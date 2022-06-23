@@ -1,0 +1,28 @@
+config:
+  verbose: True
+  output_dir: earthmover/examples/sample_output/
+  # show_graph: True
+
+sources:
+  scores:
+    file: earthmover/examples/sample_data/scores.csv
+
+transformations:
+  grouped_scores:
+    - operation: group_by
+      source: $sources.scores
+      group_by_columns:
+        - group_id
+      create_columns:
+        num_scores: count()
+        min_score: min(score)
+        max_score: max(score)
+        avg_score: mean(score)
+        item_scores: agg(score,,)
+
+destinations:
+  grouped_score:
+    source: $transformations.grouped_scores
+    template: earthmover/examples/sample_templates/aggregated_score.jsont
+    extension: jsonl
+    linearize: True

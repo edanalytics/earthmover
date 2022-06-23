@@ -1,0 +1,17 @@
+config:
+  output_dir: earthmover/examples/sample_output/
+  # show_graph: True
+  # verbose: True
+
+sources:
+  districts:
+    connection: postgresql://user:pass@host/database
+    # query: SELECT * FROM dev_tr_warehouse.dim_school_districts
+    query: SELECT * FROM schema_name.table_name
+
+destinations:
+  districts:
+    source: $sources.districts
+    template: earthmover/examples/sample_templates/district.jsont
+    extension: jsonl
+    linearize: True

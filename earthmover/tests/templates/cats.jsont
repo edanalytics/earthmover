@@ -1,0 +1,8 @@
+{
+    "name": "{{name}}",
+    "scientific_name": "{{scientific_name}}",
+    "family": "{{family}}",
+    "branch": "{{branch}}",
+    "genus": "{{genus}}",
+    "species": "{{species}}"
+}

@@ -1,0 +1,5 @@
+{
+    "entity": "{{entity}}",
+    "name": "{{name}}",
+    "{{count_column}}": {{count|int}}
+}

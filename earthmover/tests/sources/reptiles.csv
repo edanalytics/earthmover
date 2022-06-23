@@ -1,0 +1,10 @@
+id,name,genus,species,avg_lifespan_yrs,avg_weight_kg
+1,American Alligator,Alligator,mississippiensis,40,250
+2,Veiled Chameleon,Chamaeleo,calyptratus,6,0.12
+3,Nile Crocodile,Crocodylus,niloticus,55,1000
+4,Marine Iguana,Amblyrhynchus,cristatus,45,1.5
+5,Komodo Dragon,Varanus,komodoensis,30,85
+6,Gila Monster,Heloderma,suspectum,18,2
+7,Northern Crested Newt,Triturus,cristatus,8,0.1
+8,Timber Rattlesnake,Crotalus,horridus,15,1.1
+9,Leatherback Sea Turtle,Dermochelys,coriacea,45,500

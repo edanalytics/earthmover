@@ -1,0 +1,72 @@
+import re
+import os
+import jinja2
+from earthmover.earthmover_node import Node
+
+class Destination(Node):
+    def __init__(self, name, config, loader):
+        super().__init__(name, loader)
+        self.type = "destination"
+        self.meta = self.loader.to_dotdict(config)
+        self.config = self.loader.to_dotdict(config)
+        self.loader.error_handler.ctx.update(file=self.loader.config_file, line=self.meta.__line__, node=self, operation=None)
+        self.loader.error_handler.assert_key_exists_and_type_is(self.meta, "source", str)
+        self.source = self.meta.source
+        self.loader.error_handler.assert_key_exists_and_type_is(self.meta, "template", str)
+        self.template = self.meta.template
+        self.mode = "w" # by default, (over)write files... but if source is chunked, need to append instead
+
+    def do(self):
+        self.loader.error_handler.ctx.update(file=self.loader.config_file, line=self.config.__line__, node=self, operation=None)
+        # load template
+        exp = re.compile(r"\s+")
+        try:
+            file = open(self.template, 'r')
+        except Exception as e:
+            self.loader.error_handler.throw("`template` file {0} cannot be opened ({1})".format(self.template, e))
+        with file:
+            template_string = file.read()
+            # Allow people to create pretty templates (with spacing line breaks, etc.) but "linearize" them
+            # prior to writing out to a jsonl file (so that each line is a record)... the following code
+            # "linearizes" the JSON template (once), which is then (repeatedly) parsed by Jinja.
+            if self.config.linearize:
+                template_string = template_string.replace("\r\n", "")
+                template_string = template_string.replace("\n", "")
+                template_string = template_string.replace("\r", "")
+                template_string = template_string.strip()
+                template_string = exp.sub(" ", template_string).strip()
+            try:
+                template = jinja2.Template(self.loader.config.macros + template_string)
+            except Exception as e:
+                self.loader.error_handler.throw("Syntax error in Jinja template in `template` file {0} ({1})".format(self.template, e))
+        # write output!
+        target = self.loader.ref(self.source)
+        self.rows += target.data.shape[0]
+        self.cols = target.data.shape[1]
+        target.data.fillna('', inplace=True)
+        # assume that predecessor data is already loaded (this makes chunked processing work)
+        file_name = "{0}{1}.{2}".format(self.loader.config.output_dir, self.name, self.meta.extension)
+        with open(file_name, self.mode) as file:
+            for row in target.data.to_records(index=False):
+                row_data = list(zip(target.meta["header_row"], row))
+                try:
+                    json_string = template.render(row_data)
+                except Exception as e:
+                    self.loader.error_handler.throw("Error rendering Jinja template in `template` file {0} ({1})".format(self.template, e))
+                file.write(json_string + "\n")
+        self.size = os.path.getsize(file_name)
+        self.is_done = True
+        self.loader.profile("   output {0}{1}.{2} written".format(self.loader.config.output_dir, self.name, self.config.extension))
+        self.loader.profile_memory()
+    
+    def wipe(self):
+        try:
+            file = open("{0}{1}.{2}".format(self.loader.config.output_dir, self.name, self.config.extension), 'w')
+        except Exception as e:
+            self.loader.error_handler.ctx.update(file=self.loader.config_file, line=self.config.__line__, node=self, operation=None)
+            self.loader.error_handler.throw("Error opening file {0} ({1})".format(file, e))
+        with file:
+            file.write("")
+    
+    def clear(self):
+        pass

@@ -1,0 +1,10 @@
+aiohttp
+aiohttp_retry
+requests
+pyyaml
+pandas
+networkx
+matplotlib
+jinja2
+pygraphviz
+git+https://github.com/edanalytics/edfi_api.git#egg=edfi_api

@@ -1,0 +1,16 @@
+config:
+  output_dir: earthmover/examples/sample_output/
+  #show_graph: True
+  verbose: True
+
+sources:
+  data:
+    # run with `-p '{"TEST_FTP":"ftp://ftp.cdc.gov"}'`
+    connection: ${TEST_FTP}/pub/Health_Statistics/NCHS/Datasets/NPALS/final2018rcc_puf.csv
+
+destinations:
+  data:
+    source: $sources.data
+    template: earthmover/examples/sample_templates/data.jsont
+    extension: jsonl
+    linearize: True

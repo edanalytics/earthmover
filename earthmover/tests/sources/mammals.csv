@@ -1,0 +1,22 @@
+id,name,genus,species,avg_lifespan_yrs,avg_weight_kg
+1,Giant Anteater,Myrmecophaga,tridactyla,14,40
+2,Yellow Baboon,Papio,cynocephalus,14,15
+3,Little Brown Bat,Myotis,lucifugus,7,0.008
+4,Dromedary Camel,Camelus,dromedarius,40,500
+5,Cheetah,Acinonyx,jubatus,12,45
+6,African Bush Elephant,Loxodonta,africana,65,4500
+7,Red Fox,Vulpes,vulpes,4,11
+8,Reticulated Girraffe,Giraffa,reticulata,25,1200
+9,Mountain Gorilla,Gorilla,beringei beringei,40,200
+10,Hippopotamus,Hippopotamus,amphibius,45,1400
+11,Red Kangaroo,Macropus,rufus,8,50
+12,Koala,Phascolarctos,cinereus,15,10
+13,Lion,Panthera,leo,12,220
+14,Bornean Orangutan,Pongo,pygmaeus,40,75
+15,Giant Panda,Ailuropoda,melanoleuca,20,120
+16,Polar Bear,Ursus,maritimus,22,300
+17,Crested Porcupine,Hystrix,cristata,20,15
+18,Indian Rhinoceros,Rhinoceros,unicornis,40,2100
+19,Bengal Tiger,Panthera,tigris tigris,18,200
+20,Walrus,Odobenus,rosmarus,40,1100
+21,Mountain Zebra,Equus,zebra,20,310

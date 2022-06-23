@@ -1,0 +1,19 @@
+{
+  "id": "{{ school }}-{{ session }}-{{ day }}-{{ student_id }}-{{ status }}",
+  "attendanceEventCategoryDescriptor": "{{ status }}",
+  "eventDate": "{{ day }}",
+  "schoolReference": {
+    "schoolId": {{ school }}
+  },
+  "sessionReference": {
+    "schoolId": {{ school }},
+    "schoolYear": 1920,
+    "sessionName": "{{ session }}"
+  },
+  "studentReference": {
+    "studentUniqueId": "{{ student_id }}"
+  }{# ,
+  "attendanceEventReason": "string",
+  "educationalEnvironmentDescriptor": "string",
+  "eventDuration": {{ duration }} #}
+}

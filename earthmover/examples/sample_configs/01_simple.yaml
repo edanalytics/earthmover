@@ -1,0 +1,36 @@
+config:
+  # verbose: True
+  output_dir: earthmover/examples/sample_output/
+  # memory_limit: 2GB
+  # show_stacktrace: True
+  # show_graph: True
+
+sources:
+  attendance:
+    file: earthmover/examples/sample_data/attendance1000.tsv
+    header_rows: 1
+
+transformations:
+  attendance:
+    - operation: map_values
+      source: $sources.attendance
+      column: absent
+      mapping:
+        "TRUE": absent
+        "FALSE": present
+    - operation: rename_columns
+      source: $transformations.attendance
+      columns:
+        absent: status
+        section: session
+    - operation: add_columns
+      source: $transformations.attendance
+      columns:
+        school: 12345
+
+destinations:
+  studentSchoolAttendanceEvents:
+    source: $transformations.attendance
+    template: earthmover/examples/sample_templates/studentSchoolAttendanceEvent.jsont
+    extension: jsonl
+    linearize: True

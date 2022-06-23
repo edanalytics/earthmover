@@ -1,0 +1,16 @@
+id,name,genus,species,avg_lifespan_yrs,avg_weight_kg
+1,White Cockatoo,Cacatua,alba,50,0.8
+2,Sandhill Crane,Antigone,canadensis,20,4.5
+3,Golden Eagle,Aquila,chrysaetos,30,5.5
+4,American Flamingo,Phoenicopterus,ruber,25,3
+5,Rufous Hummingbird,Selasphorus,rufus,4,0.0034
+6,Belted Kingfisher,Megaceryle,alcyon,9,0.2
+7,Common Ostrich,Struthio,camelus,35,140
+8,Great Horned Owl,Bubo,virginianus,20,1.6
+9,African Grey Parrot,Psittacus,erithacus,23,0.4
+10,Brown Pelican,Pelecanus,occidentalis,12,3.4
+11,King Penguin,Aptenodytes,patagonicus,20,15
+12,Atlantic Puffin,Fratercula,arctica,30,0.6
+13,Mute Swan,Cygnus,olor,8,10
+14,Keel-billed Toucan,Ramphastos,sulfuratus,18,0.4
+15,Pileated Woodpecker,Dryocopus,pileatus,12,0.3

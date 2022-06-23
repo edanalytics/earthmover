@@ -1,0 +1,47 @@
+{% macro gradeNumToDescriptor(num) %}{%
+if num==1 %}First{%
+elif num==2 %}Second{%
+elif num==3 %}Third{%
+elif num==4 %}Fourth{%
+elif num==5 %}Fifth{%
+elif num==6 %}Sixth{%
+elif num==7 %}Seventh{%
+elif num==8 %}Eighth{%
+elif num==9 %}Ninth{%
+elif num==10 %}Tenth{%
+elif num==11 %}Eleventh{%
+elif num==12 %}Twelveth{%
+endif %} Grade{%
+endmacro %}
+{
+  "addresses": [
+    {
+      "addressTypeDescriptor": "uri://ed-fi.org/AddressTypeDescriptor#Physical",
+      "stateAbbreviationDescriptor": "uri://ed-fi.org/StateAbbreviationDescriptor#{{ physical_address_state }}",
+      "city": "{{ physical_address_city }}",
+      "postalCode": {{ physical_address_zip }},
+      "streetNumberName": "{{ physical_address_street }}"
+    },
+    {
+      "addressTypeDescriptor": "uri://ed-fi.org/AddressTypeDescriptor#Mailing",
+      "stateAbbreviationDescriptor": "uri://ed-fi.org/StateAbbreviationDescriptor#{{ mailing_address_state }}",
+      "city": "{{ mailing_address_city }}",
+      "postalCode": {{ mailing_address_zip }},
+      "streetNumberName": "{{ mailing_address_street }}"
+    }
+  ],
+  "educationOrganizationCategories": [
+    {
+      "educationOrganizationCategoryDescriptor": "uri://ed-fi.org/EducationOrganizationCategoryDescriptor#School"
+    }
+  ],
+  "nameOfInstitution": "Fake School {{ school_id }} {{address_line2}}",
+  "schoolId": "{{ school_id }}",
+  "gradeLevels": [
+    {% for n in range(low_grade|int, high_grade|int) %}
+    {
+      "gradeLevelDescriptor": "uri://ed-fi.org/GradeLevelDescriptor#{{ gradeNumToDescriptor(n) }}"
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
