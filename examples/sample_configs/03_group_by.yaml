@@ -1,11 +1,11 @@
 config:
   verbose: True
-  output_dir: earthmover/examples/sample_output/
+  output_dir: examples/sample_output/
   # show_graph: True
 
 sources:
   scores:
-    file: earthmover/examples/sample_data/scores.csv
+    file: examples/sample_data/scores.csv
 
 transformations:
   grouped_scores:
@@ -23,6 +23,6 @@ transformations:
 destinations:
   grouped_score:
     source: $transformations.grouped_scores
-    template: earthmover/examples/sample_templates/aggregated_score.jsont
+    template: examples/sample_templates/aggregated_score.jsont
     extension: jsonl
     linearize: True

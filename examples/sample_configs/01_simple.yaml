@@ -1,13 +1,13 @@
 config:
   # verbose: True
-  output_dir: earthmover/examples/sample_output/
+  output_dir: examples/sample_output/
   # memory_limit: 2GB
   # show_stacktrace: True
   # show_graph: True
 
 sources:
   attendance:
-    file: earthmover/examples/sample_data/attendance1000.tsv
+    file: examples/sample_data/attendance1000.tsv
     header_rows: 1
 
 transformations:
@@ -31,6 +31,6 @@ transformations:
 destinations:
   studentSchoolAttendanceEvents:
     source: $transformations.attendance
-    template: earthmover/examples/sample_templates/studentSchoolAttendanceEvent.jsont
+    template: examples/sample_templates/studentSchoolAttendanceEvent.jsont
     extension: jsonl
     linearize: True

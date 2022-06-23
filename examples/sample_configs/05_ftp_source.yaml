@@ -1,5 +1,5 @@
 config:
-  output_dir: earthmover/examples/sample_output/
+  output_dir: examples/sample_output/
   #show_graph: True
   verbose: True
 
@@ -11,6 +11,6 @@ sources:
 destinations:
   data:
     source: $sources.data
-    template: earthmover/examples/sample_templates/data.jsont
+    template: examples/sample_templates/data.jsont
     extension: jsonl
     linearize: True
