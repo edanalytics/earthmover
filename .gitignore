@@ -25,7 +25,7 @@ MANIFEST
 
 graph.png
 graph.svg
-earthmover/examples/sample_output/
-earthmover/examples/sample_output/*
-earthmover/examples/sample_data/
-earthmover/examples/sample_data/*
+examples/sample_output/
+examples/sample_output/*
+examples/sample_data/
+examples/sample_data/*

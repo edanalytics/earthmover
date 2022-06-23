@@ -1,5 +1,5 @@
 <!-- Logo/image -->
-![earthmover](earthmover/images/earthmover.png)
+![earthmover](images/earthmover.png)
 
 `earthmover` transforms collections of tabular source data (flat files, FTP files, database tables/queries) into text-based (JSONL, XML) data via YAML configuration.
 <!-- GIF or screenshot? -->
@@ -551,7 +551,7 @@ earthmover path/to/config.yaml --force-regenerate
 # Tests
 This tool ships with a test suite covering all transformation operations. It can be run with `earthmover -t`, which simply runs the tool on the `config.yaml` and toy data in the `earthmover/tests/` folder. (The DAG is pictured below.) Rendered `earthmover/tests/output/` are then compared against the `earthmover/tests/expected/` output; the test passes only if all files match exactly.
 
-![tests DAG](tests/tests-dag.png)
+![tests DAG](earthmover/tests/tests-dag.png)
 
 Run tests with
 ```bash
