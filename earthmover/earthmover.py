@@ -76,7 +76,7 @@ class Earthmover:
         "show_stacktrace": False
     }
     
-    def __init__(self, config_file, params="", force_regenerate=False):
+    def __init__(self, config_file, params="", force=False, skip_hashing=False):
         self.config_file = config_file
         self.error_handler = ErrorHandler(file=config_file)
         self.graph = nx.DiGraph() # dependency graph
@@ -86,7 +86,8 @@ class Earthmover:
         self.dispatcher_errors = 0
         self.do_generate = True
         self.params = params
-        self.force_regenerate=force_regenerate
+        self.force=force
+        self.skip_hashing=skip_hashing
 
         parameters = {}
         if params!="": parameters = json.loads(params)
@@ -330,60 +331,62 @@ class Earthmover:
 
     def generate(self, selector):
 
-        ######################## check if anything's changed #################
-        # This tool maintains state about prior runs. If no inputs have changed, there's no need to re-run, so for each run, we log hashes of
-        # - config.yaml
-        # - any CSV/TSV files from sources
-        # - any template files from destinations
-        # - any CSV/TSV files from map_values transformation operations
-        # - any parameters passed via CLI
-        # Only if any of these have changed since the last run do we actually re-process the DAG.
-        has_remote_sources = False
-        for name, source in self.sources.items():
-            if name=="__line__": continue
-            if "connection" in source.keys():
-                has_remote_sources = True
-        
-        runs_file = self.config.state_file
-        self.profile("INFO: computing input hashes for run log at {0}".format(runs_file))
-        hash_algorithm = "md5" # or "sha1"
-        
-        config_hash = self.get_string_hash(json.dumps(self.config), hash_algorithm)
-        
-        source_hashes = ""
-        for name, source in self.sources.items():
-            if name=="__line__": continue
-            if "file" in source.keys():
-                source_hashes += self.get_file_hash(source["file"], hash_algorithm)
-        if source_hashes!="": sources_hash = self.get_string_hash(source_hashes, hash_algorithm)
-        else: sources_hash = ""
-        
-        template_hashes = ""
-        for name, destination in self.destinations.items():
-            if name=="__line__": continue
-            if "template" in destination.keys():
-                template_hashes += self.get_file_hash(destination["template"], hash_algorithm)
-        if template_hashes!="": templates_hash = self.get_string_hash(template_hashes, hash_algorithm)
-        else: templates_hash = ""
+        if not self.skip_hashing:
+            ######################## check if anything's changed #################
+            # This tool maintains state about prior runs. If no inputs have changed, there's no need to re-run, so for each run, we log hashes of
+            # - config.yaml
+            # - any CSV/TSV files from sources
+            # - any template files from destinations
+            # - any CSV/TSV files from map_values transformation operations
+            # - any parameters passed via CLI
+            # Only if any of these have changed since the last run do we actually re-process the DAG.
+            has_remote_sources = False
+            for name, source in self.sources.items():
+                if name=="__line__": continue
+                if "connection" in source.keys():
+                    has_remote_sources = True
+            
+            runs_file = self.config.state_file
+            self.profile("INFO: computing input hashes for run log at {0}".format(runs_file))
+            hash_algorithm = "md5" # or "sha1"
+            
+            config_hash = self.get_string_hash(json.dumps(self.config), hash_algorithm)
+            
+            source_hashes = ""
+            for name, source in self.sources.items():
+                if name=="__line__": continue
+                if "file" in source.keys():
+                    source_hashes += self.get_file_hash(source["file"], hash_algorithm)
+            if source_hashes!="": sources_hash = self.get_string_hash(source_hashes, hash_algorithm)
+            else: sources_hash = ""
+            
+            template_hashes = ""
+            for name, destination in self.destinations.items():
+                if name=="__line__": continue
+                if "template" in destination.keys():
+                    template_hashes += self.get_file_hash(destination["template"], hash_algorithm)
+            if template_hashes!="": templates_hash = self.get_string_hash(template_hashes, hash_algorithm)
+            else: templates_hash = ""
 
-        mapping_hashes = ""
-        for name, transformation in self.transformations.items():
-            if name=="__line__": continue
-            for op in transformation:
-                if "operation" in op.keys() and op["operation"]=="map_values" and "map_file" in op.keys():
-                    mapping_hashes += self.get_file_hash(op["map_file"], hash_algorithm)
-        if mapping_hashes!="": mappings_hash = self.get_string_hash(mapping_hashes, hash_algorithm)
-        else: mappings_hash = ""
+            mapping_hashes = ""
+            for name, transformation in self.transformations.items():
+                if name=="__line__": continue
+                for op in transformation:
+                    if "operation" in op.keys() and op["operation"]=="map_values" and "map_file" in op.keys():
+                        mapping_hashes += self.get_file_hash(op["map_file"], hash_algorithm)
+            if mapping_hashes!="": mappings_hash = self.get_string_hash(mapping_hashes, hash_algorithm)
+            else: mappings_hash = ""
 
-        if self.params!="": params_hash = self.get_string_hash(self.params, hash_algorithm)
-        else: params_hash = ""
+            if self.params!="": params_hash = self.get_string_hash(self.params, hash_algorithm)
+            else: params_hash = ""
 
-        if not os.path.isfile(runs_file):
-            f = open(runs_file, "x")
-            f.write("run_timestamp,config_hash,sources_hash,templates_hash,mappings_hash,params_hash")
-            f.close()
+            if not os.path.isfile(runs_file):
+                f = open(runs_file, "x")
+                f.write("run_timestamp,config_hash,sources_hash,templates_hash,mappings_hash,params_hash")
+                f.close()
+        else: self.profile("INFO: skipping hashing and run logging")
         
-        if not self.force_regenerate and not has_remote_sources:
+        if not self.force and not has_remote_sources:
             self.profile("INFO: checking for changes since last run")
             with open(runs_file) as runs_handle:
                 runs_reader = csv.reader(runs_handle, delimiter=',')
@@ -404,17 +407,17 @@ class Earthmover:
                 else:
                     self.profile("INFO: regenerating (changes since last run: ")
                     self.profile("      [{0}]".format(", ".join(differences)))
-        elif self.force_regenerate:
+        elif self.force:
             self.profile("INFO: forcing regenerate")
         elif has_remote_sources:
             self.profile("INFO: forcing regenerate, since some sources are remote (FTP/database)")
         
-        if self.do_generate:
+        if self.do_generate and not self.skip_hashing:
             # save to run details to run log (which now certainly exists):
             f = open(runs_file, "a") # <-- append!
             f.write("\n{0},{1},{2},{3},{4},{5}".format(time.time(), config_hash, sources_hash, templates_hash, mappings_hash, params_hash))
             f.close()
-        else: return
+        elif not self.do_generate: return
 
         ###################### build dataflow graph ###########################
         # sources:

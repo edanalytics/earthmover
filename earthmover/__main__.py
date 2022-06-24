@@ -39,9 +39,13 @@ def main(argv=None):
         nargs='?',
         help='subgraph selector to run'
         )
-    parser.add_argument("-f", "--force-regenerate",
+    parser.add_argument("-f", "--force",
         action='store_true',
-        help='skip checking for changes since last run'
+        help='force regenerating data - even if nothing has changed'
+        )
+    parser.add_argument("-k", "--skip-hashing",
+        action='store_true',
+        help='skips computing input hashes for change detection, and prevents write to run log'
         )
     parser.add_argument("-p", "--params",
         type=str,
@@ -55,8 +59,13 @@ def main(argv=None):
     if args.version: exit("earthmover, version {0}".format(Earthmover.version))
     if args.test:
         print("Running tests...")
-        em = Earthmover("earthmover/tests/config.yaml", "", True)
-        em.generate('*')
+        em = Earthmover(
+            config_file="earthmover/tests/config.yaml",
+            params="",
+            force=True,
+            skip_hashing=True
+            )
+        em.generate(selector='*')
         # compare tests/outputs/* against tests/expected/*
         for filename in os.listdir('earthmover/tests/expected/'):
             if not filecmp.cmp(os.path.join('earthmover', 'tests', 'expected', filename), os.path.join('earthmover', 'tests', 'outputs', filename)):
@@ -64,8 +73,13 @@ def main(argv=None):
         exit('Tests passed successfully.')
     if not args.config_file: exit("FATAL: Please pass a config YAML file as a command line argument. (Try the -h flag for help.)")
     try:
-        em = Earthmover(args.config_file, args.params, args.force_regenerate)
-        em.generate(args.selector)
+        em = Earthmover(
+            config_file=args.config_file,
+            params=args.params,
+            force=args.force,
+            skip_hashing=args.skip_hashing
+            )
+        em.generate(selector=args.selector)
     except Exception as e:
         print('FATAL: ' + str(e))
         if(em.config.show_stacktrace): traceback.print_exc()

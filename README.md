@@ -541,11 +541,17 @@ earthmover path/to/config.yaml --params '{"BASE_DIR":"path/to/my/base/dir"}'
 Command-line parameters override any environment variables of the same name.
 
 ## State
-This tool *maintains state about past runs.* Subsequent runs only re-process if something has changed &ndash; the [YAML configuration](#yaml-configuration) itself, data files of `sources`, `value_mapping` CSVs of `transformations`, template files of `destinations`, or CLI parameters. (Changes are tracked by hashing files; hashes and run timestamps are stored in the file specified by [config](#config)/`state_file`.) You may choose to override this behavior and force reprocessing of the whole DAG, regardless of whether files have changed or not, using the `-f` or `--force-regenerate` command-line flag:
+This tool *maintains state about past runs.* Subsequent runs only re-process if something has changed &ndash; the [YAML configuration](#yaml-configuration) itself, data files of `sources`, `value_mapping` CSVs of `transformations`, template files of `destinations`, or CLI parameters. (Changes are tracked by hashing files; hashes and run timestamps are stored in the file specified by [config](#config)/`state_file`.) You may choose to override this behavior and force reprocessing of the whole DAG, regardless of whether files have changed or not, using the `-f` or `--force` command-line flag:
 ```bash
 earthmover path/to/config.yaml -f
 earthmover path/to/config.yaml --force-regenerate
 ```
+To further avoid computing input hashes and not log a run, use the `-k` or `--skip-hashing` flag:
+```bash
+earthmover path/to/config.yaml -k
+earthmover path/to/config.yaml --skip-hashing
+```
+(This makes a one-time run on large input files faster.)
 
 
 # Tests
