@@ -39,11 +39,11 @@ Running the tool requires
 1. Jinja [templates](#templates) defining the desired output format (JSON, XML, etc.)
 1. a [YAML configuration](#yaml-configuration) file specifying the source data, doing any necessary transformations (joins, value mappings, etc.), and destinations (Ed-Fi API resources) to write to
 
-Item 1 is usually your own data. Items 2 & 3 together may be shared as a reusable "bundle" (zip file); see [available bundles](docs/bundles.md) for more information and a list of published bundles.
+Item 1 is usually your own data. Items 2 & 3 together may be shared as a reusable "bundle" (zip file); see [available bundles](#bundles) for more information and a list of published bundles.
 
 > **If you  already have a bundle, continue to the [usage](#Usage) section below.**
 
-If you develop a bundle for a particular source data system or format, please consider contributing it to the community by publishing it online and emailing the link to treitz@edanalytics.org to get it listed [here](docs/bundles.md).
+If you develop a bundle for a particular source data system or format, please consider contributing it to the community by publishing it online and emailing the link to treitz@edanalytics.org to get it listed [here](#bundles).
 
 
 ## Source data
