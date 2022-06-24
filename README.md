@@ -546,7 +546,7 @@ This tool *maintains state about past runs.* Subsequent runs only re-process if 
 earthmover path/to/config.yaml -f
 earthmover path/to/config.yaml --force-regenerate
 ```
-To further avoid computing input hashes and not log a run, use the `-k` or `--skip-hashing` flag:
+To further avoid computing input hashes and not log a run to the `state_file`, use the `-k` or `--skip-hashing` flag:
 ```bash
 earthmover path/to/config.yaml -k
 earthmover path/to/config.yaml --skip-hashing
