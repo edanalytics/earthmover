@@ -5,8 +5,8 @@ config:
 
 sources:
   data:
-    # run with `-p '{"TEST_FTP":"ftp://ftp.cdc.gov"}'`
-    connection: ${TEST_FTP}/pub/Health_Statistics/NCHS/Datasets/NPALS/final2018rcc_puf.csv
+    # grab a public FTP file:
+    connection: ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NPALS/final2018rcc_puf.csv
 
 destinations:
   data:

@@ -1,0 +1,21 @@
+config:
+  output_dir: examples/sample_output/
+  # show_graph: True
+  verbose: True
+  show_stacktrace: True
+
+sources:
+  rna:
+    # connect to a public Postgres database (see https://rnacentral.org/help/public-database):
+    connection: postgresql://reader:NWDMCE5xdipIjRrp@hh-pgsql-public.ebi.ac.uk:5432/pfmegrnargs
+    query: >
+      SELECT * FROM (
+      SELECT upi, taxid, ac FROM xref LIMIT 20
+      ) x
+
+destinations:
+  rna:
+    source: $sources.rna
+    template: examples/sample_templates/rna.jsont
+    extension: jsonl
+    linearize: True

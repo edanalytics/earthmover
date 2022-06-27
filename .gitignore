@@ -25,7 +25,8 @@ MANIFEST
 
 graph.png
 graph.svg
-examples/sample_output/
-examples/sample_output/*
-examples/sample_data/
-examples/sample_data/*
+examples/sample_output/*.jsonl
+examples/sample_output/*.json
+examples/sample_output/*.xml
+examples/ignore_data/
+examples/ignore_data/*

@@ -7,7 +7,7 @@ config:
 
 sources:
   attendance:
-    file: examples/sample_data/attendance1000.tsv
+    file: examples/sample_data/attendance.tsv
     header_rows: 1
 
 transformations:
