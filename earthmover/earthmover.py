@@ -5,6 +5,7 @@ import json
 import math
 import time
 import yaml
+from pathlib import Path
 import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -111,6 +112,9 @@ class Earthmover:
         else: self.config = dotdict(self.config_defaults)
         self.config.memory_limit = self.string_to_bytes(self.config.memory_limit)
         self.config.macros = self.config.macros.strip()
+
+        # check if output_dir exists, if not, create it:
+        Path(self.config.output_dir).mkdir(parents=True, exist_ok=True)
         
         self.error_handler.assert_key_exists_and_type_is(user_config, "sources", dict)
         self.sources = user_config["sources"]
