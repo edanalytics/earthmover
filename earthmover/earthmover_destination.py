@@ -45,7 +45,7 @@ class Destination(Node):
         self.cols = target.data.shape[1]
         target.data.fillna('', inplace=True)
         # assume that predecessor data is already loaded (this makes chunked processing work)
-        file_name = "{0}{1}.{2}".format(self.loader.config.output_dir, self.name, self.meta.extension)
+        file_name = os.path.join(self.loader.config.output_dir, f'{self.name}.{self.meta.extension}')
         with open(file_name, self.mode) as file:
             for row in target.data.to_records(index=False):
                 row_data = list(zip(target.meta["header_row"], row))
@@ -56,12 +56,12 @@ class Destination(Node):
                 file.write(json_string + "\n")
         self.size = os.path.getsize(file_name)
         self.is_done = True
-        self.loader.profile("   output {0}{1}.{2} written".format(self.loader.config.output_dir, self.name, self.config.extension))
+        self.loader.profile(f"   output {file_name} written")
         self.loader.profile_memory()
     
     def wipe(self):
         try:
-            file = open("{0}{1}.{2}".format(self.loader.config.output_dir, self.name, self.config.extension), 'w')
+            file = os.path.join(self.loader.config.output_dir, f'{self.name}.{self.meta.extension}'), 'w')
         except Exception as e:
             self.loader.error_handler.ctx.update(file=self.loader.config_file, line=self.config.__line__, node=self, operation=None)
             self.loader.error_handler.throw("Error opening file {0} ({1})".format(file, e))
