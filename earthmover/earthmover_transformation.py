@@ -220,7 +220,7 @@ class Transformation(Node):
         self.error_handler.assert_key_exists_and_type_is(op, "columns", dict)
         for col, val in op.columns.items():
             if col=="__line__": continue
-            if isinstance(val, str) and "{{" in val and "}}" in val:
+            if isinstance(val, str) and (("{{" in val and "}}" in val) or ("{%" in val and "%}" in val)):
                 try:
                     template = jinja2.Template(self.loader.config.macros + val)
                 except Exception as e:
