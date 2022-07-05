@@ -46,6 +46,9 @@ class Destination(Node):
         target.data.fillna('', inplace=True)
         # assume that predecessor data is already loaded (this makes chunked processing work)
         file_name = os.path.join(self.loader.config.output_dir, f'{self.name}.{self.meta.extension}')
+        file_path = os.path.dirname(file_name)
+        if not os.path.exists(file_path):
+            os.makedirs(file_path)
         with open(file_name, self.mode) as file:
             for row in target.data.to_records(index=False):
                 row_data = list(zip(target.meta["header_row"], row))
@@ -61,11 +64,11 @@ class Destination(Node):
     
     def wipe(self):
         try:
-            file = os.path.join(self.loader.config.output_dir, f'{self.name}.{self.meta.extension}'), 'w')
+            file_name = os.path.join(self.loader.config.output_dir, f'{self.name}.{self.meta.extension}')
         except Exception as e:
             self.loader.error_handler.ctx.update(file=self.loader.config_file, line=self.config.__line__, node=self, operation=None)
             self.loader.error_handler.throw("Error opening file {0} ({1})".format(file, e))
-        with file:
+        with open(file_name, 'w') as file:
             file.write("")
     
     def clear(self):
