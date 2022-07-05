@@ -1,6 +1,7 @@
 import re
 import os
 import jinja2
+from jinja2 import Environment, FileSystemLoader
 from earthmover.earthmover_node import Node
 
 class Destination(Node):
@@ -36,7 +37,9 @@ class Destination(Node):
                 template_string = template_string.strip()
                 template_string = exp.sub(" ", template_string).strip()
             try:
-                template = jinja2.Template(self.loader.config.macros + template_string)
+                template = Environment(
+                                loader=FileSystemLoader(os.path.dirname('./'))
+                                ).from_string(self.loader.config.macros + template_string)
             except Exception as e:
                 self.loader.error_handler.throw("Syntax error in Jinja template in `template` file {0} ({1})".format(self.template, e))
         # write output!

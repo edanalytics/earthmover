@@ -1,0 +1,1 @@
+{ "mood": "{{mood}}", "payload": {% include "examples/sample_templates/message.jsont" %} }

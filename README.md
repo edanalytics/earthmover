@@ -57,6 +57,8 @@ After transforming the source data, this tool converts it to a text-based file l
 
 Briefly, Jinja interpolates variables in double curly braces `{{...}}` to actual values, as well as providing other convenience functionality, such as string manipulation functions, logic blocks like if-tests, looping functionality, and much more. See the examples in the `examples/sample_templates/` folder, or check out [the official Jinja documentation](https://jinja.palletsprojects.com/en/3.1.x/).
 
+Note that templates may [include](https://jinja.palletsprojects.com/en/3.1.x/templates/#include) other templates, specified relative to the path from which `earthmover` is run - see `examples/sample_configs/06_subtemplates_earthmover.yaml` and `examples/sample_templates/mood.jsont` for an example.
+
 
 ## YAML configuration
 All the instructions for this tool &mdash; where to find the source data, what transformations to apply to it, and how and where to save the output &mdash; are specified in a single YAML configuration file. Example YAML configuration files can be found in `examples/sample_configs/`.

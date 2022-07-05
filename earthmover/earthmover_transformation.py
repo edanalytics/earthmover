@@ -1,7 +1,9 @@
 import re
+import os
 import csv
 import time
 import jinja2
+from jinja2 import Environment, FileSystemLoader
 import numpy as np
 import networkx as nx
 import pandas as pd
@@ -207,7 +209,10 @@ class Transformation(Node):
             if col=="__line__": continue
             if isinstance(val, str) and "{{" in val and "}}" in val:
                 try:
-                    template = jinja2.Template(self.loader.config.macros + val)
+                    # template = jinja2.Template(self.loader.config.macros + val)
+                    template = Environment(
+                                loader=FileSystemLoader(os.path.dirname('./'))
+                                ).from_string(self.loader.config.macros + val)
                 except Exception as e:
                     self.error_handler.throw("Syntax error in Jinja template for column `{0}` of `add_columns` operation ({1})".format(col, e))
                 source_df = source_df.apply(self.apply_jinja, axis=1, args=(template, col, 'add'))
@@ -222,7 +227,10 @@ class Transformation(Node):
             if col=="__line__": continue
             if isinstance(val, str) and (("{{" in val and "}}" in val) or ("{%" in val and "%}" in val)):
                 try:
-                    template = jinja2.Template(self.loader.config.macros + val)
+                    # template = jinja2.Template(self.loader.config.macros + val)
+                    template = Environment(
+                                loader=FileSystemLoader(os.path.dirname('./'))
+                                ).from_string(self.loader.config.macros + val)
                 except Exception as e:
                     self.error_handler.throw("Syntax error in Jinja template for column `{0}` of `modify_columns` operation ({1})".format(col, e))
                 source_df = source_df.apply(self.apply_jinja, axis=1, args=(template, col, 'modify'))
