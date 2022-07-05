@@ -9,12 +9,7 @@ sources:
     connection: ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NPALS/final2018rcc_puf.csv
 
 destinations:
-  data/1:
-    source: $sources.data
-    template: examples/sample_templates/data.jsont
-    extension: jsonl
-    linearize: True
-  data/2:
+  data:
     source: $sources.data
     template: examples/sample_templates/data.jsont
     extension: jsonl
