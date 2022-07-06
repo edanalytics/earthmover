@@ -2,6 +2,7 @@ config:
   verbose: True
   output_dir: examples/sample_output/
   # show_graph: True
+  # show_stacktrace: True
 
 sources:
   scores:
