@@ -65,6 +65,7 @@ All the instructions for this tool &mdash; where to find the source data, what t
 
 The general structure of the YAML involves four main sections:
 1. [`config`](#config), which specifies options like the memory limit and whether to show verbose output
+1. [`definitions`](#definitions) is an optional place where you can place common values and settings that are reused throughout the config
 1. [`sources`](#sources), where each source file is listed with details like the number of header rows
 1. [`transformations`](#transformations), where source data can be transformed in various ways
 1. [`destinations`](#destinations), where transformed data can be mapped to JSON templates and Ed-Fi endpoints and sent to an Ed-Fi API
@@ -95,6 +96,44 @@ config:
 * (optional) Specify whether to show a stacktrace for runtime errors. The default is `False`.
 * (optional) Specify whether or not `show_graph` (default is `False`), which requires [PyGraphViz](https://pygraphviz.github.io/) to be installed and creates `graph.png` and `graph.svg` which are visual depictions of the dependency graph.
 * (optional) Specify Jinja `macros` which will be available within any Jinja template content throughout the project. (This can slow performance.)
+
+
+### **`definitions`**
+The `definitions` section of the [YAML configuration](#yaml-configuration) is an optional section you can use to define configurations which are reused throughout the rest of the configuration. `earthmover` does nothing special with this section, it's just parsed by the YAML parser. However, this can be a very useful way to keep your YAML configuration [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) &ndash; rather than redefine the same values, Jinja phrases, etc. throughout your config, define them once in this section and refer to them later using [YAML anchors, aliases, and overrides](https://www.linode.com/docs/guides/yaml-anchors-aliases-overrides-extensions/). An example `definitions` section is shown below:
+
+```yaml
+definitions:
+  operations:
+  - &student_join_op
+    operation: join
+    join_type: left
+    left_key: id
+    right_key: id
+  ...
+  date_to_year_jinja: &date_to_year "{{ val[-4:] }}"
+...
+
+transformations:
+  roster:
+    - <<: *student_join_op
+      sources:
+      - $sources.roster
+      - $sources.students
+  enrollment:
+    - <<: *student_join_op
+      sources:
+      - $sources.enrollment
+      - $sources.students
+  ...
+  academic_terms:
+    - operation: add_columns
+      source: $sources.academic_terms
+      columns:
+        school_year: "{{start_date}}"
+    - operation: modify_columns
+      columns:
+        school_year: *date_to_year
+```
 
 
 ### **`sources`**
