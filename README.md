@@ -128,10 +128,10 @@ transformations:
       - $sources.students
   ...
   academic_terms:
-    - operation: add_columns
+    - operation: duplicate_columns
       source: $sources.academic_terms
       columns:
-        school_year: "{{start_date}}"
+        start_date: school_year
     - operation: modify_columns
       columns:
         school_year: *date_to_year
