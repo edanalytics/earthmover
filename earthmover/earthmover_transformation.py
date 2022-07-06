@@ -303,7 +303,12 @@ class Transformation(Node):
     def do_map_values(self, op):
         source_df = self.load_op_source_data(op)
         self.error_handler.assert_key_exists_and_type_is(op, "column", str)
-        column_name = op.column
+        if "column" in op.keys() and isinstance(op.column, str):
+            columns = []
+            columns.append(op.column)
+        elif  "columns" and isinstance(op.columns, list):
+            columns = op.columns
+        # column_name = op.column
         if "mapping" in op.keys():
             self.error_handler.assert_key_type_is(op, "mapping", dict)
             mapping = op.mapping
@@ -312,7 +317,7 @@ class Transformation(Node):
         elif "map_file" in op.keys():
             self.error_handler.assert_key_type_is(op, "map_file", str)
             with open(op.map_file, 'r') as file:
-                # next(file) # skip first row (header) ??????? NEED TO HANDLE THIS ?????????
+                next(file) # skip first header row (we assume that map_files have a header)
                 sep = self.loader.get_sep(op.map_file)
                 try:
                     reader = csv.reader(file, delimiter=sep)
@@ -322,9 +327,10 @@ class Transformation(Node):
         else:
             self.error_handler.throw("must define either `mapping` (list of old_value: new_value) or a `map_file` (two-column CSV or TSV)")
         try:
-            source_df[column_name] = source_df[column_name].replace(mapping)
+            for column_name in columns:
+                source_df[column_name] = source_df[column_name].replace(mapping)
         except Exception as e:
-            self.error_handler.throw("Error during `map_values` operation. Check mapping shape and `column`?")
+            self.error_handler.throw("Error during `map_values` operation. Check mapping shape and `column(s)`?")
         return source_df
 
     def do_date_format(self, op):
