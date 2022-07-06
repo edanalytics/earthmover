@@ -65,7 +65,7 @@ All the instructions for this tool &mdash; where to find the source data, what t
 
 The general structure of the YAML involves four main sections:
 1. [`config`](#config), which specifies options like the memory limit and whether to show verbose output
-1. [`definitions`](#definitions) is an *optional* way to specify common values and settings that are reused throughout the config
+1. [`definitions`](#definitions) is an *optional* way to specify reusable values and blocks
 1. [`sources`](#sources), where each source file is listed with details like the number of header rows
 1. [`transformations`](#transformations), where source data can be transformed in various ways
 1. [`destinations`](#destinations), where transformed data can be mapped to JSON templates and Ed-Fi endpoints and sent to an Ed-Fi API
