@@ -350,6 +350,10 @@ Map the values of a column.
     - operation: map_values
       source: $sources.courses
       column: column_name
+      # or, to map multiple columns simultaneously
+      columns:
+        - col_1
+        - col_2
       mapping:
         old_value_1: new_value_1
         old_value_2: new_value_2
