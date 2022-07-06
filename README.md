@@ -106,11 +106,11 @@ An example `definitions` section is shown below:
 ```yaml
 definitions:
   operations:
-  - &student_join_op
-    operation: join
-    join_type: left
-    left_key: student_id
-    right_key: student_id
+    - &student_join_op
+      operation: join
+      join_type: left
+      left_key: student_id
+      right_key: student_id
   ...
   date_to_year_jinja: &date_to_year "{{ val[-4:] }}"
 ...
