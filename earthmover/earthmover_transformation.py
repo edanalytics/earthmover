@@ -302,13 +302,13 @@ class Transformation(Node):
 
     def do_map_values(self, op):
         source_df = self.load_op_source_data(op)
-        self.error_handler.assert_key_exists_and_type_is(op, "column", str)
         if "column" in op.keys() and isinstance(op.column, str):
             columns = []
             columns.append(op.column)
         elif  "columns" and isinstance(op.columns, list):
             columns = op.columns
-        # column_name = op.column
+        else:
+            self.error_handler.throw("a `date_format` operation must specify either one `column` or several `columns` to convert")
         if "mapping" in op.keys():
             self.error_handler.assert_key_type_is(op, "mapping", dict)
             mapping = op.mapping
