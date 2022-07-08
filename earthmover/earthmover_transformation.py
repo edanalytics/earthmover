@@ -215,7 +215,8 @@ class Transformation(Node):
                                 ).from_string(self.loader.config.macros + val)
                 except Exception as e:
                     self.error_handler.throw("Syntax error in Jinja template for column `{0}` of `add_columns` operation ({1})".format(col, e))
-                source_df = source_df.apply(self.apply_jinja, axis=1, args=(template, col, 'add'))
+                if len(source_df)==0: source_df[col] = None
+                else: source_df = source_df.apply(self.apply_jinja, axis=1, args=(template, col, 'add'))
             else:
                 source_df[col] = val
         return source_df
