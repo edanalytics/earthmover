@@ -680,7 +680,7 @@ You can remove these settings once your `earthmover` project is ready for operat
 
 ## Operationalization practices
 Typically `earthmover` is used when the same (or simlar) data transformations must be done repeatedly. (A one-time data transformation task can probably be done more easily with [SQLite](https://www.sqlite.org/index.html) or a similar tool.) When deploying/operationalizing `earthmover`, whether with a simple scheduler like [cron](https://en.wikipedia.org/wiki/Cron) or an orchestration tool like [Airflow](https://airflow.apache.org/) or [Dagster](https://dagster.io/), consider
-* specifying conditions you `expect` your [sources](#sources) to meet to have `earthmover` fail on source data errors
+* specifying conditions you `expect` your [sources](#sources) to meet, so `earthmover` will fail on source data errors
 * specifying `config` &raquo; `verbose: True` and monitoring logs for phrases like
   > `distinct_rows` operation removed NN duplicate rows
 
