@@ -121,7 +121,11 @@ class Earthmover:
         self.config.macros = self.config.macros.strip()
 
         # Check if output_dir exists, if not, create it:
+        self.config.output_dir = os.path.expanduser(self.config.output_dir)
         Path(self.config.output_dir).mkdir(parents=True, exist_ok=True)
+
+        # Expand state_file if necessary:
+        self.config.state_file = os.path.expanduser(self.config.state_file)
         
         # sources and destinations are required; transformations are optional
         self.error_handler.assert_key_exists_and_type_is(user_config, "sources", dict)
