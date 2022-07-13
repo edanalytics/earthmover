@@ -651,7 +651,7 @@ The [state feature](#state) adds some overhead, as hashes of input data and JSON
 
 
 # Best Practices
-In this section we outline some suggestions for best practices to follow when using `earthmover`, based on our experience using the tool. Many of these are based on best practices for using [dbt](https://www.getdbt.com/), to which `earthmover` is similar, although `earthmover` operates on dataframes rather than database tables.
+In this section we outline some suggestions for best practices to follow when using `earthmover`, based on our experience with the tool. Many of these are based on best practices for using [dbt](https://www.getdbt.com/), to which `earthmover` is similar, although `earthmover` operates on dataframes rather than database tables.
 
 ## Development practices
 While YAML is a data format, it is best to treat the `earthmover` [YAML configuration](#yaml-configuration) as code, meaning you should
