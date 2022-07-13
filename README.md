@@ -15,6 +15,7 @@
 * [Design](#design)
 * [Performance](#performance)
 * [Limitations](#limitations)
+* [Best Practices](#best-practices)
 * [Changelog](#changelog)
 * [Contributing](#contributing)<!--
 Guides and Resources -->
@@ -646,6 +647,44 @@ Tool performance depends on a variety of factors including source file size and/
 Smaller source data (which all fits into memory) processes very quickly. Larger chunked sources are necessarily slower. We have tested with sources files of 3.3GB, 100M rows (synthetic attendance data): creating 100M lines of JSONL (50GB) takes around 45 minutes on a modern laptop.
 
 The [state feature](#state) adds some overhead, as hashes of input data and JSON payloads must be computed and stored, but this can be disabled if desired.
+
+
+
+# Best Practices
+In this section we outline some suggestions for best practices to follow when using `earthmover`, based on our experience using the tool. Many of these are based on best practices for using [dbt](https://www.getdbt.com/), to which `earthmover` is similar, although `earthmover` operates on dataframes rather than database tables.
+
+## Development practices
+While YAML is a data format, it is best to treat the `earthmover` [YAML configuration](#yaml-configuration) as code, meaning you should
+* [version](https://en.wikipedia.org/wiki/Version_control) it!
+* avoid putting credentials and other sensitive information in the configuration; rather specify such values as [environment variables](#environment-variable-references) or [command-line parameters](#command-line-parameters)
+* keep your YAML [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) by using [Jinja macros](#config) and [YAML anchors and aliases](#definitions)
+Remember that [code is poetry](https://medium.com/@launchyard/code-is-poetry-3d13d50a36b3): it should be beautiful! To that end
+* Carefully choose concise, good names for your `sources`, `transformations`, and `destinations`.
+  - Good names for `sources` could be based on their source file/table (e.g. `students` for `students.csv`)
+  - Good names for `transformations` indicate what they do (e.g. `students_with_mailing_addresses`)
+  - Good names for `destinations` could be based on the destination file (e.g. `student_mail_merge.xml`)
+* Add good, descriptive comments throughout your YAML explaining any assumptions or non-intuitive operations (including complex Jinja).
+* Keep YAML concise by compose `transformation` operations where possible. Many operations like `add_columns`, `map_values`, and others can operate on multiple `columns` in a dataframe.
+* At the same time, avoid doing too much at once in a single `transformation`; splitting multiple `join` operations into separate transformations can make [debugging](#debugging-practices) easier.
+
+## Debugging practices
+When developing your transformations, it can be helpful to
+* specify `config` &raquo; `verbose: True` and `transformation` &raquo; `operation` &raquo; `debug: True` to verify the columns and shape of your data after each `operation`
+* turn on `config` &raquo; `show_stacktrace: True` to get more detailed and helpful error messages
+* avoid name-sharing for a `source`, a `transformation`, and/or a `destination` - this is allowed but can make debugging confusing
+* [install pygraphviz](https://pygraphviz.github.io/documentation/stable/install.html) and turn on `config` &raquo; `show_graph: True`, then visually inspect your transformations in `graph.png` for structural errors
+* use a linter/validator to validate the formatting of your generated data
+
+You can remove these settings once your YAML configuration is ready for operationalization.
+
+## Operationalization practices
+Typically `earthmover` is used when the same (or simlar) data transformations must be done many times. (A one-time data transformation task can probably be done more easily with [SQLite](https://www.sqlite.org/index.html) or a similar tool.) When deploying/operationalizing `earthmover`, whether with a simple scheduler like [cron](https://en.wikipedia.org/wiki/Cron) or an orchestration tool like [Airflow](https://airflow.apache.org/) or [Dagster](https://dagster.io/), consider
+* specifying conditions you `expect` your [sources](#sources) to meet to have `earthmover` fail on source data errors
+* specifying `config` &raquo; `verbose: True` and monitoring logs for phrases like
+  > `distinct_rows` operation removed NN duplicate rows
+
+  > `filter_rows` operation removed NN rows
+
 
 
 # Change log
