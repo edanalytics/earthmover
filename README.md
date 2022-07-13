@@ -665,7 +665,7 @@ Remember that [code is poetry](https://medium.com/@launchyard/code-is-poetry-3d1
   - Good names for `transformations` indicate what they do (e.g. `students_with_mailing_addresses`)
   - Good names for `destinations` could be based on the destination file (e.g. `student_mail_merge.xml`)
 * Add good, descriptive comments throughout your YAML explaining any assumptions or non-intuitive operations (including complex Jinja).
-* Keep YAML concise by compose `transformation` operations where possible. Many operations like `add_columns`, `map_values`, and others can operate on multiple `columns` in a dataframe.
+* Keep YAML concise by composing `transformation` operations where possible. Many operations like `add_columns`, `map_values`, and others can operate on multiple `columns` in a dataframe.
 * At the same time, avoid doing too much at once in a single `transformation`; splitting multiple `join` operations into separate transformations can make [debugging](#debugging-practices) easier.
 
 ## Debugging practices
