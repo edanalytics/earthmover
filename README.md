@@ -658,6 +658,7 @@ While YAML is a data format, it is best to treat the `earthmover` [YAML configur
 * [version](https://en.wikipedia.org/wiki/Version_control) it!
 * avoid putting credentials and other sensitive information in the configuration; rather specify such values as [environment variables](#environment-variable-references) or [command-line parameters](#command-line-parameters)
 * keep your YAML [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) by using [Jinja macros](#config) and [YAML anchors and aliases](#definitions)
+
 Remember that [code is poetry](https://medium.com/@launchyard/code-is-poetry-3d13d50a36b3): it should be beautiful! To that end
 * Carefully choose concise, good names for your `sources`, `transformations`, and `destinations`.
   - Good names for `sources` could be based on their source file/table (e.g. `students` for `students.csv`)
