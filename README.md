@@ -675,7 +675,7 @@ When developing your transformations, it can be helpful to
 * [install pygraphviz](https://pygraphviz.github.io/documentation/stable/install.html) and turn on `config` &raquo; `show_graph: True`, then visually inspect your transformations in `graph.png` for structural errors
 * use a linter/validator to validate the formatting of your generated data
 
-You can remove these settings once your YAML configuration is ready for operationalization.
+You can remove these settings once your `earthmover` project is ready for operationalization.
 
 ## Operationalization practices
 Typically `earthmover` is used when the same (or simlar) data transformations must be done many times. (A one-time data transformation task can probably be done more easily with [SQLite](https://www.sqlite.org/index.html) or a similar tool.) When deploying/operationalizing `earthmover`, whether with a simple scheduler like [cron](https://en.wikipedia.org/wiki/Cron) or an orchestration tool like [Airflow](https://airflow.apache.org/) or [Dagster](https://dagster.io/), consider
