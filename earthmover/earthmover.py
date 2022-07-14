@@ -5,6 +5,7 @@ import json
 import math
 import time
 import yaml
+import logging
 from pathlib import Path
 import pandas as pd
 import networkx as nx
@@ -68,6 +69,7 @@ class Earthmover:
         "macros": "",
         "memory_limit": "1GB",
         "show_graph": False,
+        "log_level": "INFO",
         "verbose": False,
         "show_stacktrace": False
     }
@@ -75,6 +77,7 @@ class Earthmover:
     def __init__(self, config_file, params="", force=False, skip_hashing=False):
         self.config_file = config_file
         self.error_handler = ErrorHandler(file=config_file)
+        self.logger = logging.getLogger('earthmover')
         self.graph = nx.DiGraph() # dependency graph
         self.t0 = time.time()
         self.memory_usage = 0
@@ -120,9 +123,21 @@ class Earthmover:
         self.config.memory_limit = self.string_to_bytes(self.config.memory_limit)
         self.config.macros = self.config.macros.strip()
 
+        # Set up logging
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.getLevelName(self.config.log_level))
+        formatter = logging.Formatter("%(asctime)s.%(msecs)03d %(name)s %(levelname)s %(message)s",
+            "%Y-%m-%d %H:%M:%S"
+            )
+        handler.setFormatter(formatter)
+        self.logger.setLevel(logging.getLevelName(self.config.log_level))
+        self.logger.addHandler(handler)
+        
         # Check if output_dir exists, if not, create it:
         self.config.output_dir = os.path.expanduser(self.config.output_dir)
-        Path(self.config.output_dir).mkdir(parents=True, exist_ok=True)
+        if not os.path.isdir(self.config.output_dir):
+            self.logger.info(f'Creating output directory {self.config.output_dir}')
+            Path(self.config.output_dir).mkdir(parents=True, exist_ok=True)
 
         # Expand state_file if necessary:
         self.config.state_file = os.path.expanduser(self.config.state_file)
@@ -375,6 +390,7 @@ class Earthmover:
         return graph
 
     def build_graph(self):
+        self.logger.debug("building dataflow graph")
         # sources:
         for name, config in self.sources.items():
             if name=="__line__": continue # skip YAML line annotations
@@ -423,8 +439,28 @@ class Earthmover:
             if source_node.is_chunked: node.is_chunked = True
 
         # Confirm that the graph is a DAG
+        self.logger.debug("checking dataflow graph")
         if not nx.is_directed_acyclic_graph(self.graph):
             self.error_handler.throw("the graph is not a DAG! it has the cycle {0}".format(nx.find_cycle(self.graph)))
+
+        # Delete any components that have a blank source
+        node_data = { node[0]: node[1]["data"] for node in self.graph.nodes(data=True) }
+        nodes_to_remove = []
+        for component in nx.weakly_connected_components(self.graph):
+            skip_nodes = []
+            for node in component:
+                node_data = { node[0]: node[1]["data"] for node in self.graph.nodes(data=True) }
+                if node_data[node].type=="source" and node_data[node].skip:
+                    skip_nodes.append(node.replace("$sources.", ""))
+            if len(skip_nodes)>0:
+                missing_sources = ", ".join(skip_nodes)
+                for node in component:
+                    if node_data[node].type=="destination":
+                        dest_node = node.replace("$destinations.","")
+                        self.logger.warn(f"destination {dest_node} will not be generated because it depends on missing source(s) [{missing_sources}]")
+                    nodes_to_remove.append(node)
+        for node in nodes_to_remove:
+            self.graph.remove_node(node)
 
 
     def generate(self, selector):
@@ -441,6 +477,7 @@ class Earthmover:
         active_destinations = [node[0] for node in graph.nodes(data=True)]
             
         if not self.skip_hashing:
+            node_data = { node[0]: node[1]["data"] for node in self.graph.nodes(data=True) }
             # This tool maintains state about prior runs. If no inputs have changed, there's no need to re-run,
             # so for each run, we log hashes of
             # - config.yaml
@@ -460,12 +497,14 @@ class Earthmover:
             
             runs_file = self.config.state_file
             self.profile("INFO: computing input hashes for run log at {0}".format(runs_file))
+            self.logger.info("computing input hashes for run log at {0}".format(runs_file))
             hash_algorithm = "md5" # or "sha1"
             
             config_hash = self.get_string_hash(json.dumps(self.config), hash_algorithm)
             
             source_hashes = ""
             for name, source in self.sources.items():
+                if "$sources."+name not in node_data.keys(): continue
                 if name=="__line__": continue
                 if "file" in source.keys():
                     source_hashes += self.get_file_hash(source["file"], hash_algorithm)
@@ -474,6 +513,7 @@ class Earthmover:
             
             template_hashes = ""
             for name, destination in self.destinations.items():
+                if "$destinations."+name not in node_data.keys(): continue
                 if name=="__line__": continue
                 if "template" in destination.keys():
                     template_hashes += self.get_file_hash(destination["template"], hash_algorithm)

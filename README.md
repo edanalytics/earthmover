@@ -571,6 +571,9 @@ earthmover path/to/config.yaml -s people,people_*
 ```
 This processes all DAG paths (from sources to destinations) through any matched nodes.
 
+## Optional Sources
+Specifying `required: False` on a `source` will make `earthmover` skip creating any `destinations` that [depend](#dag) on the `source` if the `source`'s `connection` and/or `file` are missing. This, combined with the use of [environment variable references](#environment-variable-references) and/or [command-line parameters](#command-line-parameters) to specify a `source`'s `connection` and/or `file`, can allows a single `earthmover.yaml` to be used to create a subset of possible `destinations`.
+
 ## Environment variable references
 In your [YAML configuration](#yaml-configuration), you may reference environment variables with `${ENV_VAR}`. This can be useful for making references to source file locations dynamic, such as
 ```yaml
@@ -652,6 +655,86 @@ The [state feature](#state) adds some overhead, as hashes of input data and JSON
 
 # Best Practices
 In this section we outline some suggestions for best practices to follow when using `earthmover`, based on our experience with the tool. Many of these are based on best practices for using [dbt](https://www.getdbt.com/), to which `earthmover` is similar, although `earthmover` operates on dataframes rather than database tables.
+
+# Project Structure Practices
+A typical `earthmover` project might have a structure like this:
+```
+project/
+├── README.md
+├── data/
+│   └── source_file_1.csv
+│   └── source_file_2.csv
+│   └── source_file_3.csv
+├── earthmover.yaml
+├── output/
+│   └── output_file_1.jsonl
+│   └── output_file_2.xml
+├── seeds/
+│   └── crosswalk_1.csv
+│   └── crosswalk_2.csv
+├── templates/
+│   └── json_template_1.jsont
+│   └── json_template_2.jsont
+│   └── xml_template_1.xmlt
+│   └── xml_template_2.xmlt
+```
+Generally you should separate the mappings, transformations, and structure of your data &ndash; which are probably *not* sensitive &ndash; from the actual input and output &ndash; which may be large and/or sensitive, and therefore should not be committed to a version control system. This can be accomplished in two ways:
+1. include a `.gitignore` or similar file in your project which excludes the `data/` and `output/` directories from being committed the repository
+1. remove the `data/` and `output/` directories from your project and update `earthmover.yaml`'s `sources` and `destinations` to reference another location outside the `project/` directory
+
+When dealing with sensitive source data, you may have to comply with security protocols, such as referencing sensitive data from a network storage location rather than copying it to your own computer. In this situation, option 2 above is a good choice.
+
+To facilitate [operationalization]($operationalization-practices), we recommended using [environment vairables](#environment-variable-references) or [command-line parameters](#command-line-parameters) to pass input and output directories and filenames to `earthmover`, rather than hard-coding them into `earthmover.yaml`. For example, rather than
+```yaml
+config:
+  output_dir: path/to/outputs/
+...
+sources:
+  source_1:
+    file: path/to/inputs/source_file_1.csv
+    header_rows: 1
+  source_2:
+    file: path/to/inputs/source_file_2.csv
+    header_rows: 1
+...
+destinations:
+  output_1:
+    source: $transformations.transformed_1
+    ...
+  output_2:
+    source: $transformations.transformed_2
+    ...
+```
+instead consider using
+```yaml
+config:
+  output_dir: ${OUTPUT_DIR}
+...
+sources:
+  source_1:
+    file: ${INPUT_DIR}${INPUT_FILE_1}
+    header_rows: 1
+  source_2:
+    file: ${INPUT_DIR}${INPUT_FILE_2}
+    header_rows: 1
+...
+destinations:
+  output_1:
+    source: $transformations.transformed_1
+    ...
+  output_2:
+    source: $transformations.transformed_2
+    ...
+```
+and then run with
+```bash
+earthmover earthmover.yaml -p '{ "OUTPUT_DIR": "path/to/outputs/", "INPUT_DIR": "path/to/inputs/", "INPUT_FILE_1": "source_file_1.csv", "INPUT_FILE_2": "source_file_2.csv" }'
+```
+Note that with this pattern you can also use [optional sources](#optional-sources) to only create one of the outputs if needed, for example
+```bash
+earthmover earthmover.yaml -p '{ "OUTPUT_DIR": "path/to/outputs/", "INPUT_DIR": "path/to/inputs/", "INPUT_FILE_1": "source_file_1.csv" }'
+```
+would only create `output_1` if `source_1` had `required: False` (since `INPUT_FILE_2` is missing).
 
 ## Development practices
 While YAML is a data format, it is best to treat the `earthmover` [YAML configuration](#yaml-configuration) as code, meaning you should

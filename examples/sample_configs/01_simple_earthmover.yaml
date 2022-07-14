@@ -4,11 +4,16 @@ config:
   # memory_limit: 2GB
   # show_stacktrace: True
   # show_graph: True
+  # verbose: True
 
 sources:
   attendance:
     file: examples/sample_data/attendance.tsv
     header_rows: 1
+  testing_source:
+    file: 
+    header_rows: 1
+    required: False # this prevents an error due to `file` being blank... testing_destination just won't be created
 
 transformations:
   attendance:
@@ -31,6 +36,11 @@ transformations:
 destinations:
   studentSchoolAttendanceEvents:
     source: $transformations.attendance
+    template: examples/sample_templates/studentSchoolAttendanceEvent.jsont
+    extension: jsonl
+    linearize: True
+  testing_destination:
+    source: $sources.testing_source
     template: examples/sample_templates/studentSchoolAttendanceEvent.jsont
     extension: jsonl
     linearize: True

@@ -12,59 +12,78 @@ class Source(Node):
         self.meta = self.loader.to_dotdict(source_config)
         self.config = self.loader.to_dotdict(source_config)
         self.type = "source"
+        self.skip = False
         self.loader.error_handler.ctx.update(file=self.loader.config_file, line=self.meta.__line__, node=self, operation=None)
         
         if "expect" in self.meta.keys() and isinstance(self.config.expect, list):
             self.expectations = self.config.expect
 
         # ftp:
-        if "connection" in source_config.keys() and "ftp://" in self.config.connection:
+        if "connection" in source_config.keys() and "query" not in source_config.keys():
             self.mode = "ftp"
             self.file = source_config["connection"]
-            user, passwd, host, port, path = re.match(r'ftp:\/\/(.*?):?(.*?)@?([^:\/]*):?(.*?)\/(.*)', self.file).groups()
-            try:
-                ftp = ftplib.FTP(host)
-                if user and passwd: ftp.login(user=user, passwd=passwd)
-                else: ftp.login()
-                self.meta.file_size = ftp.size(path)
-            except Exception as e:
-                self.loader.error_handler.throw("Source file {0} could not be accessed".format(self.file))
-            if self.meta.file_size > self.loader.config.memory_limit / 2:
-                self.is_chunked = True
-                self.reader = None
-            self.size = self.meta.file_size
-            self.is_loaded = False
+            if "required" in source_config.keys() and not source_config["required"] and (
+                source_config["connection"] is None or source_config["connection"]==""
+                ):
+                self.skip = True
+            else:
+                user, passwd, host, port, path = re.match(r'ftp:\/\/(.*?):?(.*?)@?([^:\/]*):?(.*?)\/(.*)', self.file).groups()
+                try:
+                    ftp = ftplib.FTP(host)
+                    if user and passwd: ftp.login(user=user, passwd=passwd)
+                    else: ftp.login()
+                    self.meta.file_size = ftp.size(path)
+                except Exception as e:
+                    self.loader.error_handler.throw("Source file {0} could not be accessed".format(self.file))
+                if self.meta.file_size > self.loader.config.memory_limit / 2:
+                    self.is_chunked = True
+                    self.reader = None
+                self.size = self.meta.file_size
+                self.is_loaded = False
 
         # database connection:
         elif "connection" in source_config.keys() and "query" in source_config.keys():
-            self.loader.error_handler.assert_key_exists_and_type_is(self.meta, "connection", str)
-            self.loader.error_handler.assert_key_exists_and_type_is(self.meta, "query", str)
+            self.loader.error_handler.assert_key_exists(self.meta, "connection")
+            self.loader.error_handler.assert_key_exists(self.meta, "query")
             self.mode = "sql"
             self.is_loaded = False
-            # replace columns from outer query with count(*), to measure the size of the datasource (and determine is_chunked):
-            query = re.sub(r'(^select\s+)(.*?)(\s+from.*$)', r'\1count(*)\3', self.meta.query, count=1, flags=re.M|re.I)
-            tmp = pd.read_sql(sql=query, con=self.meta.connection)
-            num_records = tmp.iloc[0,0]
-            # print("num_records: ", num_records)
-            self.meta["num_rows"] = num_records
-            if num_records > self.get_chunksize() / 2:
-                self.is_chunked = True
-                self.page = 0
+            if "required" in source_config.keys() and not source_config["required"] and (
+                source_config["connection"] is None or source_config["connection"]==""
+                ):
+                self.skip = True
+            else:
+                self.loader.error_handler.assert_key_type_is(self.meta, "connection", str)
+                self.loader.error_handler.assert_key_type_is(self.meta, "query", str)
+                # replace columns from outer query with count(*), to measure the size of the datasource (and determine is_chunked):
+                query = re.sub(r'(^select\s+)(.*?)(\s+from.*$)', r'\1count(*)\3', self.meta.query, count=1, flags=re.M|re.I)
+                tmp = pd.read_sql(sql=query, con=self.meta.connection)
+                num_records = tmp.iloc[0,0]
+                # print("num_records: ", num_records)
+                self.meta["num_rows"] = num_records
+                if num_records > self.get_chunksize() / 2:
+                    self.is_chunked = True
+                    self.page = 0
 
         # local file:
         elif "file" in source_config.keys():
-            self.loader.error_handler.assert_key_exists_and_type_is(self.meta, "file", str)
+            self.loader.error_handler.assert_key_exists(self.meta, "file")
             self.file = source_config.file
             self.mode = "file"
             self.is_loaded = False
-            try:
-                self.meta["file_size"] = os.path.getsize(self.file)
-            except FileNotFoundError:
-                self.loader.error_handler.throw("Source file {0} not found".format(self.file))
-            self.size = self.meta["file_size"]
-            if self.meta["file_size"] > self.loader.config.memory_limit / 2:
-                self.is_chunked = True
-                self.reader = None
+            if "required" in source_config.keys() and not source_config["required"] and (
+                source_config["file"] is None or source_config["file"]==""
+                ):
+                self.skip = True
+            else:
+                self.loader.error_handler.assert_key_type_is(self.meta, "file", str)
+                try:
+                    self.meta["file_size"] = os.path.getsize(self.file)
+                except FileNotFoundError:
+                    self.loader.error_handler.throw("Source file {0} not found".format(self.file))
+                self.size = self.meta["file_size"]
+                if self.meta["file_size"] > self.loader.config.memory_limit / 2:
+                    self.is_chunked = True
+                    self.reader = None
 
         else: self.loader.error_handler.throw("sources must specify either a `file` or a `connection` string and `query`")
 

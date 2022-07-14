@@ -7,6 +7,7 @@ class Node:
         self.type = ""
         self.name = name
         self.loader = loader
+        self.logger = loader.logger
         self.memory_usage = 0
         self.age = 0
         self.is_chunked = False
