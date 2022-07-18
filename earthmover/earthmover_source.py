@@ -13,7 +13,7 @@ class Source(Node):
         self.config = self.loader.to_dotdict(source_config)
         self.type = "source"
         self.skip = False
-        self.loader.error_handler.ctx.update(file=self.loader.config_file, line=self.meta.__line__, node=self, operation=None)
+        self.error_handler.ctx.update(file=self.loader.config_file, line=self.meta.__line__, node=self, operation=None)
         
         if "expect" in self.meta.keys() and isinstance(self.config.expect, list):
             self.expectations = self.config.expect
@@ -34,7 +34,7 @@ class Source(Node):
                     else: ftp.login()
                     self.meta.file_size = ftp.size(path)
                 except Exception as e:
-                    self.loader.error_handler.throw("Source file {0} could not be accessed".format(self.file))
+                    self.error_handler.throw("source file {0} could not be accessed".format(self.file))
                 if self.meta.file_size > self.loader.config.memory_limit / 2:
                     self.is_chunked = True
                     self.reader = None
@@ -43,8 +43,8 @@ class Source(Node):
 
         # database connection:
         elif "connection" in source_config.keys() and "query" in source_config.keys():
-            self.loader.error_handler.assert_key_exists(self.meta, "connection")
-            self.loader.error_handler.assert_key_exists(self.meta, "query")
+            self.error_handler.assert_key_exists(self.meta, "connection")
+            self.error_handler.assert_key_exists(self.meta, "query")
             self.mode = "sql"
             self.is_loaded = False
             if "required" in source_config.keys() and not source_config["required"] and (
@@ -52,8 +52,8 @@ class Source(Node):
                 ):
                 self.skip = True
             else:
-                self.loader.error_handler.assert_key_type_is(self.meta, "connection", str)
-                self.loader.error_handler.assert_key_type_is(self.meta, "query", str)
+                self.error_handler.assert_key_type_is(self.meta, "connection", str)
+                self.error_handler.assert_key_type_is(self.meta, "query", str)
                 # replace columns from outer query with count(*), to measure the size of the datasource (and determine is_chunked):
                 query = re.sub(r'(^select\s+)(.*?)(\s+from.*$)', r'\1count(*)\3', self.meta.query, count=1, flags=re.M|re.I)
                 tmp = pd.read_sql(sql=query, con=self.meta.connection)
@@ -66,7 +66,7 @@ class Source(Node):
 
         # local file:
         elif "file" in source_config.keys():
-            self.loader.error_handler.assert_key_exists(self.meta, "file")
+            self.error_handler.assert_key_exists(self.meta, "file")
             self.file = source_config.file
             self.mode = "file"
             self.is_loaded = False
@@ -75,17 +75,17 @@ class Source(Node):
                 ):
                 self.skip = True
             else:
-                self.loader.error_handler.assert_key_type_is(self.meta, "file", str)
+                self.error_handler.assert_key_type_is(self.meta, "file", str)
                 try:
                     self.meta["file_size"] = os.path.getsize(self.file)
                 except FileNotFoundError:
-                    self.loader.error_handler.throw("Source file {0} not found".format(self.file))
+                    self.error_handler.throw("Source file {0} not found".format(self.file))
                 self.size = self.meta["file_size"]
                 if self.meta["file_size"] > self.loader.config.memory_limit / 2:
                     self.is_chunked = True
                     self.reader = None
 
-        else: self.loader.error_handler.throw("sources must specify either a `file` or a `connection` string and `query`")
+        else: self.error_handler.throw("sources must specify either a `file` or a `connection` string and `query`")
 
     def get_chunksize(self):
         mb = 1024 * 1024
@@ -109,7 +109,7 @@ class Source(Node):
 
     def do(self):
         if not self.is_loaded:
-            self.loader.error_handler.ctx.update(file=self.loader.config_file, line=self.meta["__line__"], node=self, operation=None)
+            self.error_handler.ctx.update(file=self.loader.config_file, line=self.meta["__line__"], node=self, operation=None)
             
             if self.mode=="file":
                 sep = self.loader.get_sep(self.file)
@@ -124,16 +124,16 @@ class Source(Node):
                     else:
                         self.data = pd.read_csv(self.file, sep=sep, dtype=str, encoding=encoding)
                         self.is_done = True
-                        self.loader.profile("   source `{0}` loaded ({1} bytes)".format(self.name, self.meta["file_size"]))
+                        self.logger.debug("source `{0}` loaded ({1} bytes, {2} rows)".format(self.name, self.meta["file_size"], len(self.data)))
                 # error handling:
                 except FileNotFoundError:
-                    self.loader.error_handler.throw("Source file {0} not found".format(self.file))
+                    self.error_handler.throw("source file {0} not found".format(self.file))
                 except pd.errors.EmptyDataError:
-                    self.loader.error_handler.throw("No data in source file {0}".format(self.file))
+                    self.error_handler.throw("no data in source file {0}".format(self.file))
                 except pd.errors.ParserError:
-                    self.loader.error_handler.throw("Error parsing source file {0}".format(self.file))
+                    self.error_handler.throw("error parsing source file {0}".format(self.file))
                 except Exception as e:
-                    self.loader.error_handler.throw("Error with source file {0} ({1})".format(self.file, e))
+                    self.error_handler.throw("error with source file {0} ({1})".format(self.file, e))
                 # detect categorical columns and convert their type to save memory:
             
             elif self.mode=="ftp":
@@ -148,9 +148,9 @@ class Source(Node):
                     flo.seek(0)
                     self.data = pd.read_csv(flo)
                 except Exception as e:
-                    self.loader.error_handler.throw("Error with source file {0} ({1})".format(self.file, e))
+                    self.error_handler.throw("error with source file {0} ({1})".format(self.file, e))
                 self.is_done = True
-                self.loader.profile("   source `{0}` loaded {1} rows (via FTP)".format(self.name, len(self.data)))
+                self.logger.debug("source `{0}` loaded {1} rows (via FTP)".format(self.name, len(self.data)))
             
             elif self.mode=="sql":
                 try:
@@ -161,9 +161,9 @@ class Source(Node):
                     else:
                         self.data = pd.read_sql(sql=self.meta["query"], con=self.meta["connection"])
                         self.is_done = True
-                        self.loader.profile("   source `{0}` loaded ({1} rows)".format(self.name, self.meta["num_rows"]))
+                        self.logger.debug("source `{0}` loaded ({1} rows)".format(self.name, self.meta["num_rows"]))
                 except Exception as e:
-                    self.loader.error_handler.throw("Source {0} error ({1}); check `connection` and `query`".format(self.file, e))
+                    self.error_handler.throw("source {0} error ({1}); check `connection` and `query`".format(self.file, e))
             
             self.data = self.loader.pack_dataframe(self.data)
             # check expectations

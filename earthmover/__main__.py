@@ -2,8 +2,28 @@ import os
 import sys
 import filecmp
 import argparse
+import logging
 import traceback
 from earthmover import Earthmover
+
+
+class ExitOnExceptionHandler(logging.StreamHandler):
+    def emit(self, record):
+        super().emit(record)
+        if record.levelno in (logging.ERROR, logging.CRITICAL):
+            raise SystemExit(-1)
+
+
+# Set up logging
+handler = ExitOnExceptionHandler()
+formatter = logging.Formatter("%(asctime)s.%(msecs)03d %(name)s %(levelname)s %(message)s",
+    "%Y-%m-%d %H:%M:%S"
+    )
+handler.setFormatter(formatter)
+logger = logging.getLogger("earthmover")
+logger.setLevel(logging.getLevelName('INFO'))
+logger.addHandler(handler)
+# logging.basicConfig(handlers=[ExitOnExceptionHandler()])
 
 
 def main(argv=None):
@@ -56,34 +76,46 @@ def main(argv=None):
     parser.set_defaults(**defaults)
     args, remaining_argv = parser.parse_known_args()
     
-    if args.version: exit("earthmover, version {0}".format(Earthmover.version))
+    if args.version:
+        logger.info("earthmover, version {0}".format(Earthmover.version))
+        exit(0)
     if args.test:
-        print("Running tests...")
         em = Earthmover(
             config_file="earthmover/tests/config.yaml",
+            logger=logger,
             params="",
             force=True,
             skip_hashing=True
             )
+        em.logger.info("running tests...")
         em.generate(selector='*')
         # compare tests/outputs/* against tests/expected/*
         for filename in os.listdir('earthmover/tests/expected/'):
             if not filecmp.cmp(os.path.join('earthmover', 'tests', 'expected', filename), os.path.join('earthmover', 'tests', 'outputs', filename)):
-                exit(f"FATAL: Test output {filename} does not match expected output.")
-        exit('Tests passed successfully.')
-    if not args.config_file: exit("FATAL: Please pass a config YAML file as a command line argument. (Try the -h flag for help.)")
+                file = os.path.join('earthmover', 'tests', 'outputs', filename)
+                em.logger.critical(f"Test output `{file}` does not match expected output.")
+                exit(1)
+        em.logger.info('tests passed successfully.')
+        exit(0)
+    if not args.config_file:
+        logger.exception("please pass a config YAML file as a command line argument (try the -h flag for help)")
+        # exit(1)
     try:
         em = Earthmover(
             config_file=args.config_file,
+            logger=logger,
             params=args.params,
             force=args.force,
             skip_hashing=args.skip_hashing
             )
-        em.generate(selector=args.selector)
     except Exception as e:
-        print('FATAL: ' + str(e))
-        if(em.config.show_stacktrace): traceback.print_exc()
-        exit
+        logger.exception(e, exc_info=False)
+    try:
+        em.logger.info("starting...")
+        em.generate(selector=args.selector)
+        em.logger.info("done")
+    except Exception as e:
+        logger.exception(e, exc_info=em.config.show_stacktrace)
 
 if __name__ == "__main__":
     sys.exit(main())

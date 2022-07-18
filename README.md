@@ -82,7 +82,7 @@ config:
   output_dir: ./
   state_file: ~/.earthmover.csv
   memory_limit: 500MB
-  verbose: True
+  log_level: INFO
   show_stacktrace: True
   show_graph: True
   macros: >
@@ -93,7 +93,11 @@ config:
 * (optional) `output_dir` determines where generated JSONL is stored. The default is `./`.
 * (optional) `state_file` determines the file which maintains [tool state](#state). The default is `~/.earthmover.csv` on *nix systems, `C:/Users/USER/.earthmover.csv` on Windows systems.
 * (optional) Specify a `memory_limit` for the tool. The default is `1GB`.
-* (optional) Turn on `verbose` output. The default is `False`.
+* (optional) Specify a `log_level` for output. Possible values are
+  - `ERROR`: only output errors like missing required sources, invalid references, invalid [YAML configuration](#yaml-configuration), etc.
+  - `WARNING`: output errors and warnings like when the run log is getting long
+  - `INFO`: all errors and warnings plus basic information about what `earthmover` is doing: start and stop, how many rows were removed by a `distinct_rows` or `filter_rows` operation, etc. (This is the default `log_level`.)
+  - `DEBUG`: all output above, plus verbose details about each transformation step, timing, memory usage, and more. (This `log_level` is recommended for [debugging](#debugging-practices) transformations.)
 * (optional) Specify whether to show a stacktrace for runtime errors. The default is `False`.
 * (optional) Specify whether or not `show_graph` (default is `False`), which requires [PyGraphViz](https://pygraphviz.github.io/) to be installed and creates `graph.png` and `graph.svg` which are visual depictions of the dependency graph.
 * (optional) Specify Jinja `macros` which will be available within any Jinja template content throughout the project. (This can slow performance.)
@@ -753,7 +757,7 @@ Remember that [code is poetry](https://medium.com/@launchyard/code-is-poetry-3d1
 
 ## Debugging practices
 When developing your transformations, it can be helpful to
-* specify `config` &raquo; `verbose: True` and `transformation` &raquo; `operation` &raquo; `debug: True` to verify the columns and shape of your data after each `operation`
+* specify `config` &raquo; `log_level: DEBUG` and `transformation` &raquo; `operation` &raquo; `debug: True` to verify the columns and shape of your data after each `operation`
 * turn on `config` &raquo; `show_stacktrace: True` to get more detailed and helpful error messages
 * avoid name-sharing for a `source`, a `transformation`, and/or a `destination` - this is allowed but can make debugging confusing
 * [install pygraphviz](https://pygraphviz.github.io/documentation/stable/install.html) and turn on `config` &raquo; `show_graph: True`, then visually inspect your transformations in `graph.png` for structural errors

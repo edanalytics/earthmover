@@ -74,10 +74,10 @@ class Earthmover:
         "show_stacktrace": False
     }
     
-    def __init__(self, config_file, params="", force=False, skip_hashing=False):
+    def __init__(self, config_file, logger=None, params="", force=False, skip_hashing=False):
         self.config_file = config_file
         self.error_handler = ErrorHandler(file=config_file)
-        self.logger = logging.getLogger('earthmover')
+        self.logger = logger
         self.graph = nx.DiGraph() # dependency graph
         self.t0 = time.time()
         self.memory_usage = 0
@@ -123,20 +123,13 @@ class Earthmover:
         self.config.memory_limit = self.string_to_bytes(self.config.memory_limit)
         self.config.macros = self.config.macros.strip()
 
-        # Set up logging
-        handler = logging.StreamHandler()
-        handler.setLevel(logging.getLevelName(self.config.log_level))
-        formatter = logging.Formatter("%(asctime)s.%(msecs)03d %(name)s %(levelname)s %(message)s",
-            "%Y-%m-%d %H:%M:%S"
-            )
-        handler.setFormatter(formatter)
+        # Configure log level
         self.logger.setLevel(logging.getLevelName(self.config.log_level))
-        self.logger.addHandler(handler)
         
         # Check if output_dir exists, if not, create it:
         self.config.output_dir = os.path.expanduser(self.config.output_dir)
         if not os.path.isdir(self.config.output_dir):
-            self.logger.info(f'Creating output directory {self.config.output_dir}')
+            self.logger.info(f'creating output directory {self.config.output_dir}')
             Path(self.config.output_dir).mkdir(parents=True, exist_ok=True)
 
         # Expand state_file if necessary:
@@ -153,6 +146,7 @@ class Earthmover:
 
     # Compute the hash of a (potentially large) file by streaming it in from disk
     def get_file_hash(self, file, hash_algorithm):
+        self.logger.debug(f'hashing file `{file}`...')
         BUF_SIZE = 65536  # 64kb chunks
         if hash_algorithm=="md5": hashed = hashlib.md5()
         elif hash_algorithm=="sha1": hashed = hashlib.sha1()
@@ -205,7 +199,7 @@ class Earthmover:
     def get_sep(self, file_name):
         if ".csv" in file_name: return ","
         elif ".tsv" in file_name: return "\t"
-        else: raise Exception("file format of {0} not recognized, must be .tsv or .csv".format(file_name))
+        else: raise Exception(f"file format of {file_name} not recognized, must be .tsv or .csv")
 
     # Turns a raw duration (seconds) integer into a human-readable approximation like "42 minutes"
     def human_time(self, seconds):
@@ -221,14 +215,13 @@ class Earthmover:
         return str(round(seconds/86400))+" days"
 
     def profile(self, msg, force=False):
-        t = time.time()
-        if self.config.verbose or force: print(str(t-self.t0) + "\t" + msg)
+        self.logger.info(msg)
 
     def profile_memory(self):
         self.update_memory_usage()
         usage = self.memory_usage
         limit = self.config.memory_limit
-        self.profile("   [using {0}/{1} ({2}) memory bytes]".format(self.human_size(usage), self.human_size(limit), "{:.2%}".format(usage/limit)))
+        self.logger.debug("[using {0}/{1} ({2}) memory bytes]".format(self.human_size(usage), self.human_size(limit), "{:.2%}".format(usage/limit)))
 
     def update_memory_usage(self):
         self.memory_usage = 0
@@ -443,7 +436,7 @@ class Earthmover:
         if not nx.is_directed_acyclic_graph(self.graph):
             self.error_handler.throw("the graph is not a DAG! it has the cycle {0}".format(nx.find_cycle(self.graph)))
 
-        # Delete any components that have a blank source
+        # Delete all trees emanating from a missing/blank source
         node_data = { node[0]: node[1]["data"] for node in self.graph.nodes(data=True) }
         nodes_to_remove = []
         for component in nx.weakly_connected_components(self.graph):
@@ -454,11 +447,13 @@ class Earthmover:
                     skip_nodes.append(node.replace("$sources.", ""))
             if len(skip_nodes)>0:
                 missing_sources = ", ".join(skip_nodes)
-                for node in component:
-                    if node_data[node].type=="destination":
-                        dest_node = node.replace("$destinations.","")
-                        self.logger.warn(f"destination {dest_node} will not be generated because it depends on missing source(s) [{missing_sources}]")
-                    nodes_to_remove.append(node)
+                for skip_node in skip_nodes:
+                    missing_source_tree = nx.dfs_tree(self.graph, "$sources."+skip_node)
+                    for node in missing_source_tree:
+                        if node_data[node].type=="destination":
+                            dest_node = node.replace("$destinations.","")
+                            self.logger.info(f"destination {dest_node} will not be generated because it depends on missing source(s) [{missing_sources}]")
+                        nodes_to_remove.append(node)
         for node in nodes_to_remove:
             self.graph.remove_node(node)
 
@@ -473,9 +468,16 @@ class Earthmover:
         # only parts/paths of the graph. Selectors may select just one node ("node_1") or several
         # ("node_1,node_2,node_3"). Selectors may also contain wildcards ("node_*"), and these operations may
         # be composed ("node_*_cheeses,node_*_fruits").
+        if selector!="*": self.logger.info(f"filtering dataflow graph using selector `{selector}`")
         graph = self.select_subgraph(selector)
         active_destinations = [node[0] for node in graph.nodes(data=True)]
-            
+        
+        has_remote_sources = False
+        for name, source in self.sources.items():
+            if name=="__line__": continue
+            if "connection" in source.keys():
+                has_remote_sources = True
+        
         if not self.skip_hashing:
             node_data = { node[0]: node[1]["data"] for node in self.graph.nodes(data=True) }
             # This tool maintains state about prior runs. If no inputs have changed, there's no need to re-run,
@@ -486,17 +488,9 @@ class Earthmover:
             # - any CSV/TSV files from map_values transformation operations
             # - any parameters passed via CLI
             # Only if any of these have changed since the last run do we actually re-process the DAG.
-            # 
             # We also need to make sure to handle the selector...  data since a prior run may not have changed,
             # but the selector may be "wider" this time, necessitating a (re)run.
-            has_remote_sources = False
-            for name, source in self.sources.items():
-                if name=="__line__": continue
-                if "connection" in source.keys():
-                    has_remote_sources = True
-            
             runs_file = self.config.state_file
-            self.profile("INFO: computing input hashes for run log at {0}".format(runs_file))
             self.logger.info("computing input hashes for run log at {0}".format(runs_file))
             hash_algorithm = "md5" # or "sha1"
             
@@ -536,10 +530,10 @@ class Earthmover:
                 f = open(runs_file, "x")
                 f.write("run_timestamp,config_hash,sources_hash,templates_hash,mappings_hash,params_hash,selector")
                 f.close()
-        else: self.profile("INFO: skipping hashing and run logging")
+        else: self.logger.info("skipping hashing and run logging")
         
-        if not self.force and not has_remote_sources:
-            self.profile("INFO: checking for changes since last run")
+        if not self.force and not self.skip_hashing and not has_remote_sources:
+            self.logger.info("checking for prior runs...")
             # Find the latest run that matched our selector(s)...
             with open(runs_file) as runs_handle:
                 runs_reader = csv.reader(runs_handle, delimiter=',')
@@ -566,21 +560,21 @@ class Earthmover:
                     if most_recent_run[4]!=mappings_hash: differences.append("one or more map_values transformations' map_file")
                     if most_recent_run[5]!=params_hash: differences.append("CLI parameter(s)")
                     if len(differences)==0:
-                        self.profile("INFO: skipping (no changes since the last run {0} ago)".format(self.human_time(time.time() - float(most_recent_run[0]))))
+                        self.logger.info("skipping (no changes since the last run {0} ago)".format(self.human_time(time.time() - float(most_recent_run[0]))))
                         self.do_generate = False
                     else:
-                        self.profile("INFO: regenerating (changes since last run: ")
-                        self.profile("      [{0}]".format(", ".join(differences)))
-                else: self.profile("INFO: regenerating (no prior runs found, or config.yaml has changed since last run")
+                        self.logger.info("regenerating (changes since last run: ")
+                        self.logger.info("   [{0}])".format(", ".join(differences)))
+                else: self.logger.info("regenerating (no prior runs found, or config.yaml has changed since last run")
                 
                 if num_lines>10000:
-                    self.profile(f"WARN: run log file {runs_file} is getting long, consider truncating it for better performance.", True)
+                    self.logger.warn(f"run log file {runs_file} is getting long, consider truncating it for better performance.", True)
 
         elif self.force:
-            self.profile("INFO: forcing regenerate")
+            self.logger.info("forcing regenerate")
         
         elif has_remote_sources:
-            self.profile("INFO: forcing regenerate, since some sources are remote (FTP/database)")
+            self.logger.info("forcing regenerate, since some sources are remote (FTP/database)")
         
         # (Draw the graph)
         if self.config.show_graph: self.draw_graph(graph)
@@ -588,7 +582,10 @@ class Earthmover:
         if not self.do_generate: return
 
         # Process the graph
+        counter = 0
         for component in nx.weakly_connected_components(graph):
+            counter += 1
+            self.logger.debug(f"processing component {counter}")
             subgraph = graph.subgraph(component)
 
             # Validate chunked sources
@@ -601,6 +598,7 @@ class Earthmover:
                 start_node_names = [node[0] for node in start_nodes]
                 self.process(subgraph, start_nodes=start_node_names, exclude_nodes=[])
             else: # exactly 1 chunked source
+                self.logger.debug("(component contains a chunked source)")
                 # load all but chunked source, stream chunked data down through tree emanating from it
                 chunked_source = [node[0] for node in subgraph.nodes(data=True) if node[1]["data"].is_chunked and node[1]["data"].type=="source"]
                 chunked_source_name = chunked_source[0]
@@ -625,7 +623,7 @@ class Earthmover:
                 chunked_source_node = subgraph.nodes[chunked_source[0]]["data"]
                 next_chunk = False
                 while not chunked_source_node.is_done:
-                    self.profile("   source {0} chunk loaded ({1} rows)".format(chunked_source_node.file, len(chunked_source_node.data)))
+                    self.logger.debug("source {0} chunk loaded ({1} rows)".format(chunked_source_node.file, len(chunked_source_node.data)))
                     self.profile_memory()
                     try:
                         next_chunk = chunked_source_node.reader.get_chunk()
@@ -645,6 +643,7 @@ class Earthmover:
 
         # Save run log only after a successful run! (in case of errors)
         if not self.skip_hashing:
+            self.logger.debug("saving details to run log")
             # save to run details to run log (which now certainly exists):
             f = open(runs_file, "a") # <-- append!
             if selector=="*": destinations = "*"
@@ -654,4 +653,6 @@ class Earthmover:
 
 
         # (Draw the graph again, this time we can add metadata about rows/cols/size at each node)
-        if self.config.show_graph: self.draw_graph(graph)
+        if self.config.show_graph: 
+            self.logger.info("saving dataflow graph image to `graph.png` and `graph.svg`")
+            self.draw_graph(graph)

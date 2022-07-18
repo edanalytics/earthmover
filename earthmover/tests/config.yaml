@@ -1,6 +1,7 @@
 config:
   # verbose: True
   output_dir: earthmover/tests/outputs/
+  log_level: INFO
   # show_graph: True
 
 
@@ -46,6 +47,7 @@ transformations:
   fish_species:
     - operation: distinct_rows
       source: $sources.fish_species
+      columns: [ id, name, genus, species ]
     - operation: add_columns
       source: $transformations.fish_species
       columns:

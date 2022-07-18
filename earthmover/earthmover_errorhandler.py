@@ -40,20 +40,16 @@ class ErrorContext:
 
 class ErrorHandler:
     def __init__(self, file=None, line=None, node=None, operation=None):
-        self.ctx = ErrorContext(file=None, line=None, node=None, operation=None)
+        self.ctx = ErrorContext(file=file, line=None, node=None, operation=None)
     
-    NOT_DEFINED = "must define `{0}`"
-    WRONG_TYPE = "`{0}` is defined, but wrong type (should be {1}, is {2})"
-    MISSING_SOURCE = "Invalid source {0}"
-
     def assert_key_exists(self, object, key):
         if key not in object.keys():
-            raise Exception(self.ctx + ErrorHandler.NOT_DEFINED.format(key))
+            raise Exception(self.ctx + "must define `{0}`".format(key))
     
     def assert_key_type_is(self, object, key, desired_type):
         if type(object[key])!=desired_type:
             if not (desired_type==dict and str(type(object[key]))=="<class 'earthmover.earthmover.dotdict'>"):
-                raise Exception(self.ctx + ErrorHandler.WRONG_TYPE.format(key, desired_type, type(object[key])))
+                raise Exception(self.ctx + "`{0}` is defined, but wrong type (should be {1}, is {2})".format(key, desired_type, type(object[key])))
     
     def assert_key_exists_and_type_is(self, object, key, desired_type):
         self.assert_key_exists(object, key)

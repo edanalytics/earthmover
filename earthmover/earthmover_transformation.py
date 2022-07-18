@@ -23,7 +23,6 @@ class Transformation(Node):
         self.type = "transformation"
         self.operations = ops
         self.meta = self.loader.to_dotdict({})
-        self.error_handler = self.loader.error_handler
 
     def do(self):
         if not self.is_done:
@@ -50,16 +49,15 @@ class Transformation(Node):
                 elif op.operation=="group_by":            transformed = self.do_group_by(op)
                 else:
                     self.error_handler.throw("invalid transformation operation `{0}`".format(op.operation))
-                self.loader.profile("   transformation {0} {1} processed".format(self.name, op.operation))
+                self.logger.debug("transformation {0} {1} processed".format(self.name, op.operation))
                 #self.is_done = True
                 self.data = transformed.copy()
                 if "debug" in op.keys() and op.debug:
-                    print("DEBUG: `{0}` transformation on ${1}s.{2} completed".format(op.operation, self.type, self.name))
-                    print(f"       transformed shape: {transformed.shape[0]} rows, {transformed.shape[1]} cols")
-                    print("       transformed columns: ", transformed.columns.values)
+                    self.logger.debug("`{0}` transformation on ${1}s.{2} completed".format(op.operation, self.type, self.name))
+                    self.logger.debug(f"... transformed shape: {transformed.shape[0]} rows, {transformed.shape[1]} cols")
+                    self.logger.debug("... transformed columns: ", transformed.columns.values)
                     # print("       RANDOMLY-SHUFFLED PREVIEW:")
                     # print(shuffle_df(transformed).head(5))
-                    print(transformed)
             self.rows += transformed.shape[0]
             self.cols = transformed.shape[1]
             self.meta.header_row = self.data.columns.values.tolist()
@@ -76,7 +74,7 @@ class Transformation(Node):
             try:
                 source = self.loader.ref(op.sources[index])
             except IndexError:
-                self.error_handler.throw("Too few sources defined")
+                self.error_handler.throw("too few sources defined")
         return source.data
     
     def has_chunked_ancestor(self, node_name):
@@ -157,7 +155,7 @@ class Transformation(Node):
         try:
             transformed = pd.merge(source1_df, source2_df, how=join_type, left_on=left_on, right_on=right_on)
         except Exception as e:
-            self.error_handler.throw("Error during `join` operation. Check your join keys?")
+            self.error_handler.throw("error during `join` operation. Check your join keys?")
         return transformed
 
     def do_union(self, op):
@@ -186,7 +184,7 @@ class Transformation(Node):
                 try:
                     transformed = pd.concat([transformed, source_df], ignore_index=True)
                 except Exception as e:
-                    self.error_handler.throw("Error during `union` operation. Are sources same shape?")
+                    self.error_handler.throw("error during `union` operation... are sources same shape?")
         else: # no chunked sources!
             transformed = self.load_op_source_data(op, 0)
             for i in range(1, len(op.sources)):
@@ -194,7 +192,7 @@ class Transformation(Node):
                 try:
                     transformed = pd.concat([transformed, source_df], ignore_index=True)
                 except Exception as e:
-                    self.error_handler.throw("Error during `union` operation. Are sources same shape?")
+                    self.error_handler.throw("error during `union` operation... are sources same shape?")
         return transformed
 
     def do_rename_columns(self, op):
@@ -214,7 +212,7 @@ class Transformation(Node):
                                 loader=FileSystemLoader(os.path.dirname('./'))
                                 ).from_string(self.loader.config.macros + val)
                 except Exception as e:
-                    self.error_handler.throw("Syntax error in Jinja template for column `{0}` of `add_columns` operation ({1})".format(col, e))
+                    self.error_handler.throw("syntax error in Jinja template for column `{0}` of `add_columns` operation ({1})".format(col, e))
                 if len(source_df)==0: source_df[col] = None
                 else: source_df = source_df.apply(self.apply_jinja, axis=1, args=(template, col, 'add'))
             else:
@@ -233,7 +231,7 @@ class Transformation(Node):
                                 loader=FileSystemLoader(os.path.dirname('./'))
                                 ).from_string(self.loader.config.macros + val)
                 except Exception as e:
-                    self.error_handler.throw("Syntax error in Jinja template for column `{0}` of `modify_columns` operation ({1})".format(col, e))
+                    self.error_handler.throw("syntax error in Jinja template for column `{0}` of `modify_columns` operation ({1})".format(col, e))
                 source_df = source_df.apply(self.apply_jinja, axis=1, args=(template, col, 'modify'))
             else:
                 source_df[col] = val
@@ -269,18 +267,18 @@ class Transformation(Node):
 
     def do_distinct_rows(self, op):
         if self.has_chunked_ancestor(op["source"]):
-            self.error_handler.throw("A `distinct_rows` operation cannot run on a chunked (large) source.")
+            self.error_handler.throw("a `distinct_rows` operation cannot run on a chunked (large) source.")
         source_df = self.load_op_source_data(op)
         old_len = len(source_df)
         if "columns" in op.keys():
             dup_cols = op.columns
             transformed = source_df.drop_duplicates(subset=dup_cols)
         else:
-            self.loader.profile(" (`distinct_rows` operation using all columns for distinctness, since no `columns` were specified)")
+            self.logger.info("`distinct_rows` operation using all columns for distinctness, since no `columns` were specified")
             transformed = source_df.drop_duplicates()
         new_len = len(transformed)
         if old_len!=new_len and self.loader.config.verbose:
-            self.loader.profile(" (`distinct_rows` operation removed {0} duplicate rows)".format(old_len-new_len))
+            self.logger.info("`distinct_rows` operation removed {0} duplicate rows".format(old_len-new_len))
         return transformed
 
     def do_filter_rows(self, op):
@@ -295,10 +293,10 @@ class Transformation(Node):
         try:
             transformed = source_df.query(query)
         except Exception as e:
-            self.error_handler.throw("Error during `filter_rows` operation. Check query format?")
+            self.error_handler.throw("error during `filter_rows` operation... check query format?")
         new_len = len(transformed)
         if old_len!=new_len and self.loader.config.verbose:
-            self.loader.profile(" (`filter_rows` operation removed {0} rows)".format(old_len-new_len))
+            self.logger.info("`filter_rows` operation removed {0} rows".format(old_len-new_len))
         return transformed
 
     def do_map_values(self, op):
@@ -309,7 +307,7 @@ class Transformation(Node):
         elif  "columns" and isinstance(op.columns, list):
             columns = op.columns
         else:
-            self.error_handler.throw("a `date_format` operation must specify either one `column` or several `columns` to convert")
+            self.error_handler.throw("a `map_values` operation must specify either one `column` or several `columns` to convert")
         if "mapping" in op.keys():
             self.error_handler.assert_key_type_is(op, "mapping", dict)
             mapping = op.mapping
@@ -331,7 +329,7 @@ class Transformation(Node):
             for column_name in columns:
                 source_df[column_name] = source_df[column_name].replace(mapping)
         except Exception as e:
-            self.error_handler.throw("Error during `map_values` operation. Check mapping shape and `column(s)`?")
+            self.error_handler.throw("error during `map_values` operation... check mapping shape and `column(s)`?")
         return source_df
 
     def do_date_format(self, op):
@@ -348,12 +346,12 @@ class Transformation(Node):
             try:
                 source_df[column] = [ datetime.strptime(value, op.from_format).strftime(op.to_format) for value in source_df[column] ]
             except Exception as e:
-                self.error_handler.throw("Error during `date_format` operation, `{0}` column. Check format strings? ({1})".format(column, e))
+                self.error_handler.throw("error during `date_format` operation, `{0}` column... check format strings? ({1})".format(column, e))
         return source_df
     
     def do_group_by_with_count(self, op):
         if self.has_chunked_ancestor(op["source"]):
-            self.error_handler.throw("A `group_by_with_count` operation cannot run on a chunked (large) source.")
+            self.error_handler.throw("a `group_by_with_count` operation cannot run on a chunked (large) source.")
         source_df = self.load_op_source_data(op)
         self.error_handler.assert_key_exists_and_type_is(op, "group_by_columns", list)
         self.error_handler.assert_key_exists_and_type_is(op, "count_column", str)
@@ -368,7 +366,7 @@ class Transformation(Node):
 
     def do_group_by_with_agg(self, op):
         if self.has_chunked_ancestor(op["source"]):
-            self.error_handler.throw("A `group_by_with_agg` operation cannot run on a chunked (large) source.")
+            self.error_handler.throw("a `group_by_with_agg` operation cannot run on a chunked (large) source.")
         source_df = self.load_op_source_data(op)
         self.error_handler.assert_key_exists_and_type_is(op, "group_by_columns", list)
         self.error_handler.assert_key_exists_and_type_is(op, "agg_column", str)
@@ -386,7 +384,7 @@ class Transformation(Node):
     
     def do_group_by(self, op):
         if self.has_chunked_ancestor(op["source"]):
-            self.error_handler.throw("A `group_by` operation cannot run on a chunked (large) source.")
+            self.error_handler.throw("a `group_by` operation cannot run on a chunked (large) source.")
         source_df = self.load_op_source_data(op)
         self.error_handler.assert_key_exists_and_type_is(op, "group_by_columns", list)
         self.error_handler.assert_key_exists_and_type_is(op, "create_columns", dict)
@@ -409,9 +407,9 @@ class Transformation(Node):
             # check for errors:
             if function in ["agg", "aggregate", "max", "maximum", "min", "minimum", "sum", "mean", "avg", "std", "stdev", "stddev", "var", "variance"]:
                 if column=="":
-                    self.error_handler.throw("Aggregation function `{0}`(column) missing required column".format(function))
+                    self.error_handler.throw("aggregation function `{0}`(column) missing required column".format(function))
                 if column not in source_df.columns.values:
-                    self.error_handler.throw("Aggregation function `{0}`({1}) refers to a column {2} which does not exist".format(function, column, column))
+                    self.error_handler.throw("aggregation function `{0}`({1}) refers to a column {2} which does not exist".format(function, column, column))
 
             if function=='count' or function=='size':
                 new_series = grouped_df.apply(lambda x: len(x))
@@ -430,7 +428,7 @@ class Transformation(Node):
             elif function=="var"or function=="variance":
                 new_series = grouped_df.apply(lambda x: pd.to_numeric(x[column]).var())
             else:
-                self.error_handler.throw("Invalid aggregation function `{0}` in `group_by` operation".format(function))
+                self.error_handler.throw("invalid aggregation function `{0}` in `group_by` operation".format(function))
 
             computed = new_series.to_frame(new_col_name).reset_index()
             new_df = new_df.merge(computed, how="left", on=op.group_by_columns)

@@ -10,21 +10,21 @@ class Destination(Node):
         self.type = "destination"
         self.meta = self.loader.to_dotdict(config)
         self.config = self.loader.to_dotdict(config)
-        self.loader.error_handler.ctx.update(file=self.loader.config_file, line=self.meta.__line__, node=self, operation=None)
-        self.loader.error_handler.assert_key_exists_and_type_is(self.meta, "source", str)
+        self.error_handler.ctx.update(file=self.loader.config_file, line=self.meta.__line__, node=self, operation=None)
+        self.error_handler.assert_key_exists_and_type_is(self.meta, "source", str)
         self.source = self.meta.source
-        self.loader.error_handler.assert_key_exists_and_type_is(self.meta, "template", str)
+        self.error_handler.assert_key_exists_and_type_is(self.meta, "template", str)
         self.template = self.meta.template
         self.mode = "w" # by default, (over)write files... but if source is chunked, need to append instead
 
     def do(self):
-        self.loader.error_handler.ctx.update(file=self.loader.config_file, line=self.config.__line__, node=self, operation=None)
+        self.error_handler.ctx.update(file=self.loader.config_file, line=self.config.__line__, node=self, operation=None)
         # load template
         exp = re.compile(r"\s+")
         try:
             file = open(self.template, 'r')
         except Exception as e:
-            self.loader.error_handler.throw("`template` file {0} cannot be opened ({1})".format(self.template, e))
+            self.error_handler.throw("`template` file {0} cannot be opened ({1})".format(self.template, e))
         with file:
             template_string = file.read()
             # Allow people to create pretty templates (with spacing line breaks, etc.) but "linearize" them
@@ -41,7 +41,7 @@ class Destination(Node):
                                 loader=FileSystemLoader(os.path.dirname('./'))
                                 ).from_string(self.loader.config.macros + template_string)
             except Exception as e:
-                self.loader.error_handler.throw("Syntax error in Jinja template in `template` file {0} ({1})".format(self.template, e))
+                self.loader.error_handler.throw("syntax error in Jinja template in `template` file {0} ({1})".format(self.template, e))
         # write output!
         target = self.loader.ref(self.source)
         self.rows += target.data.shape[0]
@@ -58,19 +58,19 @@ class Destination(Node):
                 try:
                     json_string = template.render(row_data)
                 except Exception as e:
-                    self.loader.error_handler.throw("Error rendering Jinja template in `template` file {0} ({1})".format(self.template, e))
+                    self.error_handler.throw("error rendering Jinja template in `template` file {0} ({1})".format(self.template, e))
                 file.write(json_string + "\n")
         self.size = os.path.getsize(file_name)
         self.is_done = True
-        self.loader.profile(f"   output {file_name} written")
+        self.logger.debug(f"output `{file_name}` written")
         self.loader.profile_memory()
     
     def wipe(self):
         try:
             file_name = os.path.join(self.loader.config.output_dir, f'{self.name}.{self.meta.extension}')
         except Exception as e:
-            self.loader.error_handler.ctx.update(file=self.loader.config_file, line=self.config.__line__, node=self, operation=None)
-            self.loader.error_handler.throw("Error opening file {0} ({1})".format(file, e))
+            self.error_handler.ctx.update(file=self.loader.config_file, line=self.config.__line__, node=self, operation=None)
+            self.error_handler.throw("error opening file {0} ({1})".format(file, e))
         with open(file_name, 'w') as file:
             file.write("")
     
