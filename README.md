@@ -30,7 +30,7 @@ Guides and Resources -->
 
 # Installation
 ```
-pip install earthmover
+pip install git+https://github.com/edanalytics/earthmover.git#egg=earthmover
 ```
 
 
