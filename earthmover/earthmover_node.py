@@ -34,7 +34,6 @@ class Node:
 
     def apply_jinja(self, row, template, col, func):
         row["___row_id___"] = row.name
-        print(row.name)
         if func=="modify": row["value"] = row[col]
         try:
             value = template.render(row)
