@@ -768,7 +768,7 @@ You can remove these settings once your `earthmover` project is ready for operat
 ## Operationalization practices
 Typically `earthmover` is used when the same (or simlar) data transformations must be done repeatedly. (A one-time data transformation task can probably be done more easily with [SQLite](https://www.sqlite.org/index.html) or a similar tool.) When deploying/operationalizing `earthmover`, whether with a simple scheduler like [cron](https://en.wikipedia.org/wiki/Cron) or an orchestration tool like [Airflow](https://airflow.apache.org/) or [Dagster](https://dagster.io/), consider
 * specifying conditions you `expect` your [sources](#sources) to meet, so `earthmover` will fail on source data errors
-* specifying `config` &raquo; `verbose: True` and monitoring logs for phrases like
+* specifying `config` &raquo; `log_level: INFO` and monitoring logs for phrases like
   > `distinct_rows` operation removed NN duplicate rows
 
   > `filter_rows` operation removed NN rows
@@ -794,19 +794,7 @@ See [License](LICENSE).
 # Bundles
 Bundles are pre-built data mappings for converting various data formats to Ed-Fi format using this tool. They consist of a folder with CSV seed data, JSON template files, and a `config.yaml` with sources, transformations, and destinations.
 
-We currently have the following bundles available:
+Here we maintain a list of bundles for various domain-specific uses:
+* Bundles for transforming [assessment data from various vendors to the Ed-Fi data standard](https://github.com/edanalytics/earthmover_edfi_bundles)
 
-Source System and version | Ed-Fi API version | Author | Last Updated | Link
----|---|---|---|---
-NWEA MAP v1 | Ed-Fi API v3.2 | [@tomreitz](https://github.com/tomreitz) | May 2022 | [Link](https://github.com/edanalytics/dsst_edfi_import_tool/tree/main/bundles/NWEA-MAP-v1__EDFI-2.5)
-NWEA MAP v2 | Ed-Fi API v3.2 | [@tomreitz](https://github.com/tomreitz) | May 2022 | [Link](https://github.com/edanalytics/dsst_edfi_import_tool/tree/main/bundles/NWEA-MAP-v2__EDFI-2.5)
-
-
-## Bundle Maker
-We also provide a python script for converting Ed-Fi data import tool mappings to bundles for this tool. Given a `mapping.json` file from Ed-Fi DIT, from within the `bundles/` directory, you can run
-```bash
-python3 bundle-maker.py NewBundleName path/to/mapping.json
-```
-This will create a folder `bundles/NewBundleName/` with data and configuration derived from `mapping.json`. **Note** that if the Ed-Fi DIT mapping also requires data pre-processing done by PowerShell scripts, you must manually re-create those transformations in the `transformations:` section of the generated `config.yaml` file -- this cannot be done automatically.
-
-If you develop a bundle for a particular SIS or other education data system, please consider contributing it to the community by publishing it online and emailing the link to treitz@edanalytics.org to get it listed above.
+If you develop bundles, please consider contributing them to the community by publishing them online and emailing the link to treitz@edanalytics.org to get them listed above.

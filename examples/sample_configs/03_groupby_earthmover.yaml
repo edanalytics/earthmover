@@ -1,5 +1,5 @@
 config:
-  verbose: True
+  # log_level: DEBUG
   output_dir: examples/sample_output/
   # show_graph: True
   # show_stacktrace: True

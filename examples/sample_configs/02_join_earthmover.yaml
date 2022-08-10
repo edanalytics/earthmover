@@ -1,7 +1,7 @@
 config:
   output_dir: examples/sample_output/
   memory_limit: 4GB
-  # verbose: True
+  # log_level: DEBUG
   # show_stacktrace: True
   # show_graph: True
 

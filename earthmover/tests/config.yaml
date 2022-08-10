@@ -1,5 +1,4 @@
 config:
-  # verbose: True
   output_dir: earthmover/tests/outputs/
   log_level: INFO
   # show_graph: True
