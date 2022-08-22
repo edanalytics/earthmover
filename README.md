@@ -295,6 +295,7 @@ Adds columns with specified values.
         - new_column_3: "Reference values from {{AnotherColumn}} in this new column"
         - new_column_4: "{% if col1>col2 %}{{col1|float + col2|float}}{% else %}{{col1|float - col2|float}}{% endif %}"
 ```
+Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers to another column's value. Any [Jinja filters](https://jinja.palletsprojects.com/en/3.1.x/templates/#builtin-filters) and [math operations](https://jinja.palletsprojects.com/en/3.0.x/templates/#math) should work. Reference the current row number with `{{___row_id___}}` (only works with transformations of non-chunked sources).
 </details>
 
 
@@ -384,7 +385,7 @@ Modify the values in the specified columns.
         school_year: "20{{value[-2:]}}"
         zipcode: "{{ value|int ** 2 }}"
 ```
-Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers to another column's value. Any [Jinja filters](https://jinja.palletsprojects.com/en/3.1.x/templates/#builtin-filters) and [math operations](https://jinja.palletsprojects.com/en/3.0.x/templates/#math) should work.
+Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers to another column's value. Any [Jinja filters](https://jinja.palletsprojects.com/en/3.1.x/templates/#builtin-filters) and [math operations](https://jinja.palletsprojects.com/en/3.0.x/templates/#math) should work. Reference the current row number with `{{___row_id___}}` (only works with transformations of non-chunked sources).
 </details>
 
 

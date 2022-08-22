@@ -33,13 +33,13 @@ class Node:
                     self.error_handler.throw("Source `${0}s.{1}` failed expectation `{2}` ({3} rows fail)".format(self.type, self.name, expectation, num_failed))
 
     def apply_jinja(self, row, template, col, func):
-        row["___row_id___"] = row.name
+        if not self.is_chunked: row["___row_id___"] = row.name
         if func=="modify": row["value"] = row[col]
         try:
             value = template.render(row)
         except Exception as e:
             self.error_handler.throw("Error rendering Jinja template for column `{0}` of `{1}_columns` operation ({2})".format(col, func, e))
         row[col] = value
-        del row["___row_id___"]
+        if not self.is_chunked: del row["___row_id___"]
         if func=="modify": del row["value"]
         return row

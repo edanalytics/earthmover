@@ -197,9 +197,10 @@ class Earthmover:
 
     # Determine field separator from file extension
     def get_sep(self, file_name):
-        if ".csv" in file_name: return ","
-        elif ".tsv" in file_name: return "\t"
-        else: raise Exception(f"file format of {file_name} not recognized, must be .tsv or .csv")
+        if file_name.lower()[-4:] == ".csv": return ","
+        elif file_name.lower()[-4:] == ".tsv": return "\t"
+        elif file_name.lower()[-8:] == ".parquet": return ""
+        else: raise Exception(f"file format of {file_name} not recognized, must be .tsv, .csv, or .parquet")
 
     # Turns a raw duration (seconds) integer into a human-readable approximation like "42 minutes"
     def human_time(self, seconds):
@@ -276,7 +277,10 @@ class Earthmover:
             else: transformations.append(node[0])
         
         # Position nodes using PyGraphViz (needs to be apt/pip installed separately):
-        node_positions = nx.drawing.nx_agraph.graphviz_layout(graph, prog='dot', args='-Grankdir=LR')
+        try:
+            node_positions = nx.drawing.nx_agraph.graphviz_layout(graph, prog='dot', args='-Grankdir=LR')
+        except ImportError:
+            self.error_handler.throw("drawing the graph requires the PyGraphViz library... please install it with `sudo apt-get install graphviz graphviz-dev && pip install pygraphviz` or similar")
 
         # Calculate label positions: sources to left of node, destinations to right of node, transformations centered
         label_positions = {}

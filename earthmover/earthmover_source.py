@@ -119,13 +119,17 @@ class Source(Node):
                 try:
                     if self.is_chunked:
                         chunksize = self.get_chunksize()
-                        self.reader = pd.read_csv(self.file, sep=sep, dtype=str, encoding=encoding, chunksize=chunksize)
+                        if sep=="": self.error_handler.throw("parquet files cannot be chunked {0} not found".format(self.file))
+                        else: self.reader = pd.read_csv(self.file, sep=sep, dtype=str, encoding=encoding, chunksize=chunksize)
                         self.data = self.reader.get_chunk()
                     else:
-                        self.data = pd.read_csv(self.file, sep=sep, dtype=str, encoding=encoding)
+                        if sep=="": self.data = pd.read_parquet(self.file,)
+                        else: self.data = pd.read_csv(self.file, sep=sep, dtype=str, encoding=encoding)
                         self.is_done = True
                         self.logger.debug("source `{0}` loaded ({1} bytes, {2} rows)".format(self.name, self.meta["file_size"], len(self.data)))
                 # error handling:
+                except ImportError:
+                    self.error_handler.throw("processing .parquet file {0} requires the pyarrow or fastparquet libraries... please `pip install pyarrow` or `pip install fastparquet`".format(self.file))
                 except FileNotFoundError:
                     self.error_handler.throw("source file {0} not found".format(self.file))
                 except pd.errors.EmptyDataError:
