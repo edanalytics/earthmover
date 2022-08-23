@@ -55,7 +55,8 @@ class Transformation(Node):
                 if "debug" in op.keys() and op.debug:
                     self.logger.debug("`{0}` transformation on ${1}s.{2} completed".format(op.operation, self.type, self.name))
                     self.logger.debug(f"... transformed shape: {transformed.shape[0]} rows, {transformed.shape[1]} cols")
-                    self.logger.debug("... transformed columns: ", str(transformed.columns.values))
+                    self.logger.debug("... transformed columns: [ " + ", ".join([str(v) for v in transformed.columns.values]) + " ]")
+                    # print(transformed.head(10))
                     # print("       RANDOMLY-SHUFFLED PREVIEW:")
                     # print(shuffle_df(transformed).head(5))
             self.rows += transformed.shape[0]

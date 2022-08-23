@@ -40,6 +40,7 @@ class Source(Node):
                     self.reader = None
                 self.size = self.meta.file_size
                 self.is_loaded = False
+                self.is_remote = True
 
         # database connection:
         elif "connection" in source_config.keys() and "query" in source_config.keys():
@@ -47,6 +48,7 @@ class Source(Node):
             self.error_handler.assert_key_exists(self.meta, "query")
             self.mode = "sql"
             self.is_loaded = False
+            self.is_remote = True
             if "required" in source_config.keys() and not source_config["required"] and (
                 source_config["connection"] is None or source_config["connection"]==""
                 ):
@@ -64,12 +66,13 @@ class Source(Node):
                     self.is_chunked = True
                     self.page = 0
 
-        # local file:
+        # file:
         elif "file" in source_config.keys():
             self.error_handler.assert_key_exists(self.meta, "file")
             self.file = source_config.file
             self.mode = "file"
             self.is_loaded = False
+            self.is_remote = False
             if "required" in source_config.keys() and not source_config["required"] and (
                 source_config["file"] is None or source_config["file"]==""
                 ):
@@ -77,11 +80,14 @@ class Source(Node):
             else:
                 self.error_handler.assert_key_type_is(self.meta, "file", str)
                 try:
-                    self.meta["file_size"] = os.path.getsize(self.file)
+                    if "://" not in self.file: self.meta["file_size"] = os.path.getsize(self.file)
+                    else:
+                        self.is_remote = True
+                        self.meta["file_size"] = None
                 except FileNotFoundError:
                     self.error_handler.throw("Source file {0} not found".format(self.file))
                 self.size = self.meta["file_size"]
-                if self.meta["file_size"] > self.loader.config.memory_limit / 2:
+                if not self.is_remote and self.meta["file_size"] > self.loader.config.memory_limit / 2:
                     self.is_chunked = True
                     self.reader = None
 
@@ -112,24 +118,50 @@ class Source(Node):
             self.error_handler.ctx.update(file=self.loader.config_file, line=self.meta["__line__"], node=self, operation=None)
             
             if self.mode=="file":
-                sep = self.loader.get_sep(self.file)
+                if "type" in self.meta.keys(): file_type = self.meta["type"]
+                else: file_type = self.loader.get_type(self.file)
+                
+                # theoretically we could use `self.loader.get_sep(self.file)`, but not if the user overrode the file_type...
+                sep = ""
+                if file_type=="csv": sep = ","
+                elif file_type=="tsv": sep = "\t"
+
                 encoding = "utf8" # default encoding
                 if "encoding" in self.meta.keys(): encoding = self.meta["encoding"]
                 # read in data:
                 try:
                     if self.is_chunked:
                         chunksize = self.get_chunksize()
-                        if sep=="": self.error_handler.throw("parquet files cannot be chunked {0} not found".format(self.file))
+                        if sep=="": self.error_handler.throw("({0}) .{1} files do not support chunked processing... increase memory_limit or split the file manually".format(self.file, file_type))
                         else: self.reader = pd.read_csv(self.file, sep=sep, dtype=str, encoding=encoding, chunksize=chunksize)
                         self.data = self.reader.get_chunk()
                     else:
-                        if sep=="": self.data = pd.read_parquet(self.file,)
+                        if file_type=="parquet": self.data = pd.read_parquet(self.file)
+                        elif file_type=="feather": self.data = pd.read_feather(self.file)
+                        elif file_type=="orc": self.data = pd.read_orc(self.file)
+                        elif file_type=="sas": self.data = pd.read_sas(self.file)
+                        elif file_type=="spss": self.data = pd.read_spss(self.file)
+                        elif file_type=="stata": self.data = pd.read_stata(self.file)
+                        elif file_type=="excel": self.data = pd.read_excel(self.file, sheet_name=(self.meta["sheet"] if "sheet" in self.meta.keys() else 0) )
+                        elif file_type=="fixedwidth": self.data = pd.read_fwf(self.file)
+                        elif file_type=="xml": self.data = pd.read_xml(self.file, xpath=(self.meta["xpath"] if "xpath" in self.meta.keys() else "./*") )
+                        elif file_type=="html": self.data = pd.read_html(self.file, match=(self.meta["match"] if "match" in self.meta.keys() else ".+") )
+                        elif file_type=="json": self.data = pd.read_json(self.file, typ=(self.meta["object_type"] if "object_type" in self.meta.keys() else "frame"), orient=(self.meta["orientation"] if "orientation" in self.meta.keys() else "columns")  )
                         else: self.data = pd.read_csv(self.file, sep=sep, dtype=str, encoding=encoding)
+
+                        # rename columns (if specified)
+                        if "columns" in self.meta.keys():
+                            if type(self.meta["columns"])==list:
+                                if len(self.data.columns)==len(self.meta["columns"]):
+                                    self.data.columns = self.meta["columns"]
+                                else: self.error_handler.throw("source file {0} specified {1} `columns` but has {2} columns".format(self.file, len(self.meta["columns"]), len(self.data.columns) ))
+                            else: self.error_handler.throw("source file {0} specified `columns` but not as a list (of new column names)".format(self.file))
+
                         self.is_done = True
                         self.logger.debug("source `{0}` loaded ({1} bytes, {2} rows)".format(self.name, self.meta["file_size"], len(self.data)))
                 # error handling:
                 except ImportError:
-                    self.error_handler.throw("processing .parquet file {0} requires the pyarrow or fastparquet libraries... please `pip install pyarrow` or `pip install fastparquet`".format(self.file))
+                    self.error_handler.throw("processing .{0} file {1} requires the pyarrow library... please `pip install pyarrow`".format(file_type, self.file))
                 except FileNotFoundError:
                     self.error_handler.throw("source file {0} not found".format(self.file))
                 except pd.errors.EmptyDataError:

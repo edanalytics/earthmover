@@ -196,11 +196,37 @@ class Earthmover:
         return user
 
     # Determine field separator from file extension
+    # (this should only be used for local files, aka the map_file for a map_values transformation operation)
     def get_sep(self, file_name):
         if file_name.lower()[-4:] == ".csv": return ","
         elif file_name.lower()[-4:] == ".tsv": return "\t"
-        elif file_name.lower()[-8:] == ".parquet": return ""
-        else: raise Exception(f"file format of {file_name} not recognized, must be .tsv, .csv, or .parquet")
+        else: raise Exception(f"file {file_name} is of unrecognized file format - specify the `type` manually or see documentation for supported file types")
+
+    # Determine file type from file extension
+    def get_type(self, file_name):
+        if file_name.lower()[-4:] == ".csv": return "csv"
+        elif file_name.lower()[-4:] == ".tsv": return "tsv"
+        elif file_name.lower()[-9:] == ".sas7bdat": return "sas"
+        elif file_name.lower()[-4:] == ".sav": return "spss"
+        elif file_name.lower()[-4:] == ".dta": return "stata"
+        elif file_name.lower()[-4:] == ".xls": return "excel"
+        elif file_name.lower()[-5:] == ".xlsx": return "excel"
+        elif file_name.lower()[-5:] == ".xlsm": return "excel"
+        elif file_name.lower()[-5:] == ".xlsb": return "excel"
+        elif file_name.lower()[-4:] == ".odf": return "excel"
+        elif file_name.lower()[-4:] == ".ods": return "excel"
+        elif file_name.lower()[-4:] == ".odt": return "excel"
+        elif file_name.lower()[-4:] == ".txt": return "fixedwidth"
+        elif file_name.lower()[-4:] == ".xml": return "xml"
+        elif file_name.lower()[-5:] == ".html": return "html"
+        elif file_name.lower()[-5:] == ".json": return "json"
+        elif file_name.lower()[-4:] == ".pkl": return "pickle"
+        elif file_name.lower()[-7:] == ".pickle": return "pickle"
+        elif file_name.lower()[-8:] == ".parquet": return "parquet"
+        elif file_name.lower()[-8:] == ".feather": return "feather"
+        elif file_name.lower()[-4:] == ".orc": return "orc"
+        else: raise Exception(f"file {file_name} is of unrecognized file format - specify the `type` manually or see documentation for supported file types")
+
 
     # Turns a raw duration (seconds) integer into a human-readable approximation like "42 minutes"
     def human_time(self, seconds):
@@ -481,6 +507,8 @@ class Earthmover:
             if name=="__line__": continue
             if "connection" in source.keys():
                 has_remote_sources = True
+            if "file" in source.keys() and "://" in source["file"]:
+                has_remote_sources = True
         
         if not self.skip_hashing:
             node_data = { node[0]: node[1]["data"] for node in self.graph.nodes(data=True) }
@@ -505,6 +533,7 @@ class Earthmover:
                 if "$sources."+name not in node_data.keys(): continue
                 if name=="__line__": continue
                 if "file" in source.keys():
+                    if "://" in source["file"]: continue
                     source_hashes += self.get_file_hash(source["file"], hash_algorithm)
             if source_hashes!="": sources_hash = self.get_string_hash(source_hashes, hash_algorithm)
             else: sources_hash = ""
@@ -578,7 +607,7 @@ class Earthmover:
             self.logger.info("forcing regenerate")
         
         elif has_remote_sources:
-            self.logger.info("forcing regenerate, since some sources are remote (FTP/database)")
+            self.logger.info("forcing regenerate, since some sources are remote (and we cannot know if they changed)")
         
         # (Draw the graph)
         if self.config.show_graph: self.draw_graph(graph)

@@ -1,0 +1,53 @@
+config:
+  # log_level: DEBUG
+  output_dir: examples/sample_output/
+  # memory_limit: 2GB
+  # show_stacktrace: True
+  # show_graph: True
+
+sources:
+  users1:
+    file: https://github.com/Teradata/kylo/raw/master/samples/sample-data/parquet/userdata1.parquet
+    # ^ from https://github.com/Teradata/kylo/tree/master/samples/sample-data/parquet
+    #   (note that you need to `pip install pyarrow` before you can run earthmover with parquet files)
+  users2:
+    file: https://github.com/Teradata/kylo/raw/master/samples/sample-data/orc/userdata2_orc
+    # ^ from https://github.com/Teradata/kylo/tree/master/samples/sample-data/orc
+    #   (note that you need to `pip install pyarrow` before you can run earthmover with parquet files)
+    type: orc # this is necessary because the file doesn't end in .orc
+    columns:
+      - registration_dttm
+      - id
+      - first_name
+      - last_name
+      - email
+      - gender
+      - ip_address
+      - cc
+      - country
+      - birthdate
+      - salary
+      - title
+      - comments
+    # ^ this is necessary becase the metadata isn't present in the orc file, so Pandas gives default column names
+  users3:
+    file: https://raw.githubusercontent.com/Teradata/kylo/master/samples/sample-data/csv/userdata3.csv
+    # ^ from https://github.com/Teradata/kylo/tree/master/samples/sample-data/csv
+    header_rows: 1
+
+destinations:
+  users/1:
+    source: $sources.users1
+    template: examples/sample_templates/user.jsont
+    extension: jsonl
+    linearize: True
+  users/2:
+    source: $sources.users2
+    template: examples/sample_templates/user.jsont
+    extension: jsonl
+    linearize: True
+  users/3:
+    source: $sources.users3
+    template: examples/sample_templates/user.jsont
+    extension: jsonl
+    linearize: True

@@ -180,7 +180,25 @@ sources:
       - low_grade|int <= high_grade|int
 ```
 Each source must have a name (which is how it is referenced by transformations and destinations) such as `districts`, `courses`, `tx_schools`, or `more_schools` in this example. Three types of `sources` are currently supported:
-* File sources must specify the relative or absolute path to the source `file`, the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names.
+* File sources must specify the relative or absolute path to the source `file`. Supported file types are
+  - Row-based formats:
+    - `.csv`: Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8).
+    - `.tsv`: Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8).
+    - `.txt`: a fixed-width text file; column widths are inferred from the first 100 lines.
+  - Column-based formats: `.parquet`, `.feather`, `.orc` &mdash; these require the [`pyarrow` library](https://arrow.apache.org/docs/python/index.html), which can be installed with `pip install pyarrow` or similar
+  - Structured formats:
+    - `.json`: Optionally specify a `object_type` (`frame` or `series`) and `orientation` (see [these docs](https://pandas.pydata.org/docs/reference/api/pandas.read_json.html)) to interpret different JSON structures.
+    - `.xml`: Optionally specify an `xpath` to [select a set of nodes](https://pandas.pydata.org/docs/reference/api/pandas.read_xml.html) deeper in the XML.
+    - `.html`: Optionally specify a regex to `match` for [selecting one of many tables](https://pandas.pydata.org/docs/reference/api/pandas.read_html.html) in the HTML. This can be used to extract tables from a live web page.
+  - Excel formats: `.xls`, `.xlsx`, `.xlsm`, `.xlsb`, `.odf`, `.ods` and `.odt` &mdash; optionally specify the `sheet` name (as a string) or index (as an integer) to load.
+  - Other formats:
+    - `.pkl` or `.pickle`: a [pickled](https://docs.python.org/3/library/pickle.html) Python object (typically a Pandas dataframe)
+    - `.sas7bdat`: a [SAS data file](https://documentation.sas.com/doc/en/pgmsascdc/9.4_3.5/hostwin/n0sk6o15955yoen19n9ghdziqw1u.htm)
+    - `.sav`: a [SPSS data file](https://www.ibm.com/docs/en/spss-statistics/saas?topic=files-spss-statistics-data)
+    - `.dta`: a [Stata data file](https://www.stata.com/manuals/gsw5.pdf)
+
+  
+  File type is inferred from the file extension, however you may manually specify `type:` (`csv`, `tsv`, `fixedwidth`, `parquet`, `feather`, `orc`, `json`, `xml`, `html`, `excel`, `pickle`, `sas`, `spss`, or `stata`) to force `earthmover` to treat a file with an arbitrary extension as a certain type. Remote file paths (`https://somesite.com/path/to/file.csv`) generally work, but do not support chunking. (Download large files to a local disk for [chunking](#chunking).)
 * Database sources are supported via [SQLAlchemy](https://www.sqlalchemy.org/). They must specify a database `connection` string and SQL `query` to run. Large database sources support [chunking](#chunking).
 * FTP file sources are supported via [ftplib](https://docs.python.org/3/library/ftplib.html). They must specify an FTP `connection` string. FTP sources must fit in memory, chunking not supported at this time. 
 
