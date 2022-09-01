@@ -16,9 +16,7 @@ class ExitOnExceptionHandler(logging.StreamHandler):
 
 # Set up logging
 handler = ExitOnExceptionHandler()
-formatter = logging.Formatter("%(asctime)s.%(msecs)03d %(name)s %(levelname)s %(message)s",
-    "%Y-%m-%d %H:%M:%S"
-    )
+formatter = logging.Formatter("%(asctime)s.%(msecs)03d %(name)s %(levelname)s %(message)s", "%Y-%m-%d %H:%M:%S")
 handler.setFormatter(formatter)
 logger = logging.getLogger("earthmover")
 logger.setLevel(logging.getLevelName('INFO'))
@@ -99,7 +97,6 @@ def main(argv=None):
         exit(0)
     if not args.config_file:
         logger.exception("please pass a config YAML file as a command line argument (try the -h flag for help)")
-        # exit(1)
     try:
         em = Earthmover(
             config_file=args.config_file,
@@ -113,7 +110,7 @@ def main(argv=None):
     try:
         em.logger.info("starting...")
         em.generate(selector=args.selector)
-        em.logger.info("done")
+        em.logger.info("done!")
     except Exception as e:
         logger.exception(e, exc_info=em.config.show_stacktrace)
 

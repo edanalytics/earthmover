@@ -27,10 +27,11 @@ class Node:
         if len(self.expectations) > 0:
             for expectation in self.expectations:
                 template = jinja2.Template("{{" + expectation + "}}")
-                result = self.data.apply(self.apply_jinja, axis=1, args=(template, 'expectation_result', 'expectations'))
-                num_failed = len(result.query("expectation_result=='False'"))
+                result = self.data.apply(self.apply_jinja, axis=1, args=(template, "__expectation_result__", "expectations"))
+                num_failed = len(result.query("__expectation_result__=='False'"))
                 if num_failed > 0:
                     self.error_handler.throw("Source `${0}s.{1}` failed expectation `{2}` ({3} rows fail)".format(self.type, self.name, expectation, num_failed))
+            result.drop(columns="__expectation_result__")
 
     def apply_jinja(self, row, template, col, func):
         if not self.is_chunked: row["___row_id___"] = row.name

@@ -15,6 +15,8 @@ class Destination(Node):
         self.source = self.meta.source
         self.error_handler.assert_key_exists_and_type_is(self.meta, "template", str)
         self.template = self.meta.template
+        self.header = ""
+        self.footer = ""
         self.mode = "w" # by default, (over)write files... but if source is chunked, need to append instead
 
     def do(self):

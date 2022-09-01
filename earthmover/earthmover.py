@@ -70,7 +70,6 @@ class Earthmover:
         "memory_limit": "1GB",
         "show_graph": False,
         "log_level": "INFO",
-        "verbose": False,
         "show_stacktrace": False
     }
     
@@ -124,7 +123,7 @@ class Earthmover:
         self.config.macros = self.config.macros.strip()
 
         # Configure log level
-        self.logger.setLevel(logging.getLevelName(self.config.log_level))
+        self.logger.setLevel(logging.getLevelName(self.config.log_level.upper()))
         
         # Check if output_dir exists, if not, create it:
         self.config.output_dir = os.path.expanduser(self.config.output_dir)

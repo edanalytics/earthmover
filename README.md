@@ -65,7 +65,7 @@ Note that templates may [include](https://jinja.palletsprojects.com/en/3.1.x/tem
 All the instructions for this tool &mdash; where to find the source data, what transformations to apply to it, and how and where to save the output &mdash; are specified in a single YAML configuration file. Example YAML configuration files can be found in `examples/sample_configs/`.
 
 The general structure of the YAML involves four main sections:
-1. [`config`](#config), which specifies options like the memory limit and whether to show verbose output
+1. [`config`](#config), which specifies options like the memory limit and logging level
 1. [`definitions`](#definitions) is an *optional* way to specify reusable values and blocks
 1. [`sources`](#sources), where each source file is listed with details like the number of header rows
 1. [`transformations`](#transformations), where source data can be transformed in various ways
