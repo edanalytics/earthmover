@@ -18,11 +18,7 @@ class UserConfigs:
         "show_stacktrace": False
     }
 
-    def __init__(self,
-        config_file: str,
-        params: dict,
-        error_handler: ErrorHandler
-    ):
+    def __init__(self, config_file: str, params: dict, error_handler: ErrorHandler):
         self.config_file = config_file
         self.params = params
         self.error_handler = error_handler

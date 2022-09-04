@@ -64,6 +64,3 @@ class Node:
                     )
 
             result.drop(columns="__expectation_result__")
-
-
-

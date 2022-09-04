@@ -67,7 +67,6 @@ class GenericGroupByOperation(Operation):
         pass
 
 
-
     def _group_by(self, data):
         """
 
