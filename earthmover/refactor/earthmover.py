@@ -17,7 +17,7 @@ from earthmover.refactor.util import human_time
 
 class Earthmover:
 
-    version = "1.0.0"
+    version = "0.2.0"
 
     def __init__(self,
         config_file: str,
@@ -202,7 +202,7 @@ class Earthmover:
                 node_data = self.graph.get_node_data()
 
                 if not node_data[node].is_done or ignore_done:
-                    node_data[node].execute()
+                    node_data[node].execute()  # Sets self.data in each node.
 
 
     def generate(self, selector):
@@ -233,7 +233,7 @@ class Earthmover:
 
             runs_file = RunsFile(_runs_path, earthmover=self)
 
-            # Remote sources cannot be hashed.
+            # Remote sources cannot be hashed.  # TODO: Use Source.is_remote to complete this check.
             _has_remote_sources = False
 
             for name, source in self.sources.items():
@@ -245,7 +245,15 @@ class Earthmover:
                     _has_remote_sources = True
 
             # Remote sources cannot be hashed; no hashed runs contain remote sources.
-            if not self.force and not _has_remote_sources:
+            if _has_remote_sources:
+                self.logger.info(
+                    "forcing regenerate, since some sources are remote (and we cannot know if they changed)"
+                )
+
+            elif self.force:
+                self.logger.info("forcing regenerate")
+
+            else:
                 self.logger.info("checking for prior runs...")
 
                 # Find the latest run that matched our selector(s)...
@@ -267,14 +275,6 @@ class Earthmover:
                             f"skipping (no changes since the last run {_last_run_string} ago)"
                         )
                         self.do_generate = False
-
-            elif self.force:
-                self.logger.info("forcing regenerate")
-
-            elif _has_remote_sources:
-                self.logger.info(
-                    "forcing regenerate, since some sources are remote (and we cannot know if they changed)"
-                )
 
         else:  # Skip hashing
             self.logger.info("skipping hashing and run logging")

@@ -18,43 +18,7 @@ class GenericColumnOperation(Operation):
         super().__init__(*args, **kwargs)
 
         self.source = None
-        self.result = None  # Unique to column operations to allow multiple column processing.
-
-
-    @abc.abstractmethod
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'source', str)
-        self.source = self.config['source']
-
-        pass
-
-
-    @abc.abstractmethod
-    def verify(self):
-        """
-
-        :return:
-        """
-        super().verify()
-        pass
-
-
-    @abc.abstractmethod
-    def execute(self):
-        """
-
-        :return:
-        """
-        super().execute()
-
-        self.result = self.source.data
-        pass
+        self.data = None
 
 
 
@@ -103,7 +67,7 @@ class AddColumnsOperation(GenericColumnOperation):
                     )
                     raise
 
-                self.result = self.result.apply(
+                self.data = self.data.apply(
                     self.earthmover.apply_jinja,
                     axis=1,
                     args=(template, col, 'add')
@@ -111,9 +75,9 @@ class AddColumnsOperation(GenericColumnOperation):
 
             # Otherwise, assign a static value as the column.
             else:
-                self.result[col] = val
+                self.data[col] = val
 
-        return self.result
+        return self.data
 
 
 
@@ -162,7 +126,7 @@ class ModifyColumnsOperation(GenericColumnOperation):
                     )
                     raise
 
-                self.result = self.result.apply(
+                self.data = self.data.apply(
                     self.earthmover.apply_jinja,
                     axis=1,
                     args=(template, col, 'add')
@@ -170,9 +134,9 @@ class ModifyColumnsOperation(GenericColumnOperation):
 
             # Otherwise, assign a static value as the column.
             else:
-                self.result[col] = val
+                self.data[col] = val
 
-        return self.result
+        return self.data
 
 
 
@@ -209,9 +173,9 @@ class DuplicateColumnsOperation(GenericColumnOperation):
             if old_col=="__line__":
                 continue
 
-            self.result[new_col] = self.result[old_col]
+            self.data[new_col] = self.data[old_col]
 
-        return self.result
+        return self.data
 
 
 
@@ -243,7 +207,7 @@ class RenameColumnsOperation(GenericColumnOperation):
         """
         super().execute()
 
-        return self.result.rename(columns=self.columns_dict)
+        return self.data.rename(columns=self.columns_dict)
 
 
 
@@ -275,7 +239,7 @@ class DropColumnsOperation(GenericColumnOperation):
         """
         super().verify()
 
-        if not set(self.columns_to_drop).issubset(self.source.data.columns):
+        if not set(self.columns_to_drop).issubset(self.data.columns):
             self.error_handler.throw(
                 "one or more columns specified to drop are not present in the dataset"
             )
@@ -289,7 +253,7 @@ class DropColumnsOperation(GenericColumnOperation):
         """
         super().execute()
 
-        return self.result.drop(columns=self.columns_to_drop)
+        return self.data.drop(columns=self.columns_to_drop)
 
 
 
@@ -322,7 +286,7 @@ class KeepColumnsOperation(GenericColumnOperation):
         """
         super().verify()
 
-        if not set(self.header).issubset(self.source.data.columns):
+        if not set(self.header).issubset(self.data.columns):
             self.error_handler.throw(
                 "one or more columns specified to keep are not present in the dataset"
             )
@@ -336,7 +300,7 @@ class KeepColumnsOperation(GenericColumnOperation):
         """
         super().execute()
 
-        return self.result[self.header]
+        return self.data[self.header]
 
 
 
@@ -375,7 +339,7 @@ class CombineColumnsOperation(GenericColumnOperation):
         """
         super().verify()
 
-        if not set(self.columns_list).issubset(self.source.data.columns):
+        if not set(self.columns_list).issubset(self.data.columns):
             self.error_handler.throw(
                 f"one or more defined columns is not present in the dataset"
             )
@@ -389,11 +353,11 @@ class CombineColumnsOperation(GenericColumnOperation):
         """
         super().execute()
 
-        self.result[self.new_column] = self.result.apply(
+        self.data[self.new_column] = self.data.apply(
             lambda x: ', '.join([*self.columns_list])
         , axis=1, meta='str')
 
-        return self.result
+        return self.data
 
 
 
@@ -453,7 +417,7 @@ class MapValuesOperation(GenericColumnOperation):
         """
         super().verify()
 
-        if not set(self.columns_list).issubset(self.source.data.columns):
+        if not set(self.columns_list).issubset(self.data.columns):
             self.error_handler.throw(
                 "one or more columns to map are undefined in the dataset"
             )
@@ -468,14 +432,14 @@ class MapValuesOperation(GenericColumnOperation):
 
         try:
             for _column in self.columns_list:
-                self.result[_column] = self.result[_column].replace(self.mapping)
+                self.data[_column] = self.data[_column].replace(self.mapping)
 
         except Exception as err:
             self.error_handler.throw(
                 "error during `map_values` operation... check mapping shape and `column(s)`?"
             )
 
-        return self.result
+        return self.data
 
 
     def _read_map_file(self, file) -> dict:
@@ -548,7 +512,7 @@ class DateFormatOperation(GenericColumnOperation):
         """
         super().verify()
 
-        if not set(self.columns_list).issubset(self.source.data.columns):
+        if not set(self.columns_list).issubset(self.data.columns):
             self.error_handler.throw(
                 "one or more columns to map are undefined in the dataset"
             )
@@ -564,8 +528,8 @@ class DateFormatOperation(GenericColumnOperation):
 
         for _column in self.columns_list:
             try:
-                self.result[_column] = (
-                    pd.to_datetime(self.result[_column], format=self.from_format)
+                self.data[_column] = (
+                    pd.to_datetime(self.data[_column], format=self.from_format)
                         .dt.strftime(self.to_format)
                 )
 
@@ -573,4 +537,4 @@ class DateFormatOperation(GenericColumnOperation):
                 self.error_handler.throw(
                     f"error during `date_format` operation, `{_column}` column... check format strings? ({err})"
                 )
-        return self.result
+        return self.data

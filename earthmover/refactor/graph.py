@@ -56,6 +56,7 @@ class Graph(nx.DiGraph):
         :param ref:
         :return:
         """
+        print(self.nodes[ref])
         return self.nodes[ref]["data"]
 
 

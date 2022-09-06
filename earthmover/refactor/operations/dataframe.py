@@ -7,12 +7,15 @@ from .operation import Operation
 
 class GenericDataFrameOperation(Operation):
     """
+    This class has alterative behavior to other operations.
+    More than one source is always required, so `source_list` and `data_list` are used.
+    Do NOT super() up to Operation.
 
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.sources = None
+        self.source_list = None
         self.data_list = None
 
 
@@ -22,13 +25,8 @@ class GenericDataFrameOperation(Operation):
 
         :return:
         """
-        super().compile()
-
         self.error_handler.assert_key_exists_and_type_is(self.config, 'sources', list)
-        self.sources = [
-            self.get_source(source) for source in self.config['sources']
-        ]
-
+        self.source_list = self.config['sources']
         pass
 
     @abc.abstractmethod
@@ -37,7 +35,6 @@ class GenericDataFrameOperation(Operation):
 
         :return:
         """
-        super().verify()
         pass
 
 
@@ -47,9 +44,9 @@ class GenericDataFrameOperation(Operation):
 
         :return:
         """
-        super().execute()
-
-        self.data_list = [source.data for source in self.sources]
+        self.data_list = self.source_list = [
+            self.get_source_node(source).data for source in self.source_list
+        ]
         pass
 
 
@@ -133,14 +130,14 @@ class JoinOperation(GenericDataFrameOperation):
 
 
         # Collect left and right datasets
-        if len(self.sources) != 2:
+        if len(self.source_list) != 2:
             self.error_handler.throw(
                 f"`sources` must define exactly two sources to join"
             )
             raise
 
-        self.left_data  = self.sources[0].data
-        self.right_data = self.sources[1].data
+        self.left_data  = self.source_list[0].data
+        self.right_data = self.source_list[1].data
 
 
         # Collect left columns to keep
@@ -202,6 +199,8 @@ class JoinOperation(GenericDataFrameOperation):
 
         :return:
         """
+        super().verify()
+
         if not set(self.left_cols).issubset(self.left_data.columns):
             self.error_handler.throw(
                 "columns in `left_keep_columns` are not defined in the dataset"
@@ -254,7 +253,7 @@ class UnionOperation(GenericDataFrameOperation):
         """
         super().compile()
 
-        if len(self.sources) < 2:
+        if len(self.source_list) < 2:
             self.error_handler.throw('more than one source must be defined in `sources`')
             raise
 
@@ -264,10 +263,10 @@ class UnionOperation(GenericDataFrameOperation):
 
         :return:
         """
-        _data_columns = set( self.sources[0].data.columns )
+        _data_columns = set( self.data_list[0].columns )
 
-        for source in self.sources[1:]:
-            if set(source.data.columns) != _data_columns:
+        for data in self.data_list[1:]:
+            if set(data.columns) != _data_columns:
                 self.error_handler.throw('dataframes to union do not share identical columns')
                 raise
         else:

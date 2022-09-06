@@ -62,8 +62,11 @@ class Operation:
         self.earthmover = earthmover
         self.error_handler = self.earthmover.error_handler
 
+        self.source = None
+        self.data = None
 
-    def get_source(self, source):
+
+    def get_source_node(self, source):
         """
 
         :return:
@@ -73,6 +76,8 @@ class Operation:
 
     @abc.abstractmethod
     def compile(self):
+        self.error_handler.assert_key_exists_and_type_is(self.config, 'source', str)
+        self.source = self.config['source']
         pass
 
 
@@ -83,5 +88,6 @@ class Operation:
 
     @abc.abstractmethod
     def execute(self):
+        self.data = self.get_source_node(self.source).data
         self.verify()
         pass

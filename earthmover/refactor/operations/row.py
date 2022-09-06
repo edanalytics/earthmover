@@ -10,42 +10,6 @@ class GenericRowOperation(Operation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.source = None
-
-
-    @abc.abstractmethod
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'source', str)
-        self.source = self.config['source']
-
-        pass
-
-
-    @abc.abstractmethod
-    def verify(self):
-        """
-
-        :return:
-        """
-        super().verify()
-        pass
-
-
-    @abc.abstractmethod
-    def execute(self):
-        """
-
-        :return:
-        """
-        super().execute()
-        pass
-
 
 
 class DistinctRowsOperation(GenericRowOperation):
@@ -87,7 +51,7 @@ class DistinctRowsOperation(GenericRowOperation):
         """
         super().verify()
 
-        if not set(self.columns_list).issubset(self.source.data.columns):
+        if not set(self.columns_list).issubset(self.data.columns):
             self.error_handler.throw(
                 "one or more columns for checking for distinctness are undefined in the dataset"
             )
@@ -101,7 +65,7 @@ class DistinctRowsOperation(GenericRowOperation):
         """
         super().execute()
 
-        return self.source.data.drop_duplicates(subset=self.columns_list)
+        return self.data.drop_duplicates(subset=self.columns_list)
 
 
 
@@ -162,7 +126,7 @@ class FilterRowsOperation(GenericRowOperation):
             _query = self.query
 
         try:
-            return self.source.data.query(_query)
+            return self.data.query(_query)
         except Exception as err:
             self.error_handler.throw(
                 "error during `filter_rows` operation... check query format?"

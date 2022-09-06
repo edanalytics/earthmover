@@ -28,9 +28,6 @@ class GenericGroupByOperation(Operation):
         """
         super().compile()
 
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'source', str)
-        self.source = self.config['source']
-
         self.error_handler.assert_key_exists_and_type_is(self.config, 'group_by_columns', list)
         self.group_by_columns = self.config['group_by_columns']
 
@@ -45,7 +42,7 @@ class GenericGroupByOperation(Operation):
         """
         super().verify()
 
-        if not set(self.group_by_columns).issubset(self.source.data.columns):
+        if not set(self.group_by_columns).issubset(self.data.columns):
             self.error_handler.throw(
                 "one or more specified group-by columns not in the dataset"
             )
@@ -53,15 +50,6 @@ class GenericGroupByOperation(Operation):
 
         pass
 
-
-    @abc.abstractmethod
-    def execute(self):
-        """
-
-        :return:
-        """
-        super().execute()
-        pass
 
 
     def _group_by(self, data):
@@ -123,7 +111,7 @@ class GroupByWithCountOperation(GenericGroupByOperation):
         """
         super().execute()
 
-        _grouped = self._group_by(self.source.data)
+        _grouped = self._group_by(self.data)
         _grouped = _grouped.size()
         return self._revert_group_by(_grouped)
 
@@ -166,7 +154,7 @@ class GroupByWithAggOperation(GenericGroupByOperation):
         """
         super().execute()
 
-        _grouped = self._group_by(self.source.data)
+        _grouped = self._group_by(self.data)
         _grouped = _grouped[[self.agg_column]].agg(self.separator.join)
         return self._revert_group_by(_grouped)
 
@@ -221,7 +209,7 @@ class GroupByOperation(GenericGroupByOperation):
         """
         super().execute()
 
-        _grouped = self.source.data.groupby(self.group_by_columns)
+        _grouped = self.data.groupby(self.group_by_columns)
         result = _grouped.size().reset_index()
 
         result.columns = self.group_by_columns + [self.GROUP_SIZE_COL]
