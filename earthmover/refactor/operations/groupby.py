@@ -20,7 +20,6 @@ class GenericGroupByOperation(Operation):
         self.group_by_columns = None
 
 
-
     @abc.abstractmethod
     def compile(self):
         """

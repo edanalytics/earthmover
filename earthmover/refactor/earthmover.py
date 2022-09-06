@@ -101,8 +101,8 @@ class Earthmover:
                 continue  # skip YAML line annotations
 
             _node = Source(name, config, earthmover=self)
-            self.graph.add_node(f"$sources.{name}", data=_node)
             _node.compile()
+            self.graph.add_node(f"$sources.{name}", data=_node)
 
 
         # transformations:
@@ -111,8 +111,8 @@ class Earthmover:
                 continue  # skip YAML line annotations
 
             _node = Transformation(name, operations_config, earthmover=self)
-            self.graph.add_node(f"$transformations.{name}", data=_node)
             _node.compile()
+            self.graph.add_node(f"$transformations.{name}", data=_node)
 
             for source in _node.sources:
                 if not self.graph.lookup_node(source):
@@ -131,8 +131,8 @@ class Earthmover:
                 continue  # skip YAML line annotations
 
             _node = Destination(name, config, earthmover=self)
-            self.graph.add_node(f"$destinations.{name}", data=_node)
             _node.compile()
+            self.graph.add_node(f"$destinations.{name}", data=_node)
 
             if not self.graph.lookup_node(_node.source):
                 self.error_handler.throw(
@@ -183,28 +183,26 @@ class Earthmover:
             self.graph.remove_node(node)
 
 
-    def execute(self, start_nodes=(), exclude_nodes=(), ignore_done=False):
+    def execute(self, subgraph, start_nodes=(), exclude_nodes=(), ignore_done=False):
         """
         # TODO: `start_nodes` is not used.
 
+        :param subgraph:
         :param start_nodes:
         :param exclude_nodes:
         :param ignore_done:
         :return:
         """
-        layers = list(nx.topological_generations(self))
-        node_data = self.graph.get_node_data()
-
-        prev_layer = []
-        for layer in layers:
+        for layer in list(nx.topological_generations(subgraph)):
 
             for node in layer:
                 if node in exclude_nodes:
                     continue
 
+                node_data = self.graph.get_node_data()
+
                 if not node_data[node].is_done or ignore_done:
                     node_data[node].execute()
-
 
 
     def generate(self, selector):
@@ -256,7 +254,7 @@ class Earthmover:
                 )
 
                 if most_recent_run is None:
-                    self.logger.info("regenerating (no prior runs found, or config.yaml has changed since last run")
+                    self.logger.info("regenerating (no prior runs found, or config.yaml has changed since last run)")
 
                 else:
                     _run_differences = runs_file.find_hash_differences(most_recent_run)
@@ -284,7 +282,7 @@ class Earthmover:
 
 
         ### Draw the graph, regardless of whether a run is completed.
-        if self.config.show_graph:
+        if self.config['show_graph']:
             active_graph.draw()
 
         # Unchanged runs are avoided unless the user forces the run.
@@ -315,7 +313,7 @@ class Earthmover:
             if selector == "*":
                 destinations = "*"
             else:
-                _active_destinations = active_graph().get_node_data().keys()
+                _active_destinations = active_graph.get_node_data().keys()
                 destinations = "|".join(_active_destinations)
 
             runs_file.write_row(selector=destinations)

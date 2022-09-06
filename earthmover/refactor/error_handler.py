@@ -67,6 +67,7 @@ class ErrorContext:
         return str(self) + other
 
 
+
 class ErrorHandler:
     def __init__(self, file=None, line=None, node=None, operation=None):
         self.ctx = ErrorContext(file=file, line=line, node=node, operation=operation)

@@ -13,22 +13,21 @@ class Node:
     """
 
     """
-    def __init__(self, name: str, config: Optional[dict] = None, *, earthmover: Earthmover):
+    def __init__(self, name: str, config: Optional[dict] = None, *, earthmover: 'Earthmover'):
         self.name = name
         self.config = config
         self.type = None
-        self.age = time.time()
 
         self.earthmover = earthmover
         self.logger = earthmover.logger
         self.error_handler = earthmover.error_handler
 
         self.data = None
-
         self.size = None
         self.rows = None
         self.cols = None
 
+        self.age = time.time()
         self.expectations = []
         self.is_done = False
 

@@ -142,6 +142,8 @@ def main(argv=None):
             em.compile()
         except Exception as e:
             logger.exception(e, exc_info=em.config['show_stacktrace'])
+            raise
+        exit(0)
 
     #
     try:

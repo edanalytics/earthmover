@@ -19,7 +19,7 @@ class Source(Node):
     """
 
     """
-    def __new__(cls, name: str, config: dict, *, earthmover: Earthmover):
+    def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
         """
         Logic for assigning sources to their respective classes.
 
@@ -101,7 +101,7 @@ class FileSource(Source):
         self.file = self.config['file']
 
         # Determine the file type (used to specify the read-lambda).
-        self.file_type = self.config.get('type', self.get_filetype(self.file))
+        self.file_type = self.config.get('type', self._get_filetype(self.file))
         if not self.file_type:
             self.error_handler.throw(
                 f"file `{self.file}` is of unrecognized file format - specify the `type` manually or see documentation for supported file types"
@@ -111,7 +111,7 @@ class FileSource(Source):
         # Initialize the read_lambda.
         _sep = util.get_sep(self.file_type)  # Inherited from Node
         try:
-            self.read_lambda = self.get_read_lambda(self.file_type, sep=_sep)
+            self.read_lambda = self._get_read_lambda(self.file_type, sep=_sep)
         except Exception as err:
             self.error_handler.throw(
                 f"no lambda defined for file type `{self.file_type}`"
@@ -162,7 +162,7 @@ class FileSource(Source):
 
             self.is_done = True
             self.logger.debug(
-                f"source `{self.name}` loaded ({self.config['size']} bytes, {self.rows} rows)"
+                f"source `{self.name}` loaded ({self.size} bytes, {self.rows} rows)"
             )
 
         # error handling:
@@ -189,7 +189,7 @@ class FileSource(Source):
 
 
     @staticmethod
-    def get_filetype(file):
+    def _get_filetype(file):
         """
         Determine file type from file extension
 
@@ -225,7 +225,7 @@ class FileSource(Source):
 
 
     @staticmethod
-    def get_read_lambda(file_type: str, sep: str = None):
+    def _get_read_lambda(file_type: str, sep: str = None):
         """
 
         :param file_type:

@@ -5,6 +5,8 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
+from typing import Optional
+
 from earthmover.refactor.error_handler import ErrorHandler
 
 
@@ -17,8 +19,15 @@ class Graph(nx.DiGraph):
     SIZE_OPTIONS  = {"font_size": 8 , "font_color": "black"}
 
 
-    def __init__(self, error_handler: ErrorHandler, graph=None):
-        # Logic to convert subgraphs into `earthmover.graph.Graph`s.
+    def __init__(self, error_handler: Optional[ErrorHandler] = None, graph=None):
+        """
+        Note: Defining `error_handler` as optional is a hack
+        to allow networkx methods to still act on `Graph`.
+
+        :param error_handler:
+        :param graph:
+        """
+        # Logic to convert subgraphs into Earthmover `Graph`s.
         if graph:
             super().__init__(graph)
         else:
@@ -50,16 +59,15 @@ class Graph(nx.DiGraph):
         return self.nodes[ref]["data"]
 
 
-    def select_subgraph(self, selector):
+    def select_subgraph(self, selector) -> 'Graph':
         """
 
         :param selector:
         :return:
         """
-        if selector == "*":
-            graph = self
+        _graph = self
 
-        else:
+        if selector != '*':
             if "," in selector:
                 selectors = selector.split(",")
             else:
@@ -87,10 +95,10 @@ class Graph(nx.DiGraph):
                 selected_nodes += descendant_nodes + ancestor_nodes
                 all_selected_nodes += selected_nodes
 
-            graph = nx.subgraph(self, all_selected_nodes)
+            _graph = nx.subgraph(self, all_selected_nodes)
 
         # Return as an Earthmover Graph to give better flexibility
-        return Graph(graph=graph, error_handler=self.error_handler)
+        return Graph(graph=_graph, error_handler=self.error_handler)
 
 
     def draw(self, image_width=20, image_height=14):
@@ -114,7 +122,6 @@ class Graph(nx.DiGraph):
 
             # Extract sizing data about the node (i.e., num rows, num cols, size on disk)
             # TODO: Make sizing-parsing function.
-
 
             # Classify node as source, transformation, or destination
             _type = node[1]["data"].type

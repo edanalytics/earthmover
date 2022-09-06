@@ -29,10 +29,12 @@ class RunsFile:
         'selector',
     ]
 
-    def __init__(self, file: str, *, earthmover: Earthmover):
+    def __init__(self, file: str, *, earthmover: 'Earthmover'):
         self.file = file
-        self.logger = earthmover.logger
-        self.hashes = self.build_hashes(earthmover)
+
+        self.earthmover = earthmover
+        self.logger = self.earthmover.logger
+        self.hashes = self.build_hashes()
 
         # Force the existence of the runs file.
         if not os.path.isfile( self.file ):
@@ -90,7 +92,7 @@ class RunsFile:
             writer.writerow(row_dict)
 
 
-    def build_hashes(self, earthmover: Earthmover) -> dict:
+    def build_hashes(self) -> dict:
         """
         This tool maintains state about prior runs. If no inputs have changed, there's no need to re-run,
         so for each run, we log hashes of
@@ -105,19 +107,19 @@ class RunsFile:
 
         :return:
         """
-        node_data = earthmover.graph.get_node_data()
+        node_data = self.earthmover.graph.get_node_data()
 
         ### Store all hashes into a dictionary to merge with the rest of the row.
         row = {}
 
         # Hash the configs
-        config_hash = self.get_string_hash(json.dumps(earthmover.config))
+        config_hash = self.get_string_hash(json.dumps(self.earthmover.config))
         row['config_hash'] = config_hash
 
 
         # Hash the params
-        if earthmover.params != "":
-            params_hash = self.get_string_hash(earthmover.params)
+        if self.earthmover.params != "":
+            params_hash = self.get_string_hash(self.earthmover.params)
         else:
             params_hash = ""
 
@@ -126,7 +128,7 @@ class RunsFile:
 
         # Hash the sources
         sources_hash = ""
-        for name, source in earthmover.sources.items():
+        for name, source in self.earthmover.sources.items():
 
             if f"$sources.{name}" not in node_data.keys():
                 continue
@@ -147,7 +149,7 @@ class RunsFile:
 
         # Hash the templates
         templates_hash = ""
-        for name, destination in earthmover.destinations.items():
+        for name, destination in self.earthmover.destinations.items():
 
             if f"$destinations.{name}" not in node_data.keys():
                 continue
@@ -165,7 +167,7 @@ class RunsFile:
 
         # Hash the transformation mapping files
         mappings_hash = ""
-        for name, transformation in earthmover.transformations.items():
+        for name, transformation in self.earthmover.transformations.items():
 
             if name == "__line__":
                 continue
@@ -214,6 +216,7 @@ class RunsFile:
         :param hash_algorithm:
         :return:
         """
+
         if hash_algorithm == "md5":
             hashed = hashlib.md5()
         elif hash_algorithm == "sha1":
@@ -221,11 +224,11 @@ class RunsFile:
         else:
             raise Exception("invalid hash algorithm, must be md5 or sha1")
 
-        hashed.update(string.encode('utf-8'))
+        hashed.update(str(string).encode('utf-8'))
         return hashed.hexdigest()
 
 
-    def get_newest_compatible_destination_run(self, active_nodes: Dict[str, Node]):
+    def get_newest_compatible_destination_run(self, active_nodes: Dict[str, 'Node']):
         """
         Find most-recent (i.e., last) line where this run’s destinations are a subset of the line’s destinations
 
