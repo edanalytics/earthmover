@@ -56,8 +56,8 @@ class Operation:
 
 
     def __init__(self, config, *, earthmover: 'Earthmover'):
-        self.operation = config.get('operation')
         self.config = config
+        self.type = self.config.get('operation')
 
         self.earthmover = earthmover
         self.error_handler = self.earthmover.error_handler
@@ -76,8 +76,9 @@ class Operation:
 
     @abc.abstractmethod
     def compile(self):
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'source', str)
-        self.source = self.config['source']
+        self.error_handler.ctx.update(
+            file=self.earthmover.config_file, line=self.config["__line__"], node=None, operation=self
+        )
         pass
 
 
@@ -88,6 +89,7 @@ class Operation:
 
     @abc.abstractmethod
     def execute(self):
-        self.data = self.get_source_node(self.source).data
-        self.verify()
+        self.error_handler.ctx.update(
+            file=self.earthmover.config_file, line=self.config["__line__"], node=None, operation=self
+        )
         pass

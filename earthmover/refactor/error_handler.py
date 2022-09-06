@@ -79,11 +79,10 @@ class ErrorHandler:
             )
 
     def assert_key_type_is(self, obj, key, desired_type):
-        key_type = type(obj[key])
-
-        if key_type != desired_type:
+        if not isinstance(obj[key], desired_type):
+            _key_type = type(obj[key])
             raise Exception(
-                self.ctx + f"`{key}` is defined, but wrong type (should be {desired_type}, is {key_type})"
+                self.ctx + f"`{key}` is defined, but wrong type (should be {desired_type}, is {_key_type})"
             )
 
     def assert_key_exists_and_type_is(self, obj, key, desired_type):

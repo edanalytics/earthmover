@@ -25,11 +25,8 @@ class Transformation(Node):
         self.operations = []
 
         for idx, operation_config in enumerate(self.config, start=1):
-            self.error_handler.ctx.update(
-                file=self.earthmover.config_file, line=operation_config["__line__"], node=self, operation=operation_config
-            )
-
             _operation = Operation(operation_config, earthmover=self.earthmover)
+            _operation.compile()
             self.operations.append(_operation)
 
             # Sources are defined in a list of 'sources', or a single 'source', but never both.

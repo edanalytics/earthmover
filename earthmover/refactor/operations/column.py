@@ -20,6 +20,40 @@ class GenericColumnOperation(Operation):
         self.source = None
         self.data = None
 
+    @abc.abstractmethod
+    def compile(self):
+        """
+
+        :return:
+        """
+        super().compile()
+
+
+    @abc.abstractmethod
+    def verify(self):
+        """
+
+        :return:
+        """
+        super().verify()
+
+        self.error_handler.assert_key_exists_and_type_is(self.config, 'source', str)
+        self.source = self.config['source']
+        pass
+
+
+    @abc.abstractmethod
+    def execute(self):
+        """
+
+        :return:
+        """
+        super().execute()
+
+        self.data = self.get_source_node(self.source).data
+        self.verify()
+        pass
+
 
 
 class AddColumnsOperation(GenericColumnOperation):
@@ -324,10 +358,10 @@ class CombineColumnsOperation(GenericColumnOperation):
         super().compile()
 
         self.error_handler.assert_key_exists_and_type_is(self.config, "columns", list)
-        self.columns_list = self.config['columns_list']
+        self.columns_list = self.config['columns']
 
         self.error_handler.assert_key_exists_and_type_is(self.config, "new_column", str)
-        self.new_column = self.config['new_columns']
+        self.new_column = self.config['new_column']
 
         self.separator = self.config.get('separator', "")
 
@@ -377,7 +411,7 @@ class MapValuesOperation(GenericColumnOperation):
 
         :return:
         """
-        self.compile()
+        super().compile()
 
         #
         if _column := self.config.get('column'):

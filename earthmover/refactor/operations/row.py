@@ -7,8 +7,47 @@ class GenericRowOperation(Operation):
     """
 
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.source = None
+        self.data = None
+
+
+    @abc.abstractmethod
+    def compile(self):
+        """
+
+        :return:
+        """
+        super().compile()
+
+
+    @abc.abstractmethod
+    def verify(self):
+        """
+
+        :return:
+        """
+        super().verify()
+
+        self.error_handler.assert_key_exists_and_type_is(self.config, 'source', str)
+        self.source = self.config['source']
+        pass
+
+
+    @abc.abstractmethod
+    def execute(self):
+        """
+
+        :return:
+        """
+        super().execute()
+
+        self.data = self.get_source_node(self.source).data
+        self.verify()
+        pass
 
 
 

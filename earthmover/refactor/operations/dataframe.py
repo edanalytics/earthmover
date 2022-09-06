@@ -25,9 +25,12 @@ class GenericDataFrameOperation(Operation):
 
         :return:
         """
+        super().compile()
+
         self.error_handler.assert_key_exists_and_type_is(self.config, 'sources', list)
         self.source_list = self.config['sources']
         pass
+
 
     @abc.abstractmethod
     def verify(self):
@@ -35,6 +38,7 @@ class GenericDataFrameOperation(Operation):
 
         :return:
         """
+        super().verify()
         pass
 
 
@@ -44,9 +48,12 @@ class GenericDataFrameOperation(Operation):
 
         :return:
         """
+        super().execute()
+
         self.data_list = self.source_list = [
             self.get_source_node(source).data for source in self.source_list
         ]
+        self.verify()
         pass
 
 
@@ -63,12 +70,16 @@ class JoinOperation(GenericDataFrameOperation):
         self.join_type = None
 
         self.left_data = None
-        self.left_cols = None
         self.left_keys = None
+        self.left_keep_cols = None
+        self.left_drop_cols = None
+        self.left_cols  = None # The final column list built of cols and keys
 
         self.right_data = None
-        self.right_cols = None
         self.right_keys = None
+        self.right_keep_cols = None
+        self.right_drop_cols = None
+        self.right_cols = None  # The final column list built of cols and keys
 
 
     def compile(self):
@@ -84,11 +95,11 @@ class JoinOperation(GenericDataFrameOperation):
             raise
 
         if _key := self.config.get('left_key'):
-            self.error_handler.assert_key_type_is(self.config, 'left_key', 'str')
+            self.error_handler.assert_key_type_is(self.config, 'left_key', str)
             self.left_keys = [_key]
 
         elif _keys := self.config.get('left_keys'):
-            self.error_handler.assert_key_type_is(self.config, 'left_keys', 'str')
+            self.error_handler.assert_key_type_is(self.config, 'left_keys', str)
             self.left_keys = _keys
         else:
             self.error_handler.throw(
@@ -103,11 +114,11 @@ class JoinOperation(GenericDataFrameOperation):
             raise
 
         if _key := self.config.get('right_key'):
-            self.error_handler.assert_key_type_is(self.config, 'right_key', 'str')
+            self.error_handler.assert_key_type_is(self.config, 'right_key', str)
             self.right_keys = [_key]
 
         elif _keys := self.config.get('right_keys'):
-            self.error_handler.assert_key_type_is(self.config, 'right_keys', 'str')
+            self.error_handler.assert_key_type_is(self.config, 'right_keys', str)
             self.right_keys = _keys
         else:
             self.error_handler.throw(
@@ -129,69 +140,30 @@ class JoinOperation(GenericDataFrameOperation):
             raise
 
 
-        # Collect left and right datasets
+        # Verify the correct number of datasets has been provided.
         if len(self.source_list) != 2:
             self.error_handler.throw(
                 f"`sources` must define exactly two sources to join"
             )
             raise
 
-        self.left_data  = self.source_list[0].data
-        self.right_data = self.source_list[1].data
 
-
-        # Collect left columns to keep
-        self.left_cols = self.left_data.columns
-
+        # Check left columns
         if _keep_cols := self.config.get('left_keep_columns'):
             self.error_handler.assert_key_type_is(self.config, 'left_keep_columns', list)
-            self.left_cols = _keep_cols
-
+            self.left_keep_cols = _keep_cols
         elif _drop_cols := self.config.get('left_drop_columns'):
             self.error_handler.assert_key_type_is(self.config, 'left_drop_columns', list)
-
-            # if any(self.left_keys.map(__contains__, _drop_cols)):
-            if any(col in self.left_keys for col in _drop_cols):
-                self.error_handler.throw(
-                    "you may not `left_drop_columns` that are part of the `left_key(s)`"
-                )
-                raise
-            
-            else:
-                self.left_cols = list(set(self.left_data.columns) - set(_drop_cols))
-
-        else:
-            self.error_handler.throw(
-                "`left_keep_columns` or `left_drop_columns` incorrectly specified (should be list of strings)"
-            )
-            raise
+            self.left_drop_cols = _drop_cols
 
 
-        # Collect right columns to keep
-        self.right_cols = self.right_data.columns
-
+        # Check right columns
         if _keep_cols := self.config.get('right_keep_columns'):
             self.error_handler.assert_key_type_is(self.config, 'right_keep_columns', list)
-            self.right_cols = _keep_cols
-
+            self.right_keep_cols = _keep_cols
         elif _drop_cols := self.config.get('right_drop_columns'):
             self.error_handler.assert_key_type_is(self.config, 'right_drop_columns', list)
-
-            # if any(self.right_keys.map(__contains__, _drop_cols)):
-            if any(col in self.right_keys for col in _drop_cols):
-                self.error_handler.throw(
-                    "you may not `right_drop_columns` that are part of the `right_key(s)`"
-                )
-                raise
-
-            else:
-                self.right_cols = list(set(self.right_data.columns) - set(_drop_cols))
-
-        else:
-            self.error_handler.throw(
-                "`right_keep_columns` or `right_drop_columns` incorrectly specified (should be list of strings)"
-            )
-            raise
+            self.right_drop_cols = _drop_cols
 
 
     def verify(self):
@@ -201,17 +173,49 @@ class JoinOperation(GenericDataFrameOperation):
         """
         super().verify()
 
-        if not set(self.left_cols).issubset(self.left_data.columns):
-            self.error_handler.throw(
-                "columns in `left_keep_columns` are not defined in the dataset"
-            )
-            raise
+        # Build left dataset columns
+        self.left_data  = self.data[0]
+        self.left_cols = self.left_data.columns
 
-        if not set(self.right_cols).issubset(self.right_data.columns):
-            self.error_handler.throw(
-                "columns in `right_keep_columns` are not defined in the dataset"
-            )
-            raise
+        if self.left_keep_cols:
+            if not set(self.left_keep_cols).issubset(self.left_data.columns):
+                self.error_handler.throw(
+                    "columns in `left_keep_columns` are not defined in the dataset"
+                )
+                raise
+
+            self.left_cols = list(set(self.left_keep_cols).union(self.left_keys))
+
+        elif self.left_drop_cols:
+            if any(col in self.left_keys for col in self.left_drop_cols):
+                self.error_handler.throw(
+                    "you may not `left_drop_columns` that are part of the `left_key(s)`"
+                )
+                raise
+
+            self.left_cols = list(set(self.left_cols).difference(self.left_drop_cols))
+
+        # Build right dataset columns
+        self.right_data = self.data[1]
+        self.right_cols = self.right_data.columns
+
+        if self.right_keep_cols:
+            if not set(self.right_keep_cols).issubset(self.right_data.columns):
+                self.error_handler.throw(
+                    "columns in `right_keep_columns` are not defined in the dataset"
+                )
+                raise
+
+            self.right_cols = list(set(self.right_keep_cols).union(self.right_keys))
+
+        elif self.right_drop_cols:
+            if any(col in self.right_keys for col in self.right_drop_cols):
+                self.error_handler.throw(
+                    "you may not `right_drop_columns` that are part of the `right_key(s)`"
+                )
+                raise
+
+            self.right_cols = list(set(self.right_cols).difference(self.right_drop_cols))
 
 
     def execute(self):
@@ -221,8 +225,8 @@ class JoinOperation(GenericDataFrameOperation):
         """
         super().execute()
 
-        _left_data  = self.left_data[ list(set(self.left_cols).union(self.left_keys)) ]
-        _right_data = self.right_data[ list(set(self.right_cols).union(self.right_keys)) ]
+        _left_data  = self.left_data[ self.left_cols ]
+        _right_data = self.right_data[ self.right_cols ]
 
         try:
             return pd.merge(

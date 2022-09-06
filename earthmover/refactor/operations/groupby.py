@@ -51,6 +51,19 @@ class GenericGroupByOperation(Operation):
         pass
 
 
+    @abc.abstractmethod
+    def execute(self):
+        """
+
+        :return:
+        """
+        super().execute()
+
+        self.data = self.get_source_node(self.source).data
+        self.verify()
+        pass
+
+
 
     def _group_by(self, data):
         """
