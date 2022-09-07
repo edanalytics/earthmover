@@ -51,9 +51,9 @@ class Earthmover:
             os.makedirs(_output_dir, exist_ok=True)
 
         # Retrieve the sources, transformations, and destinations
-        self.sources         = _user_configs.get_sources()
-        self.transformations = _user_configs.get_transformations()
-        self.destinations    = _user_configs.get_destinations()
+        self.source_configs         = _user_configs.get_sources()
+        self.transformation_configs = _user_configs.get_transformations()
+        self.destination_configs    = _user_configs.get_destinations()
 
         # Finally, prepare the NetworkX DiGraph
         self.graph = Graph(error_handler=self.error_handler)
@@ -96,7 +96,7 @@ class Earthmover:
 
         ### Build all nodes into a graph
         # sources:
-        for name, config in self.sources.items():
+        for name, config in self.source_configs.items():
             if name == "__line__":
                 continue  # skip YAML line annotations
 
@@ -106,7 +106,7 @@ class Earthmover:
 
 
         # transformations:
-        for name, operations_config in self.transformations.items():
+        for name, operations_config in self.transformation_configs.items():
             if name == "__line__":
                 continue  # skip YAML line annotations
 
@@ -126,7 +126,7 @@ class Earthmover:
 
 
         # destinations:
-        for name, config in self.destinations.items():
+        for name, config in self.destination_configs.items():
             if name == "__line__":
                 continue  # skip YAML line annotations
 
@@ -236,7 +236,7 @@ class Earthmover:
             # Remote sources cannot be hashed.  # TODO: Use Source.is_remote to complete this check.
             _has_remote_sources = False
 
-            for name, source in self.sources.items():
+            for name, source in self.source_configs.items():
                 if name == "__line__":
                     continue
                 if "connection" in source.keys():
