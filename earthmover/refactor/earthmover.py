@@ -35,8 +35,8 @@ class Earthmover:
         self.do_generate = True
 
         # Parse the user-provided config file and retrieve state-configs.
-        _user_configs = UserConfigs(self.config_file, params=self.params, error_handler=self.error_handler)
-        self.config = _user_configs.get_state_configs()
+        self.user_configs = UserConfigs(self.config_file, params=self.params, error_handler=self.error_handler)
+        self.config = self.user_configs.get_state_configs()
 
         # Set up the logger
         self.logger = logger
@@ -50,10 +50,8 @@ class Earthmover:
             self.logger.info(f"creating output directory {_output_dir}")
             os.makedirs(_output_dir, exist_ok=True)
 
-        # Retrieve the sources, transformations, and destinations
-        self.source_configs         = _user_configs.get_sources()
-        self.transformation_configs = _user_configs.get_transformations()
-        self.destination_configs    = _user_configs.get_destinations()
+        # Initialize the sources, transformations, and destinations
+        self.transformation_configs = self.user_configs.get_transformations()
 
         self.sources = None
         self.transformations = None
@@ -102,7 +100,8 @@ class Earthmover:
         # sources:
         self.sources = []
 
-        for name, config in self.source_configs.items():
+        self.error_handler.assert_key_exists_and_type_is(self.user_configs, 'sources', dict)
+        for name, config in self.user_configs['sources'].items():
             if name == "__line__":
                 continue  # skip YAML line annotations
 
@@ -138,7 +137,8 @@ class Earthmover:
         # destinations:
         self.destinations = []
 
-        for name, config in self.destination_configs.items():
+        self.error_handler.assert_key_exists_and_type_is(self.user_configs, 'destinations', dict)
+        for name, config in self.user_configs['destinations'].items():
             if name == "__line__":
                 continue  # skip YAML line annotations
 

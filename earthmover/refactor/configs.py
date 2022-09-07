@@ -47,6 +47,11 @@ class UserConfigs:
 
         self.user_configs = self.load_config_file()
 
+    def __getitem__(self, item):
+        return self.user_configs.__getitem__(item)
+
+    def keys(self):
+        return self.user_configs.keys()
 
     def load_config_file(self):
         """
