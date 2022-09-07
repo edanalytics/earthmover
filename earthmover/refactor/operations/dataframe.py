@@ -174,7 +174,7 @@ class JoinOperation(GenericDataFrameOperation):
         super().verify()
 
         # Build left dataset columns
-        self.left_data  = self.data[0]
+        self.left_data  = self.data_list[0]
         self.left_cols = self.left_data.columns
 
         if self.left_keep_cols:
@@ -196,7 +196,7 @@ class JoinOperation(GenericDataFrameOperation):
             self.left_cols = list(set(self.left_cols).difference(self.left_drop_cols))
 
         # Build right dataset columns
-        self.right_data = self.data[1]
+        self.right_data = self.data_list[1]
         self.right_cols = self.right_data.columns
 
         if self.right_keep_cols:
@@ -267,6 +267,8 @@ class UnionOperation(GenericDataFrameOperation):
 
         :return:
         """
+        super().verify()
+
         _data_columns = set( self.data_list[0].columns )
 
         for data in self.data_list[1:]:
@@ -282,6 +284,8 @@ class UnionOperation(GenericDataFrameOperation):
 
         :return:
         """
+        super().execute()
+
         _result = self.data_list[0]
 
         for data in self.data_list[1:]:

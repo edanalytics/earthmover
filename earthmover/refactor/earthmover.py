@@ -321,6 +321,6 @@ class Earthmover:
 
         ### (Draw the graph again, this time we can add metadata about rows/cols/size at each node)
         # TODO: Re-incorporate metadata.
-        if self.config.show_graph:
+        if self.config['show_graph']:
             self.logger.info("saving dataflow graph image to `graph.png` and `graph.svg`")
             active_graph.draw()

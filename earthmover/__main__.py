@@ -107,12 +107,11 @@ def main(argv=None):
 
         # compare tests/outputs/* against tests/expected/*
         for filename in os.listdir('earthmover/tests/expected/'):
-            if not filecmp.cmp(
-                    os.path.join('earthmover', 'tests', 'expected', filename),
-                    os.path.join('earthmover', 'tests', 'outputs', filename)
-            ):
-                file = os.path.join('earthmover', 'tests', 'outputs', filename)
-                em.logger.critical(f"Test output `{file}` does not match expected output.")
+
+            _expected_file  = os.path.join('earthmover/tests/expected', filename)
+            _outputted_file = os.path.join('earthmover/tests/outputs', filename)
+            if not filecmp.cmp(_expected_file, _outputted_file):
+                em.logger.critical(f"Test output `{_outputted_file}` does not match expected output.")
                 exit(1)
 
         em.logger.info('tests passed successfully.')

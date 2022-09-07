@@ -28,6 +28,9 @@ class GenericGroupByOperation(Operation):
         """
         super().compile()
 
+        self.error_handler.assert_key_exists_and_type_is(self.config, 'source', str)
+        self.source = self.config['source']
+
         self.error_handler.assert_key_exists_and_type_is(self.config, 'group_by_columns', list)
         self.group_by_columns = self.config['group_by_columns']
 
@@ -222,22 +225,24 @@ class GroupByOperation(GenericGroupByOperation):
         """
         super().execute()
 
+        #
         _grouped = self.data.groupby(self.group_by_columns)
-        result = _grouped.size().reset_index()
 
+        result = _grouped.size().reset_index()
         result.columns = self.group_by_columns + [self.GROUP_SIZE_COL]
 
-        for col_name, func in self.create_columns_dict.items():
-            if col_name == "__line__":
+        for new_col_name, func in self.create_columns_dict.items():
+            if new_col_name == "__line__":
                 continue
 
-            _finds = re.findall(
+            _pieces = re.findall(
                 "([A-Za-z0-9_]*)\(([A-Za-z0-9_]*)?,?(.*)?\)",
                 func
             )[0]
-            _finds = list(_finds) + ["", ""]  # Clever logic to simplify unpacking.
 
-            _agg_type, _col, _sep, *_ = _finds  # Unpack the pieces, adding blanks as necessary.
+            _pieces = list(_pieces) + ["", ""]  # Clever logic to simplify unpacking.
+            _agg_type, _col, _sep, *_ = _pieces  # Unpack the pieces, adding blanks as necessary.
+            # _agg_type, _col, _sep, *_ = _pieces + ["", ""]  # Unpack the pieces, adding blanks as necessary.
 
             #
             if _agg_type in self.COLUMN_REQ_AGG_TYPES:
@@ -257,7 +262,13 @@ class GroupByOperation(GenericGroupByOperation):
                     f"invalid aggregation function `{_agg_type}` in `group_by` operation"
                 )
 
-            _computed = agg_lambda(result).to_frame(col_name).reset_index()
+            #
+            _computed = (
+                _grouped
+                    .apply(agg_lambda)
+                    .to_frame(new_col_name)
+                    .reset_index()
+            )
             result = result.merge(_computed, how="left", on=self.group_by_columns)
 
         result = result.query(f"{self.GROUP_SIZE_COL} > 0")
@@ -266,7 +277,8 @@ class GroupByOperation(GenericGroupByOperation):
         return result
 
 
-    def _get_agg_lambda(self, agg_type: str, column: str = "", separator: str = ""):
+    @staticmethod
+    def _get_agg_lambda(agg_type: str, column: str = "", separator: str = ""):
         """
 
         :param agg_type:
@@ -275,21 +287,21 @@ class GroupByOperation(GenericGroupByOperation):
         :return:
         """
         AGG_LAMBDA_MAPPING = {
-            'agg'      : lambda grouped: grouped.apply(lambda x: separator.join(x[column])),
-            'aggregate': lambda grouped: grouped.apply(lambda x: separator.join(x[column])),
-            'avg'      : lambda grouped: grouped.apply(lambda x: pd.to_numeric(x[column]).sum() / max(1, len(x))),
-            'count'    : lambda grouped: grouped.apply(len),
-            'max'      : lambda grouped: grouped.apply(lambda x: pd.to_numeric(x[column]).max()),
-            'maximum'  : lambda grouped: grouped.apply(lambda x: pd.to_numeric(x[column]).max()),
-            'mean'     : lambda grouped: grouped.apply(lambda x: pd.to_numeric(x[column]).sum() / max(1, len(x))),
-            'min'      : lambda grouped: grouped.apply(lambda x: pd.to_numeric(x[column]).min()),
-            'minimum'  : lambda grouped: grouped.apply(lambda x: pd.to_numeric(x[column]).min()),
-            'size'     : lambda grouped: grouped.apply(len),
-            'std'      : lambda grouped: grouped.apply(lambda x: pd.to_numeric(x[column]).std()),
-            'stdev'    : lambda grouped: grouped.apply(lambda x: pd.to_numeric(x[column]).std()),
-            'stddev'   : lambda grouped: grouped.apply(lambda x: pd.to_numeric(x[column]).std()),
-            'sum'      : lambda grouped: grouped.apply(lambda x: pd.to_numeric(x[column]).sum()),
-            'var'      : lambda grouped: grouped.apply(lambda x: pd.to_numeric(x[column]).var()),
-            'variance' : lambda grouped: grouped.apply(lambda x: pd.to_numeric(x[column]).var()),
+            'agg'      : lambda x: separator.join(x[column]),
+            'aggregate': lambda x: separator.join(x[column]),
+            'avg'      : lambda x: pd.to_numeric(x[column]).sum() / max(1, len(x)),
+            'count'    : lambda x: len(x),
+            'max'      : lambda x: pd.to_numeric(x[column]).max(),
+            'maximum'  : lambda x: pd.to_numeric(x[column]).max(),
+            'mean'     : lambda x: pd.to_numeric(x[column]).sum() / max(1, len(x)),
+            'min'      : lambda x: pd.to_numeric(x[column]).min(),
+            'minimum'  : lambda x: pd.to_numeric(x[column]).min(),
+            'size'     : lambda x: len(x),
+            'std'      : lambda x: pd.to_numeric(x[column]).std(),
+            'stdev'    : lambda x: pd.to_numeric(x[column]).std(),
+            'stddev'   : lambda x: pd.to_numeric(x[column]).std(),
+            'sum'      : lambda x: pd.to_numeric(x[column]).sum(),
+            'var'      : lambda x: pd.to_numeric(x[column]).var(),
+            'variance' : lambda x: pd.to_numeric(x[column]).var(),
         }
         return AGG_LAMBDA_MAPPING.get(agg_type)

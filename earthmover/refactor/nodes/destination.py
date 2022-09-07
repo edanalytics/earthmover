@@ -20,13 +20,6 @@ class Destination(Node):
         self.type = 'destination'
         self.mode = None  # Documents which class was chosen.
 
-        self.header = None
-        self.footer = None
-
-        self.source = None
-        self.template = None
-        self.jinja_template = None
-
 
     @abc.abstractmethod
     def compile(self):
@@ -64,6 +57,9 @@ class FileDestination(Destination):
         self.output_dir = self.earthmover.config['output_dir']  # This is guaranteed define via defaults.
         self.extension = None
 
+        self.template = None
+        self.jinja_template = None
+
 
     def compile(self):
         """
@@ -74,6 +70,9 @@ class FileDestination(Destination):
 
         self.error_handler.assert_key_exists_and_type_is(self.config, "extension", str)
         self.extension = self.config['extension']
+
+        self.error_handler.assert_key_exists_and_type_is(self.config, "template", str)
+        self.template = self.config['template']
 
         #
         try:
@@ -87,7 +86,7 @@ class FileDestination(Destination):
             raise  # Avoids linter reference-before-assignment of `value`
 
         #
-        if self.config.get('linearize'):
+        if 'linearize' in self.config:
             template_string = template_string.replace("\n", "")
             template_string = template_string.replace("\r", "")
             template_string = template_string.strip()
@@ -125,7 +124,7 @@ class FileDestination(Destination):
         with open(file_name, 'w') as fp:
             for row in target.data.to_records(index=False):
 
-                row_data = list(zip(target.config["header_row"], row))
+                row_data = list(zip(target.data.columns, row))
 
                 try:
                     json_string = self.jinja_template.render(row_data)

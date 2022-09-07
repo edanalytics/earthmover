@@ -23,6 +23,10 @@ class GenericRowOperation(Operation):
         """
         super().compile()
 
+        self.error_handler.assert_key_exists_and_type_is(self.config, 'source', str)
+        self.source = self.config['source']
+        pass
+
 
     @abc.abstractmethod
     def verify(self):
@@ -31,9 +35,6 @@ class GenericRowOperation(Operation):
         :return:
         """
         super().verify()
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'source', str)
-        self.source = self.config['source']
         pass
 
 

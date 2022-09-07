@@ -28,6 +28,10 @@ class GenericColumnOperation(Operation):
         """
         super().compile()
 
+        self.error_handler.assert_key_exists_and_type_is(self.config, 'source', str)
+        self.source = self.config['source']
+        pass
+
 
     @abc.abstractmethod
     def verify(self):
@@ -36,9 +40,6 @@ class GenericColumnOperation(Operation):
         :return:
         """
         super().verify()
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'source', str)
-        self.source = self.config['source']
         pass
 
 
@@ -163,7 +164,7 @@ class ModifyColumnsOperation(GenericColumnOperation):
                 self.data = self.data.apply(
                     self.earthmover.apply_jinja,
                     axis=1,
-                    args=(template, col, 'add')
+                    args=(template, col, 'modify')
                 )
 
             # Otherwise, assign a static value as the column.
@@ -388,8 +389,8 @@ class CombineColumnsOperation(GenericColumnOperation):
         super().execute()
 
         self.data[self.new_column] = self.data.apply(
-            lambda x: ', '.join([*self.columns_list])
-        , axis=1, meta='str')
+            (lambda x: self.separator.join(x[col] for col in self.columns_list))
+        , axis=1)#, meta='str')
 
         return self.data
 
