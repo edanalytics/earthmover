@@ -34,11 +34,26 @@ class Node:
 
     @abc.abstractmethod
     def compile(self):
-        raise NotImplementedError
+        """
+
+        :return:
+        """
+        self.error_handler.ctx.update(
+            file=self.earthmover.config_file, line=self.config['__line__'], node=self, operation=None
+        )
+        pass
+
 
     @abc.abstractmethod
     def execute(self):
-        raise NotImplementedError
+        """
+
+        :return:
+        """
+        self.error_handler.ctx.update(
+            file=self.earthmover.config_file, line=self.config["__line__"], node=self, operation=None
+        )
+        pass
 
 
     def check_expectations(self):

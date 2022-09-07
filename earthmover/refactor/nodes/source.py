@@ -40,6 +40,7 @@ class Source(Node):
             earthmover.error_handler.throw(
                 "sources must specify either a `file` and/or `connection` string and `query`"
             )
+            raise
 
 
     def __init__(self, *args, **kwargs):
@@ -55,9 +56,11 @@ class Source(Node):
 
     @abc.abstractmethod
     def compile(self):
-        self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config['__line__'], node=self, operation=None
-        )
+        """
+
+        :return:
+        """
+        super().compile()
 
         if isinstance(self.config.get('expect'), list):
             self.expectations = self.config['expect']
@@ -70,9 +73,11 @@ class Source(Node):
 
     @abc.abstractmethod
     def execute(self):
-        self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config["__line__"], node=self, operation=None
-        )
+        """
+
+        :return:
+        """
+        super().execute()
         pass
 
 
@@ -112,13 +117,14 @@ class FileSource(Source):
         _sep = util.get_sep(self.file_type)  # Inherited from Node
         try:
             self.read_lambda = self._get_read_lambda(self.file_type, sep=_sep)
+
         except Exception as err:
             self.error_handler.throw(
                 f"no lambda defined for file type `{self.file_type}`"
             )
             raise
 
-        # TODO: Make remote files `FtpSource`s
+        #
         if "://" in self.file:
             self.is_remote = True
         else:
@@ -126,7 +132,9 @@ class FileSource(Source):
                 self.size = os.path.getsize(self.file)
 
             except FileNotFoundError:
-                self.error_handler.throw(f"Source file {self.file} not found")
+                self.error_handler.throw(
+                    f"Source file {self.file} not found"
+                )
                 raise
 
 
@@ -137,14 +145,10 @@ class FileSource(Source):
         """
         super().execute()
 
-        # Get the read function for this specific file.
-
-
-        # read in data:
         try:
             self.data = self.read_lambda(self.file, self.config)
 
-            # rename columns (if specified)
+            # rename columns (if specified)  # TODO: Move this step to verify?
             if _columns := self.config.get('columns'):
 
                 if isinstance(_columns, list):

@@ -20,12 +20,18 @@ class Destination(Node):
         self.type = 'destination'
         self.mode = None  # Documents which class was chosen.
 
+        self.source = None
+        self.template = None
+        self.jinja_template = None
+
 
     @abc.abstractmethod
     def compile(self):
-        self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config['__line__'], node=self, operation=None
-        )
+        """
+
+        :return:
+        """
+        super().compile()
 
         self.error_handler.assert_key_exists_and_type_is(self.config, "source", str)
         self.source = self.config['source']
@@ -38,9 +44,11 @@ class Destination(Node):
 
     @abc.abstractmethod
     def execute(self):
-        self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config["__line__"], node=self, operation=None
-        )
+        """
+
+        :return:
+        """
+        super().execute()
         pass
 
 
@@ -58,9 +66,6 @@ class FileDestination(Destination):
         self.output_dir = self.earthmover.config['output_dir']  # This is guaranteed define via defaults.
         self.extension = None
 
-        self.template = None
-        self.jinja_template = None
-
 
     def compile(self):
         """
@@ -71,9 +76,6 @@ class FileDestination(Destination):
 
         self.error_handler.assert_key_exists_and_type_is(self.config, "extension", str)
         self.extension = self.config['extension']
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, "template", str)
-        self.template = self.config['template']
 
         #
         try:
@@ -103,6 +105,7 @@ class FileDestination(Destination):
             self.earthmover.error_handler.throw(
                 f"syntax error in Jinja template in `template` file {self.template} ({err})"
             )
+            raise
 
 
     def execute(self):

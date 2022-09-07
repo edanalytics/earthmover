@@ -21,27 +21,31 @@ class Transformation(Node):
 
         :return:
         """
+        # super().compile()
+
         self.sources = set()
         self.operations = []
 
         for idx, operation_config in enumerate(self.config, start=1):
-            _operation = Operation(operation_config, earthmover=self.earthmover)
-            _operation.compile()
-            self.operations.append(_operation)
+            operation = Operation(operation_config, earthmover=self.earthmover)
+            operation.compile()
+            self.operations.append(operation)
 
-            # Sources are defined in a list of 'sources', or a single 'source', but never both.
-            # These are saved as an attribute to build network edges in `Earthmover.graph`.
-            if 'sources' in operation_config:
-                self.sources.update(operation_config['sources'])
-            elif 'source' in operation_config:
-                self.sources.add(operation_config['source'])
+            # Sources are defined in a 'source_list' or 'source' class attribute, but never both.
+            if _source_list := operation.__dict__.get('source_list'):
+                self.sources.update(_source_list)
+            elif _source := operation.__dict__.get('source'):
+                self.sources.add(_source)
 
-        if not self.sources:
+        # Sources are saved as an attribute to build network edges in `Earthmover.graph`.
+        if self.sources:
+            self.sources = list(self.sources)
+
+        else:
             self.error_handler.throw(
                 "no source(s) defined for transformation operation"
             )
-        else:
-            self.sources = list(self.sources)
+            raise
 
 
     def execute(self):
@@ -49,6 +53,8 @@ class Transformation(Node):
 
         :return:
         """
+        # super().execute()
+
         for operation in self.operations:
             self.data = operation.execute()
 
