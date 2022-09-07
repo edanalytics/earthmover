@@ -116,7 +116,7 @@ class Graph(nx.DiGraph):
         transformations = []
 
         node_labels = {}
-        node_sizes = {}
+        # node_sizes = {}
         for node in self.nodes(data=True):
             node_labels[node[0]] = node[1]["data"].name
 

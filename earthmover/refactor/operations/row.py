@@ -167,7 +167,8 @@ class FilterRowsOperation(GenericRowOperation):
 
         try:
             return self.data.query(_query)
-        except Exception as err:
+
+        except Exception as _:
             self.error_handler.throw(
                 "error during `filter_rows` operation... check query format?"
             )

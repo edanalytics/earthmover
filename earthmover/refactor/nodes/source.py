@@ -118,7 +118,7 @@ class FileSource(Source):
         try:
             self.read_lambda = self._get_read_lambda(self.file_type, sep=_sep)
 
-        except Exception as err:
+        except Exception as _:
             self.error_handler.throw(
                 f"no lambda defined for file type `{self.file_type}`"
             )
@@ -200,7 +200,7 @@ class FileSource(Source):
         :param file:
         :return:
         """
-        EXT_MAPPING = {
+        ext_mapping = {
             'csv' : 'csv',
             'dta' : 'stata',
             'feather': 'feather',
@@ -225,7 +225,7 @@ class FileSource(Source):
         }
 
         ext = file.lower().rsplit('.', 1)[-1]
-        return EXT_MAPPING.get(ext)
+        return ext_mapping.get(ext)
 
 
     @staticmethod
@@ -237,7 +237,7 @@ class FileSource(Source):
         :return:
         """
         # We don't watn to activate the function inside this helper function.
-        READ_LAMBDA_MAPPING = {
+        read_lambda_mapping = {
             'csv'       : lambda file, config: pd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8")),
             'excel'     : lambda file, config: pd.read_excel(file, sheet_name=config.get("sheet", 0)),
             'feather'   : lambda file, _     : pd.read_feather(file),
@@ -252,7 +252,7 @@ class FileSource(Source):
             'xml'       : lambda file, config: pd.read_xml(file, xpath=config.get('xpath', "./*")),
             'tsv'       : lambda file, config: pd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8")),
         }
-        return READ_LAMBDA_MAPPING.get(file_type)
+        return read_lambda_mapping.get(file_type)
 
 
 
@@ -280,7 +280,7 @@ class FtpSource(Source):
         self.error_handler.assert_key_type_is(self.config, "connection", str)
         self.connection = self.config['connection']
 
-        user, passwd, host, port, path = re.match(r'ftp:\/\/(.*?):?(.*?)@?([^:\/]*):?(.*?)\/(.*)', self.connection).groups()
+        user, passwd, host, port, self.file = re.match(r"ftp://(.*?):?(.*?)@?([^:/]*):?(.*?)/(.*)", self.connection).groups()
         try:
             self.ftp = ftplib.FTP(host)
 
@@ -289,8 +289,7 @@ class FtpSource(Source):
             else:
                 self.ftp.login()
 
-            self.file = path
-            self.size = self.ftp.size(self.path)
+            self.size = self.ftp.size(self.file)
 
         except Exception as err:
             self.error_handler.throw(

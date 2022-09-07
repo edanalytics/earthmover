@@ -14,13 +14,13 @@ class ErrorContext:
 
 
     def add(self, file=None, line=None, node=None, operation=None):
-        if file != None:
+        if file:
             self.file = file
-        if line != None:
+        if line:
             self.line = line
-        if node != None:
+        if node:
             self.node = node
-        if operation != None:
+        if operation:
             self.operation = operation
 
 

@@ -20,6 +20,7 @@ class GenericColumnOperation(Operation):
         self.source = None
         self.data = None
 
+
     @abc.abstractmethod
     def compile(self):
         """
@@ -33,9 +34,9 @@ class GenericColumnOperation(Operation):
         pass
 
 
-    @abc.abstractmethod
     def verify(self):
         """
+        Verification is optional; therefore, this is not assigned as an abstract method.
 
         :return:
         """
@@ -94,7 +95,7 @@ class AddColumnsOperation(GenericColumnOperation):
                 try:
                     template = jinja2.Environment(
                         loader=jinja2.FileSystemLoader(os.path.dirname('/'))
-                    ).from_string(self.earthmover.config['macros'] + val)
+                    ).from_string(self.earthmover.state_configs['macros'] + val)
 
                 except Exception as err:
                     self.error_handler.throw(
@@ -153,7 +154,7 @@ class ModifyColumnsOperation(GenericColumnOperation):
                 try:
                     template = jinja2.Environment(
                         loader=jinja2.FileSystemLoader(os.path.dirname('/'))
-                    ).from_string(self.earthmover.config['macros'] + val)
+                    ).from_string(self.earthmover.state_configs['macros'] + val)
 
                 except Exception as err:
                     self.error_handler.throw(
@@ -469,7 +470,7 @@ class MapValuesOperation(GenericColumnOperation):
             for _column in self.columns_list:
                 self.data[_column] = self.data[_column].replace(self.mapping)
 
-        except Exception as err:
+        except Exception as _:
             self.error_handler.throw(
                 "error during `map_values` operation... check mapping shape and `column(s)`?"
             )

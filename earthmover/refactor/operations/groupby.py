@@ -37,9 +37,9 @@ class GenericGroupByOperation(Operation):
         pass
 
 
-    @abc.abstractmethod
     def verify(self):
         """
+        # This method is inherited as is to all child classes.
 
         :return:
         """
@@ -71,7 +71,6 @@ class GenericGroupByOperation(Operation):
         """
 
         :param data:
-        :param cols:
         :return:
         """
         data[self.GROUPED_COL_NAME] = data.apply(
@@ -285,7 +284,7 @@ class GroupByOperation(GenericGroupByOperation):
         :param separator:
         :return:
         """
-        AGG_LAMBDA_MAPPING = {
+        agg_lambda_mapping = {
             'agg'      : lambda x: separator.join(x[column]),
             'aggregate': lambda x: separator.join(x[column]),
             'avg'      : lambda x: pd.to_numeric(x[column]).sum() / max(1, len(x)),
@@ -303,4 +302,4 @@ class GroupByOperation(GenericGroupByOperation):
             'var'      : lambda x: pd.to_numeric(x[column]).var(),
             'variance' : lambda x: pd.to_numeric(x[column]).var(),
         }
-        return AGG_LAMBDA_MAPPING.get(agg_type)
+        return agg_lambda_mapping.get(agg_type)

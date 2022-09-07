@@ -2,10 +2,12 @@ import json
 import logging
 import os
 import time
+import yaml
 
 import networkx as nx
 
-from earthmover.refactor.configs import UserConfigs
+from yaml import SafeLoader
+
 from earthmover.refactor.error_handler import ErrorHandler
 from earthmover.refactor.graph import Graph
 from earthmover.refactor.runs_file import RunsFile
@@ -18,6 +20,15 @@ from earthmover.refactor.util import human_time
 class Earthmover:
 
     version = "0.2.0"
+
+    config_defaults = {
+        "state_file": os.path.join(os.path.expanduser("~"), ".earthmover.csv"),
+        "output_dir": "./",
+        "macros": "",
+        "show_graph": False,
+        "log_level": "INFO",
+        "show_stacktrace": False
+    }
 
     def __init__(self,
         config_file: str,
@@ -35,30 +46,59 @@ class Earthmover:
         self.do_generate = True
 
         # Parse the user-provided config file and retrieve state-configs.
-        self.user_configs = UserConfigs(self.config_file, params=self.params, error_handler=self.error_handler)
-        self.config = self.user_configs.get_state_configs()
+        self.user_configs = self.load_config_file()  #UserConfigs(self.config_file, params=self.params, error_handler=self.error_handler)
+
+        _state_configs = {**self.config_defaults, **self.user_configs.get('config', {})}
+        self.state_configs = {
+            'state_file': os.path.expanduser(_state_configs['state_file']),
+            'output_dir': os.path.expanduser(_state_configs['output_dir']),
+            'macros': _state_configs['macros'].strip(),
+            'show_graph': _state_configs['show_graph'],
+            'log_level': _state_configs['log_level'].upper(),
+            'show_stacktrace': _state_configs['show_stacktrace'],
+        }
 
         # Set up the logger
         self.logger = logger
         self.logger.setLevel(
-            logging.getLevelName( self.config['log_level'] )
+            logging.getLevelName( self.state_configs['log_level'] )
         )
 
         # Prepare the output directory for destinations.
-        _output_dir = self.config['output_dir']
+        _output_dir = self.state_configs['output_dir']
         if not os.path.isdir(_output_dir):
             self.logger.info(f"creating output directory {_output_dir}")
             os.makedirs(_output_dir, exist_ok=True)
 
         # Initialize the sources, transformations, and destinations
-        self.transformation_configs = self.user_configs.get_transformations()
-
-        self.sources = None
-        self.transformations = None
-        self.destinations = None
+        self.sources = []
+        self.transformations = []
+        self.destinations = []
 
         # Finally, prepare the NetworkX DiGraph
         self.graph = Graph(error_handler=self.error_handler)
+
+
+    def load_config_file(self):
+        """
+
+        :return:
+        """
+        _env_backup = os.environ.copy()
+
+        # Load & parse config YAML (using modified environment vars)
+        os.environ.update(self.params)
+
+        with open(self.config_file, "r") as stream:
+            try:
+                configs = yaml.load(stream, Loader=SafeLineEnvVarLoader)
+            except yaml.YAMLError as err:
+                raise Exception(self.error_handler.ctx + f"YAML could not be parsed: {err}")
+
+        # Return environment to original backup
+        os.environ = _env_backup
+
+        return configs
 
 
     def apply_jinja(self, row, template, col, func):
@@ -98,8 +138,6 @@ class Earthmover:
 
         ### Build all nodes into a graph
         # sources:
-        self.sources = []
-
         self.error_handler.assert_key_exists_and_type_is(self.user_configs, 'sources', dict)
         for name, config in self.user_configs['sources'].items():
             if name == "__line__":
@@ -112,31 +150,30 @@ class Earthmover:
 
 
         # transformations:
-        self.transformations = []
+        if 'transformations' in self.user_configs:
+            self.error_handler.assert_key_type_is(self.user_configs, 'transformations', dict)
 
-        for name, operations_config in self.transformation_configs.items():
-            if name == "__line__":
-                continue  # skip YAML line annotations
+            for name, operations_config in self.user_configs['transformations'].items():
+                if name == "__line__":
+                    continue  # skip YAML line annotations
 
-            node = Transformation(name, operations_config, earthmover=self)
-            node.compile()
-            self.transformations.append(node)
-            self.graph.add_node(f"$transformations.{name}", data=node)
+                node = Transformation(name, operations_config, earthmover=self)
+                node.compile()
+                self.transformations.append(node)
+                self.graph.add_node(f"$transformations.{name}", data=node)
 
-            for source in node.sources:
-                if not self.graph.lookup_node(source):
-                    self.error_handler.throw(
-                        f"invalid source {source}"
-                    )
-                    raise
+                for source in node.sources:
+                    if not self.graph.lookup_node(source):
+                        self.error_handler.throw(
+                            f"invalid source {source}"
+                        )
+                        raise
 
-                if source != f"$transformations.{name}":
-                    self.graph.add_edge(source, f"$transformations.{name}")
+                    if source != f"$transformations.{name}":
+                        self.graph.add_edge(source, f"$transformations.{name}")
 
 
         # destinations:
-        self.destinations = []
-
         self.error_handler.assert_key_exists_and_type_is(self.user_configs, 'destinations', dict)
         for name, config in self.user_configs['destinations'].items():
             if name == "__line__":
@@ -241,7 +278,7 @@ class Earthmover:
 
         ### Hashing requires an entire class mixin and multiple additional steps.
         if not self.skip_hashing:
-            _runs_path = self.config['state_file']
+            _runs_path = self.state_configs['state_file']
             self.logger.info(f"computing input hashes for run log at {_runs_path}")
 
             runs_file = RunsFile(_runs_path, earthmover=self)
@@ -284,7 +321,7 @@ class Earthmover:
 
 
         ### Draw the graph, regardless of whether a run is completed.
-        if self.config['show_graph']:
+        if self.state_configs['show_graph']:
             active_graph.draw()
 
         # Unchanged runs are avoided unless the user forces the run.
@@ -323,6 +360,27 @@ class Earthmover:
 
         ### (Draw the graph again, this time we can add metadata about rows/cols/size at each node)
         # TODO: Re-incorporate metadata.
-        if self.config['show_graph']:
+        if self.state_configs['show_graph']:
             self.logger.info("saving dataflow graph image to `graph.png` and `graph.svg`")
             active_graph.draw()
+
+
+
+# This allows us to determine the YAML file line number for any element loaded from YAML
+# (very useful for debugging and giving meaningful error messages)
+# (derived from https://stackoverflow.com/a/53647080)
+# Also added env var interpolation based on
+# https://stackoverflow.com/questions/52412297/how-to-replace-environment-variable-value-in-yaml-file-to-be-parsed-using-python#answer-55301129
+class SafeLineEnvVarLoader(SafeLoader):
+
+    def construct_mapping(self, node, deep=False):
+        mapping = super().construct_mapping(node, deep=deep)
+
+        # expand env vars:
+        for k, v in mapping.items():
+            if isinstance(v, str):
+                mapping[k] = os.path.expandvars(v)
+
+        # Add 1 so line numbering starts at 1
+        mapping['__line__'] = node.start_mark.line + 1
+        return mapping

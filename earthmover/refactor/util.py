@@ -28,7 +28,7 @@ def get_chunksize(memory_limit: int) -> int:
     :return:
     """
     MB = 1024 * 1024
-    BYTES_TO_ROW_MAPPING = {
+    bytes_to_row_mapping = {
         5 * 1024 * MB: 2 * 10 ** 7, #   >  5GB -> 20 M
         2 * 1024 * MB: 1 * 10 ** 7, #   >  2GB -> 10 M
             1024 * MB: 5 * 10 ** 6, #   >  1GB -> 5  M
@@ -44,7 +44,7 @@ def get_chunksize(memory_limit: int) -> int:
     }
 
     #
-    for key, val in BYTES_TO_ROW_MAPPING.items():
+    for key, val in bytes_to_row_mapping.items():
         if memory_limit > key:
             return val
     else:
@@ -57,16 +57,15 @@ def get_sep(file: str) -> Optional[str]:
     (this should only be used for local files, aka the map_file for a map_values transformation operation)
 
     :param file:
-    :param return_none:
     :return:
     """
-    EXT_MAPPING = {
+    ext_mapping = {
         'csv': ',',
         'tsv': '\t',
     }
 
     ext = file.lower().rsplit('.', 1)[-1]
-    return EXT_MAPPING.get(ext)
+    return ext_mapping.get(ext)
 
 
 def contains_jinja(string):

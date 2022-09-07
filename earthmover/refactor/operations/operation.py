@@ -21,7 +21,7 @@ class Operation:
             column as column_operations
         )
 
-        OPERATION_MAPPING = {
+        operation_mapping = {
             'join': dataframe_operations.JoinOperation,
             'union': dataframe_operations.UnionOperation,
 
@@ -44,7 +44,7 @@ class Operation:
         }
 
         operation = config.get('operation')
-        operation_class = OPERATION_MAPPING.get(operation)
+        operation_class = operation_mapping.get(operation)
 
         if operation_class is None:
             earthmover.error_handler.throw(

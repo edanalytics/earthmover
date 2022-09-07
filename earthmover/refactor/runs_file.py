@@ -53,7 +53,7 @@ class RunsFile:
 
         # Raise a warning for the user to manually reset or select a new log-runs file.
         if len(runs) > self.ROW_COUNT_TO_WARN:
-            self.logger.warn(
+            self.logger.warning(
                 f"run log file {self.file} is getting long, consider truncating it for better performance.",
                 True
             )
@@ -113,7 +113,7 @@ class RunsFile:
         row = {}
 
         # Hash the configs
-        config_hash = self.get_string_hash(json.dumps(self.earthmover.config))
+        config_hash = self.get_string_hash(json.dumps(self.earthmover.state_configs))
         row['config_hash'] = config_hash
 
 

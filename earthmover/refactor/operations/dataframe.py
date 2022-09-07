@@ -234,8 +234,10 @@ class JoinOperation(GenericDataFrameOperation):
                 left_on=self.left_keys, right_on=self.right_keys
             )
 
-        except Exception as err:
-            self.error_handler.throw("error during `join` operation. Check your join keys?")
+        except Exception as _:
+            self.error_handler.throw(
+                "error during `join` operation. Check your join keys?"
+            )
             raise
 
 
@@ -291,8 +293,10 @@ class UnionOperation(GenericDataFrameOperation):
         for data in self.data_list[1:]:
             try:
                 _result = pd.concat([_result, data], ignore_index=True)
-            except Exception as e:
-                self.error_handler.throw("error during `union` operation... are sources same shape?")
+            except Exception as _:
+                self.error_handler.throw(
+                    "error during `union` operation... are sources same shape?"
+                )
                 raise
 
         return _result
