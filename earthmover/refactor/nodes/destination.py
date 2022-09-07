@@ -3,6 +3,7 @@ import os
 import jinja2
 import re
 
+
 from earthmover.refactor.nodes.node import Node
 
 
@@ -23,6 +24,8 @@ class Destination(Node):
         self.source = None
         self.template = None
         self.jinja_template = None
+
+        self.data = None
 
 
     @abc.abstractmethod
@@ -49,6 +52,8 @@ class Destination(Node):
         :return:
         """
         super().execute()
+        self.data = self.earthmover.graph.ref(self.source).data
+
         pass
 
 
@@ -58,6 +63,8 @@ class FileDestination(Destination):
 
     """
     EXP = re.compile(r"\s+")
+
+    TEMPLATED_COL = "____OUTPUT____"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -117,18 +124,16 @@ class FileDestination(Destination):
         """
         super().execute()
 
-        target = self.earthmover.graph.ref(self.source)
-        target.data.fillna('', inplace=True)
+        self.data = self.data.fillna('')
 
-        #
         os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
         with open(self.file_path, 'w') as fp:
-            for row in target.data.to_records(index=False):
 
-                row_data = list(zip(target.data.columns, row))
-
+            # TODO: Verify this does not load everything into memory.
+            for row_data in self.data.itertuples(index=False):
+                _data_tuple = row_data._asdict().items()
                 try:
-                    json_string = self.jinja_template.render(row_data)
+                    json_string = self.jinja_template.render(_data_tuple)
 
                 except Exception as err:
                     self.error_handler.throw(

@@ -1,7 +1,7 @@
 import abc
 import re
 
-import pandas as pd
+import dask.dataframe as dd
 
 from earthmover.refactor.operations.operation import Operation
 
@@ -287,19 +287,19 @@ class GroupByOperation(GenericGroupByOperation):
         agg_lambda_mapping = {
             'agg'      : lambda x: separator.join(x[column]),
             'aggregate': lambda x: separator.join(x[column]),
-            'avg'      : lambda x: pd.to_numeric(x[column]).sum() / max(1, len(x)),
+            'avg'      : lambda x: dd.to_numeric(x[column]).sum() / max(1, len(x)),
             'count'    : lambda x: len(x),
-            'max'      : lambda x: pd.to_numeric(x[column]).max(),
-            'maximum'  : lambda x: pd.to_numeric(x[column]).max(),
-            'mean'     : lambda x: pd.to_numeric(x[column]).sum() / max(1, len(x)),
-            'min'      : lambda x: pd.to_numeric(x[column]).min(),
-            'minimum'  : lambda x: pd.to_numeric(x[column]).min(),
+            'max'      : lambda x: dd.to_numeric(x[column]).max(),
+            'maximum'  : lambda x: dd.to_numeric(x[column]).max(),
+            'mean'     : lambda x: dd.to_numeric(x[column]).sum() / max(1, len(x)),
+            'min'      : lambda x: dd.to_numeric(x[column]).min(),
+            'minimum'  : lambda x: dd.to_numeric(x[column]).min(),
             'size'     : lambda x: len(x),
-            'std'      : lambda x: pd.to_numeric(x[column]).std(),
-            'stdev'    : lambda x: pd.to_numeric(x[column]).std(),
-            'stddev'   : lambda x: pd.to_numeric(x[column]).std(),
-            'sum'      : lambda x: pd.to_numeric(x[column]).sum(),
-            'var'      : lambda x: pd.to_numeric(x[column]).var(),
-            'variance' : lambda x: pd.to_numeric(x[column]).var(),
+            'std'      : lambda x: dd.to_numeric(x[column]).std(),
+            'stdev'    : lambda x: dd.to_numeric(x[column]).std(),
+            'stddev'   : lambda x: dd.to_numeric(x[column]).std(),
+            'sum'      : lambda x: dd.to_numeric(x[column]).sum(),
+            'var'      : lambda x: dd.to_numeric(x[column]).var(),
+            'variance' : lambda x: dd.to_numeric(x[column]).var(),
         }
         return agg_lambda_mapping.get(agg_type)

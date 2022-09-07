@@ -1,6 +1,6 @@
 import abc
 
-import pandas as pd
+import dask.dataframe as dd
 
 from .operation import Operation
 
@@ -229,7 +229,7 @@ class JoinOperation(GenericDataFrameOperation):
         _right_data = self.right_data[ self.right_cols ]
 
         try:
-            return pd.merge(
+            return dd.merge(
                 _left_data, _right_data, how=self.join_type,
                 left_on=self.left_keys, right_on=self.right_keys
             )
@@ -292,7 +292,7 @@ class UnionOperation(GenericDataFrameOperation):
 
         for data in self.data_list[1:]:
             try:
-                _result = pd.concat([_result, data], ignore_index=True)
+                _result = dd.concat([_result, data], ignore_index=True)
             except Exception as _:
                 self.error_handler.throw(
                     "error during `union` operation... are sources same shape?"

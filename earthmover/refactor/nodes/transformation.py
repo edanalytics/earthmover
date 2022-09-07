@@ -1,3 +1,5 @@
+from dask.dataframe.core import DataFrame as DaskDataFrame
+
 from earthmover.refactor.nodes.node import Node
 from earthmover.refactor.operations.operation import Operation
 
@@ -57,4 +59,4 @@ class Transformation(Node):
 
         for operation in self.operations:
             self.data = operation.execute()
-
+            assert(isinstance(self.data, DaskDataFrame))
