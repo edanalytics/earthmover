@@ -55,6 +55,10 @@ class Earthmover:
         self.transformation_configs = _user_configs.get_transformations()
         self.destination_configs    = _user_configs.get_destinations()
 
+        self.sources = None
+        self.transformations = None
+        self.destinations = None
+
         # Finally, prepare the NetworkX DiGraph
         self.graph = Graph(error_handler=self.error_handler)
 
@@ -96,25 +100,31 @@ class Earthmover:
 
         ### Build all nodes into a graph
         # sources:
+        self.sources = []
+
         for name, config in self.source_configs.items():
             if name == "__line__":
                 continue  # skip YAML line annotations
 
-            _node = Source(name, config, earthmover=self)
-            _node.compile()
-            self.graph.add_node(f"$sources.{name}", data=_node)
+            node = Source(name, config, earthmover=self)
+            node.compile()
+            self.sources.append(node)
+            self.graph.add_node(f"$sources.{name}", data=node)
 
 
         # transformations:
+        self.transformations = []
+
         for name, operations_config in self.transformation_configs.items():
             if name == "__line__":
                 continue  # skip YAML line annotations
 
-            _node = Transformation(name, operations_config, earthmover=self)
-            _node.compile()
-            self.graph.add_node(f"$transformations.{name}", data=_node)
+            node = Transformation(name, operations_config, earthmover=self)
+            node.compile()
+            self.transformations.append(node)
+            self.graph.add_node(f"$transformations.{name}", data=node)
 
-            for source in _node.sources:
+            for source in node.sources:
                 if not self.graph.lookup_node(source):
                     self.error_handler.throw(
                         f"invalid source {source}"
@@ -126,21 +136,24 @@ class Earthmover:
 
 
         # destinations:
+        self.destinations = []
+
         for name, config in self.destination_configs.items():
             if name == "__line__":
                 continue  # skip YAML line annotations
 
-            _node = Destination(name, config, earthmover=self)
-            _node.compile()
-            self.graph.add_node(f"$destinations.{name}", data=_node)
+            node = Destination(name, config, earthmover=self)
+            node.compile()
+            self.destinations.append(node)
+            self.graph.add_node(f"$destinations.{name}", data=node)
 
-            if not self.graph.lookup_node(_node.source):
+            if not self.graph.lookup_node(node.source):
                 self.error_handler.throw(
-                    f"invalid source {_node.source}"
+                    f"invalid source {node.source}"
                 )
                 raise
 
-            self.graph.add_edge(_node.source, f"$destinations.{name}")
+            self.graph.add_edge(node.source, f"$destinations.{name}")
 
 
         ### Confirm that the graph is a DAG
@@ -233,19 +246,8 @@ class Earthmover:
 
             runs_file = RunsFile(_runs_path, earthmover=self)
 
-            # Remote sources cannot be hashed.  # TODO: Use Source.is_remote to complete this check.
-            _has_remote_sources = False
-
-            for name, source in self.source_configs.items():
-                if name == "__line__":
-                    continue
-                if "connection" in source.keys():
-                    _has_remote_sources = True
-                if "file" in source.keys() and "://" in source["file"]:
-                    _has_remote_sources = True
-
             # Remote sources cannot be hashed; no hashed runs contain remote sources.
-            if _has_remote_sources:
+            if any(source.is_remote for source in self.sources):
                 self.logger.info(
                     "forcing regenerate, since some sources are remote (and we cannot know if they changed)"
                 )
