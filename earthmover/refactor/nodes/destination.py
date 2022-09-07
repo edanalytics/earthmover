@@ -3,7 +3,6 @@ import os
 import jinja2
 import re
 
-
 from earthmover.refactor.nodes.node import Node
 
 
