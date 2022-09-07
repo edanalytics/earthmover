@@ -1,10 +1,9 @@
 import abc
 import csv
-
 import jinja2
-
 import os
-import pandas as pd
+
+import dask.dataframe as dd
 
 from earthmover.refactor.operations.operation import Operation
 from earthmover.refactor import util
@@ -565,7 +564,7 @@ class DateFormatOperation(GenericColumnOperation):
         for _column in self.columns_list:
             try:
                 self.data[_column] = (
-                    pd.to_datetime(self.data[_column], format=self.from_format)
+                    dd.to_datetime(self.data[_column], format=self.from_format)
                         .dt.strftime(self.to_format)
                 )
 
