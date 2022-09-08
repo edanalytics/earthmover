@@ -1,4 +1,3 @@
-import abc
 import dask.dataframe as dd
 
 from earthmover.refactor.operations.operation import Operation

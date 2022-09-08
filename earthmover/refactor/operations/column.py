@@ -1,8 +1,7 @@
 import csv
+import dask.dataframe as dd
 import jinja2
 import os
-
-import dask.dataframe as dd
 
 from earthmover.refactor.operations.operation import Operation
 from earthmover.refactor import util
