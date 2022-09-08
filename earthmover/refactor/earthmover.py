@@ -46,7 +46,8 @@ class Earthmover:
         self.do_generate = True
 
         # Parse the user-provided config file and retrieve state-configs.
-        self.user_configs = self.load_config_file()  #UserConfigs(self.config_file, params=self.params, error_handler=self.error_handler)
+        # Merge the optional user state configs into the defaults, then clean as necessary.
+        self.user_configs = self.load_config_file()
 
         _state_configs = {**self.config_defaults, **self.user_configs.get('config', {})}
         self.state_configs = {
@@ -75,7 +76,7 @@ class Earthmover:
         self.transformations = []
         self.destinations = []
 
-        # Finally, prepare the NetworkX DiGraph
+        # Initialize the NetworkX DiGraph
         self.graph = Graph(error_handler=self.error_handler)
 
 
@@ -101,38 +102,6 @@ class Earthmover:
         return configs
 
 
-    def apply_jinja(self, row, template, col, func):
-        """
-        # TODO: Where should this go?
-
-        :param row:
-        :param template:
-        :param col:
-        :param func:
-        :return:
-        """
-        row["___row_id___"] = row.name
-
-        if func == "modify":
-            row["value"] = row[col]
-
-        try:
-            value = template.render(row)
-        except Exception as err:
-            self.error_handler.throw(
-                f"Error rendering Jinja template for column `{col}` of `{func}_columns` operation ({err})"
-            )
-            raise
-
-        row[col] = value
-        del row["___row_id___"]
-
-        if func == "modify":
-            del row["value"]
-
-        return row
-
-
     def compile(self):
         self.logger.debug("building dataflow graph")
 
@@ -153,11 +122,11 @@ class Earthmover:
         if 'transformations' in self.user_configs:
             self.error_handler.assert_key_type_is(self.user_configs, 'transformations', dict)
 
-            for name, operations_config in self.user_configs['transformations'].items():
+            for name, config in self.user_configs['transformations'].items():
                 if name == "__line__":
                     continue  # skip YAML line annotations
 
-                node = Transformation(name, operations_config, earthmover=self)
+                node = Transformation(name, config, earthmover=self)
                 node.compile()
                 self.transformations.append(node)
                 self.graph.add_node(f"$transformations.{name}", data=node)
@@ -214,12 +183,11 @@ class Earthmover:
                 if node_data[node].type == "source" and node_data[node].skip:
                     skip_nodes.append(node.replace("$sources.", ""))
 
+            #
             if skip_nodes:
                 _missing_sources = ", ".join(skip_nodes)
 
                 for skip_node in skip_nodes:
-
-                    #
                     for node in nx.dfs_tree(self.graph, f"$sources.{skip_node}"):
                         if node_data[node].type == "destination":
                             _dest_node = node.replace("$destinations.", "")
@@ -233,14 +201,13 @@ class Earthmover:
             self.graph.remove_node(node)
 
 
-    def execute(self, subgraph, start_nodes=(), exclude_nodes=(), ignore_done=False):
+    def execute(self, subgraph, start_nodes=(), exclude_nodes=()):
         """
         # TODO: `start_nodes` is not used.
 
         :param subgraph:
         :param start_nodes:
         :param exclude_nodes:
-        :param ignore_done:
         :return:
         """
         for layer in list(nx.topological_generations(subgraph)):
@@ -251,7 +218,7 @@ class Earthmover:
 
                 node_data = self.graph.get_node_data()
 
-                if not node_data[node].is_done or ignore_done:
+                if not node_data[node].data:
                     node_data[node].execute()  # Sets self.data in each node.
 
 

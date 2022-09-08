@@ -1,8 +1,7 @@
 import abc
 import jinja2
-import time
 
-from typing import Optional
+from earthmover.refactor import util
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -13,7 +12,7 @@ class Node:
     """
 
     """
-    def __init__(self, name: str, config: Optional[dict] = None, *, earthmover: 'Earthmover'):
+    def __init__(self, name: str, config: dict, *, earthmover: 'Earthmover'):
         self.name = name
         self.config = config
         self.type = None
@@ -27,9 +26,7 @@ class Node:
         self.rows = None
         self.cols = None
 
-        self.age = time.time()
         self.expectations = []
-        self.is_done = False
 
 
     @abc.abstractmethod
@@ -57,19 +54,27 @@ class Node:
 
 
     def check_expectations(self):
-        if not self.is_done:
+        """
+
+        :return:
+        """
+        if not self.data:
             self.logger.debug("skipping checking expectations (not yet loaded)")
             return
 
         if self.expectations:
-            result = self.data
+            result = self.data.copy()
 
             for expectation in self.expectations:
                 _template = jinja2.Template("{{" + expectation + "}}")
                 result = result.apply(
-                    self.earthmover.apply_jinja,
+                    util.apply_jinja_template_to_row,
                     axis=1,
-                    args=(_template, "__expectation_result__", "expectations")
+                    kwargs={
+                        'template': _template,
+                        'col': "__expectation_result__",
+                        'error_handler': self.error_handler,
+                    }
                 )
 
                 num_failed = len(result.query("__expectation_result__=='False'"))

@@ -16,10 +16,9 @@ class Destination(Node):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.type = 'destination'
-        self.mode = None  # Documents which class was chosen.
 
+        self.mode = None  # Documents which class was chosen.
         self.source = None
         self.template = None
         self.jinja_template = None
@@ -88,14 +87,17 @@ class FileDestination(Destination):
             self.error_handler.throw(
                 f"`template` file {self.template} cannot be opened ({err})"
             )
-            raise  # Avoids linter reference-before-assignment of `value`
+            raise
 
         #
         if 'linearize' in self.config:
-            template_string = template_string.replace("\n", "")
-            template_string = template_string.replace("\r", "")
-            template_string = template_string.strip()
-            template_string = self.EXP.sub(" ", template_string).strip()
+            template_string = (
+                template_string
+                    .replace("\n", "")
+                    .replace("\r", "")
+                    .strip()
+            )
+            template_string = self.EXP.sub(" ", template_string)  # Replace multiple spaces with a single space.
 
         #
         try:
@@ -138,5 +140,4 @@ class FileDestination(Destination):
 
                 fp.write(json_string + "\n")
 
-        self.is_done = True
         self.logger.debug(f"output `{self.file_path}` written")

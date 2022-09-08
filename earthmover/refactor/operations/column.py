@@ -104,9 +104,13 @@ class AddColumnsOperation(GenericColumnOperation):
                     raise
 
                 self.data = self.data.apply(
-                    self.earthmover.apply_jinja,
+                    util.apply_jinja_template_to_row,
                     axis=1,
-                    args=(template, col, 'add')
+                    kwargs={
+                        'template': template,
+                        'col': col,
+                        'error_handler': self.error_handler,
+                    }
                 )
 
             # Otherwise, assign a static value as the column.
@@ -150,7 +154,11 @@ class ModifyColumnsOperation(GenericColumnOperation):
             if col == "__line__":
                 continue
 
-            if util.contains_jinja(val):
+            # Apply the value as a static string if not obviously Jinja.
+            if not util.contains_jinja(val):
+                self.data[col] = val
+
+            else:
                 try:
                     template = jinja2.Environment(
                         loader=jinja2.FileSystemLoader(os.path.dirname('/'))
@@ -163,16 +171,30 @@ class ModifyColumnsOperation(GenericColumnOperation):
                     raise
 
                 self.data = self.data.apply(
-                    self.earthmover.apply_jinja,
-                    axis=1,
-                    args=(template, col, 'modify')
+                    self._apply_jinja, axis=1, args=(template, col)
                 )
 
-            # Otherwise, assign a static value as the column.
-            else:
-                self.data[col] = val
-
         return self.data
+
+
+    def _apply_jinja(self, row, template, col):
+        """
+        Extends util.apply_jinja_template_to_row().
+        Adds the ability to reference current column value using `value` key.
+        TODO: Let user specify name of column reference string.
+
+        :param row:
+        :param template:
+        :param col:
+        :return:
+        """
+        row["value"] = row[col]
+
+        row = util.apply_jinja_template_to_row(row, template, col, error_handler=self.error_handler)
+
+        del row["value"]
+
+        return row
 
 
 

@@ -6,7 +6,6 @@ import os
 
 import pandas as pd
 
-
 from earthmover.refactor.nodes.node import Node
 from earthmover.refactor import util
 
@@ -45,13 +44,12 @@ class Source(Node):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.type = 'source'
-        self.mode = None  # Documents which class was chosen.
 
-        self.is_remote = None  # False only for local files.
-        self.expectations = None
+        self.mode = None  # Documents which class was chosen.
+        self.is_remote = False  # False only for local files.
         self.skip = False  # A source can be turned off if `required=False` is specified in its configs.
+        self.expectations = None
 
 
     @abc.abstractmethod
@@ -93,6 +91,7 @@ class FileSource(Source):
         self.file = None
         self.file_type = None
         self.read_lambda = None
+        self.columns_list = None
 
 
     def compile(self):
@@ -114,7 +113,7 @@ class FileSource(Source):
             raise
 
         # Initialize the read_lambda.
-        _sep = util.get_sep(self.file_type)  # Inherited from Node
+        _sep = util.get_sep(self.file_type)
         try:
             self.read_lambda = self._get_read_lambda(self.file_type, sep=_sep)
 
@@ -125,15 +124,35 @@ class FileSource(Source):
             raise
 
         #
+        if 'columns' in self.config:
+            self.error_handler.assert_key_type_is(self.config, 'columns', list)
+            self.columns_list = self.config.get('columns')
+
+        #
         if "://" in self.file:
             self.is_remote = True
+
         else:
             try:
                 self.size = os.path.getsize(self.file)
-
             except FileNotFoundError:
                 self.error_handler.throw(
                     f"Source file {self.file} not found"
+                )
+                raise
+
+
+    def verify(self):
+        """
+
+        :return:
+        """
+        if self.columns_list:
+            _num_data_cols = len(self.data.columns)
+            _num_list_cols = len(self.columns_list)
+            if _num_data_cols != _num_list_cols:
+                self.error_handler.throw(
+                    f"source file {self.file} specified {_num_list_cols} `columns` but has {_num_data_cols} columns"
                 )
                 raise
 
@@ -147,24 +166,8 @@ class FileSource(Source):
 
         try:
             self.data = self.read_lambda(self.file, self.config)
+            self.verify()  # Verify the column list provided matches the number of columns in the dataframe.
 
-            # rename columns (if specified)  # TODO: Move this step to verify?
-            if _columns := self.config.get('columns'):
-
-                if isinstance(_columns, list):
-                    if len(self.data.columns) == len(_columns):
-                        self.data.columns = _columns
-                    else:
-                        _data_columns = self.data.columns
-                        self.error_handler.throw(
-                            f"source file {self.file} specified {len(_data_columns)} `columns` but has {len(_columns)} columns"
-                        )
-                else:
-                    self.error_handler.throw(
-                        f"source file {self.file} specified `columns` but not as a list (of new column names)"
-                    )
-
-            self.is_done = True
             self.logger.debug(
                 f"source `{self.name}` loaded ({self.size} bytes, {self.rows} rows)"
             )
@@ -304,7 +307,6 @@ class FtpSource(Source):
         """
         super().execute()
 
-
         try:
             flo = io.BytesIO()
             self.ftp.retrbinary('RETR ' + self.file, flo.write)
@@ -317,7 +319,6 @@ class FtpSource(Source):
             )
             raise
 
-        self.is_done = True
         self.logger.debug(
             f"source `{self.name}` loaded {self.rows} rows (via FTP)"
         )
@@ -370,7 +371,6 @@ class SqlSource(Source):
         try:
             self.data = pd.read_sql(sql=self.query, con=self.connection)
 
-            self.is_done = True
             self.logger.debug(
                 f"source `{self.name}` loaded ({self.rows} rows)"
             )
