@@ -1,6 +1,5 @@
-import re
-
 import pandas as pd
+import re
 
 from earthmover.refactor.operations.operation import Operation
 

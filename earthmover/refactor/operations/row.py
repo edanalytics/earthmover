@@ -1,5 +1,3 @@
-import abc
-
 from earthmover.refactor.operations.operation import Operation
 
 

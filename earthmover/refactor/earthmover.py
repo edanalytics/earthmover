@@ -1,10 +1,9 @@
 import json
 import logging
+import networkx as nx
 import os
 import time
 import yaml
-
-import networkx as nx
 
 from yaml import SafeLoader
 

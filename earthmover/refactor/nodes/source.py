@@ -3,7 +3,6 @@ import ftplib
 import io
 import re
 import os
-
 import pandas as pd
 
 from earthmover.refactor.nodes.node import Node
