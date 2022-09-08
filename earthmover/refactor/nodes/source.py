@@ -1,4 +1,5 @@
 import abc
+import dask.dataframe as dd
 import ftplib
 import io
 import re
@@ -180,14 +181,14 @@ class FileSource(Source):
             self.error_handler.throw(
                 f"source file {self.file} not found"
             )
-        except pd.errors.EmptyDataError:
-            self.error_handler.throw(
-                f"no data in source file {self.file}"
-            )
-        except pd.errors.ParserError:
-            self.error_handler.throw(
-                f"error parsing source file {self.file}"
-            )
+        # except pd.errors.EmptyDataError:
+        #     self.error_handler.throw(
+        #         f"no data in source file {self.file}"
+        #     )
+        # except pd.errors.ParserError:
+        #     self.error_handler.throw(
+        #         f"error parsing source file {self.file}"
+        #     )
         except Exception as err:
             self.error_handler.throw(
                 f"error with source file {self.file} ({err})"
@@ -240,19 +241,19 @@ class FileSource(Source):
         """
         # We don't watn to activate the function inside this helper function.
         read_lambda_mapping = {
-            'csv'       : lambda file, config: pd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8")),
-            'excel'     : lambda file, config: pd.read_excel(file, sheet_name=config.get("sheet", 0)),
-            'feather'   : lambda file, _     : pd.read_feather(file),
-            'fixedwidth': lambda file, _     : pd.read_fwf(file),
-            'html'      : lambda file, config: pd.read_html(file, match=config.get('match', ".+")),
-            'orc'       : lambda file, _     : pd.read_orc(file),
-            'json'      : lambda file, config: pd.read_json(file, typ=config.get('object_type', "frame"), orient=config.get('orientation', "columns")),
-            'parquet'   : lambda file, _     : pd.read_parquet(file),
-            'sas'       : lambda file, _     : pd.read_sas(file),
-            'spss'      : lambda file, _     : pd.read_spss(file),
-            'stata'     : lambda file, _     : pd.read_stata(file),
-            'xml'       : lambda file, config: pd.read_xml(file, xpath=config.get('xpath', "./*")),
-            'tsv'       : lambda file, config: pd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8")),
+            'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8")),
+            'excel'     : lambda file, config: dd.from_pandas(pd.read_excel(file, sheet_name=config.get("sheet", 0)), npartitions=1),
+            'feather'   : lambda file, _     : dd.from_pandas(pd.read_feather(file), npartitions=1),
+            'fixedwidth': lambda file, _     : dd.read_fwf(file),
+            'html'      : lambda file, config: dd.from_pandas(pd.read_html(file, match=config.get('match', ".+"))[0], npartitions=1),
+            'orc'       : lambda file, _     : dd.read_orc(file),
+            'json'      : lambda file, config: dd.read_json(file, typ=config.get('object_type', "frame"), orient=config.get('orientation', "columns")),
+            'parquet'   : lambda file, _     : dd.read_parquet(file),
+            'sas'       : lambda file, _     : dd.from_pandas(pd.read_sas(file), npartitions=1),
+            'spss'      : lambda file, _     : dd.from_pandas(pd.read_spss(file), npartitions=1),
+            'stata'     : lambda file, _     : dd.from_pandas(pd.read_stata(file), npartitions=1),
+            'xml'       : lambda file, config: dd.from_pandas(pd.read_xml(file, xpath=config.get('xpath', "./*")), npartitions=1),
+            'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8")),
         }
         return read_lambda_mapping.get(file_type)
 
@@ -310,7 +311,7 @@ class FtpSource(Source):
             flo = io.BytesIO()
             self.ftp.retrbinary('RETR ' + self.file, flo.write)
             flo.seek(0)
-            self.data = pd.read_csv(flo)
+            self.data = dd.read_csv(flo)
 
         except Exception as err:
             self.error_handler.throw(
