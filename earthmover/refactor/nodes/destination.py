@@ -130,9 +130,9 @@ class FileDestination(Destination):
         os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
         with open(self.file_path, 'w') as fp:
 
-            # TODO: Verify this does not load everything into memory.
             for row_data in self.data.itertuples(index=False):
                 _data_tuple = row_data._asdict().items()
+
                 try:
                     json_string = self.jinja_template.render(_data_tuple)
 

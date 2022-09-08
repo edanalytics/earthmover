@@ -59,4 +59,3 @@ class Transformation(Node):
 
         for operation in self.operations:
             self.data = operation.execute()
-            assert(isinstance(self.data, DaskDataFrame))
