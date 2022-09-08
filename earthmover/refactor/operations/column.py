@@ -2,6 +2,7 @@ import csv
 import dask.dataframe as dd
 import jinja2
 import os
+import pandas as pd
 
 from earthmover.refactor.operations.operation import Operation
 from earthmover.refactor import util
@@ -57,7 +58,8 @@ class AddColumnsOperation(Operation):
                     raise
 
                 self.data[col] = self.data.apply(
-                    util.render_jinja_template, axis=1, meta='str',
+                    util.render_jinja_template, axis=1,
+                    meta=pd.Series(dtype='str', name=col),
                     template=template,
                     error_handler=self.error_handler
                 )
@@ -119,7 +121,8 @@ class ModifyColumnsOperation(Operation):
                 self.data['value'] = self.data[col]
 
                 self.data[col] = self.data.apply(
-                    util.render_jinja_template, axis=1, meta='str',
+                    util.render_jinja_template, axis=1,
+                    meta=pd.Series(dtype='str', name=col),
                     template=template,
                     error_handler=self.error_handler
                 )
@@ -348,8 +351,10 @@ class CombineColumnsOperation(Operation):
         super().execute()
 
         self.data[self.new_column] = self.data.apply(
-            (lambda x: self.separator.join(x[col] for col in self.columns_list))
-        , axis=1, meta='str')
+            lambda x: self.separator.join(x[col] for col in self.columns_list),
+            axis=1,
+            meta=pd.Series(dtype='str', name=self.new_column)
+        )
 
         return self.data
 

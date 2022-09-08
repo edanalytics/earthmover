@@ -1,4 +1,5 @@
 import dask.dataframe as dd
+import pandas as pd
 import re
 
 from earthmover.refactor.operations.operation import Operation
@@ -201,6 +202,11 @@ class GroupByOperation(Operation):
 
     def execute(self):
         """
+        Note: There is a bug in Dask Groupby operations.
+        Index columns are overwritten by 'index' after index reset.
+        https://stackoverflow.com/questions/62323279/how-do-keep-dask-dataframe-after-groupby-compute
+        https://stackoverflow.com/questions/73604953/dask-groupby-columns-are-not-there-even-after-reset-index
+
 
         :return:
         """
@@ -243,19 +249,29 @@ class GroupByOperation(Operation):
                     f"invalid aggregation function `{_agg_type}` in `group_by` operation"
                 )
 
+            # Groupbys require the index be defined, at least in structure.
+            meta = pd.Series(
+                dtype='object',
+                name=new_col_name,
+                index=pd.MultiIndex.from_tuples(
+                    tuples=[(None,) * len(self.group_by_columns)],
+                    names=self.group_by_columns
+                )
+            )
+
             #
             _computed = (
                 _grouped
-                    .apply(agg_lambda)
-                    .to_frame(new_col_name)
+                    .apply(agg_lambda, meta=meta)
                     .reset_index()
             )
+
             result = result.merge(_computed, how="left", on=self.group_by_columns)
 
-        result = result.query(f"{self.GROUP_SIZE_COL} > 0")
-        del result[self.GROUP_SIZE_COL]
+        self.data = result.query(f"{self.GROUP_SIZE_COL} > 0")
+        del self.data[self.GROUP_SIZE_COL]
 
-        return result
+        return self.data
 
 
     @staticmethod
