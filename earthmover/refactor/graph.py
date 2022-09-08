@@ -1,9 +1,8 @@
 import math
-import re
-
-import networkx as nx
-import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+import networkx as nx
+import re
 
 from typing import Optional
 

@@ -1,58 +1,7 @@
-import abc
-
 from earthmover.refactor.operations.operation import Operation
 
 
-class GenericRowOperation(Operation):
-    """
-
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.source = None
-        self.data = None
-
-
-    @abc.abstractmethod
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'source', str)
-        self.source = self.config['source']
-        pass
-
-
-    @abc.abstractmethod
-    def verify(self):
-        """
-
-        :return:
-        """
-        super().verify()
-        pass
-
-
-    @abc.abstractmethod
-    def execute(self):
-        """
-
-        :return:
-        """
-        super().execute()
-
-        self.data = self.get_source_node(self.source).data
-        self.verify()
-        pass
-
-
-
-class DistinctRowsOperation(GenericRowOperation):
+class DistinctRowsOperation(Operation):
     """
 
     """
@@ -81,8 +30,6 @@ class DistinctRowsOperation(GenericRowOperation):
         else:  # Do not subset the columns.
             self.columns_list = []  # TODO: Check whether this logic works.
 
-        pass
-
 
     def verify(self):
         """
@@ -105,11 +52,12 @@ class DistinctRowsOperation(GenericRowOperation):
         """
         super().execute()
 
-        return self.data.drop_duplicates(subset=self.columns_list)
+        self.data = self.data.drop_duplicates(subset=self.columns_list)
+
+        return self.data
 
 
-
-class FilterRowsOperation(GenericRowOperation):
+class FilterRowsOperation(Operation):
     """
 
     """
@@ -143,15 +91,6 @@ class FilterRowsOperation(GenericRowOperation):
             raise
 
 
-    def verify(self):
-        """
-
-        :return:
-        """
-        super().verify()
-        pass
-
-
     def execute(self):
         """
 
@@ -166,10 +105,12 @@ class FilterRowsOperation(GenericRowOperation):
             _query = self.query
 
         try:
-            return self.data.query(_query)
+            self.data = self.data.query(_query)
 
         except Exception as _:
             self.error_handler.throw(
                 "error during `filter_rows` operation... check query format?"
             )
             raise
+
+        return self.data

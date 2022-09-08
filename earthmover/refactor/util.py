@@ -82,3 +82,25 @@ def contains_jinja(string):
         return True
     else:
         return False
+
+
+def apply_jinja_template_to_row(row, template, col, *, error_handler):
+    """
+
+    :param row:
+    :param template:
+    :param col:
+    :param error_handler:
+    :return:
+    """
+    try:
+        _value = template.render(row)
+        row[col] = _value
+
+    except Exception as err:
+        error_handler.throw(
+            f"Error rendering Jinja template for column `{col}` ({err})"
+        )
+        raise
+
+    return row

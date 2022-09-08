@@ -1,4 +1,3 @@
-import abc
 import csv
 import jinja2
 import os
@@ -9,55 +8,7 @@ from earthmover.refactor.operations.operation import Operation
 from earthmover.refactor import util
 
 
-class GenericColumnOperation(Operation):
-    """
-
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.source = None
-        self.data = None
-
-
-    @abc.abstractmethod
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'source', str)
-        self.source = self.config['source']
-        pass
-
-
-    def verify(self):
-        """
-        Verification is optional; therefore, this is not assigned as an abstract method.
-
-        :return:
-        """
-        super().verify()
-        pass
-
-
-    @abc.abstractmethod
-    def execute(self):
-        """
-
-        :return:
-        """
-        super().execute()
-
-        self.data = self.get_source_node(self.source).data
-        self.verify()
-        pass
-
-
-
-class AddColumnsOperation(GenericColumnOperation):
+class AddColumnsOperation(Operation):
     """
 
     """
@@ -90,7 +41,11 @@ class AddColumnsOperation(GenericColumnOperation):
             if col == "__line__":
                 continue
 
-            if util.contains_jinja(val):
+            # Apply the value as a static string if not obviously Jinja.
+            if not util.contains_jinja(val):
+                self.data[col] = val
+
+            else:
                 try:
                     template = jinja2.Environment(
                         loader=jinja2.FileSystemLoader(os.path.dirname('/'))
@@ -103,20 +58,20 @@ class AddColumnsOperation(GenericColumnOperation):
                     raise
 
                 self.data = self.data.apply(
-                    self.earthmover.apply_jinja,
+                    util.apply_jinja_template_to_row,
                     axis=1,
-                    args=(template, col, 'add')
+                    kwargs={
+                        'template': template,
+                        'col': col,
+                        'error_handler': self.error_handler,
+                    }
                 )
-
-            # Otherwise, assign a static value as the column.
-            else:
-                self.data[col] = val
 
         return self.data
 
 
 
-class ModifyColumnsOperation(GenericColumnOperation):
+class ModifyColumnsOperation(Operation):
     """
 
     """
@@ -149,7 +104,11 @@ class ModifyColumnsOperation(GenericColumnOperation):
             if col == "__line__":
                 continue
 
-            if util.contains_jinja(val):
+            # Apply the value as a static string if not obviously Jinja.
+            if not util.contains_jinja(val):
+                self.data[col] = val
+
+            else:
                 try:
                     template = jinja2.Environment(
                         loader=jinja2.FileSystemLoader(os.path.dirname('/'))
@@ -162,20 +121,34 @@ class ModifyColumnsOperation(GenericColumnOperation):
                     raise
 
                 self.data = self.data.apply(
-                    self.earthmover.apply_jinja,
-                    axis=1,
-                    args=(template, col, 'modify')
+                    self._apply_jinja, axis=1, args=(template, col)
                 )
-
-            # Otherwise, assign a static value as the column.
-            else:
-                self.data[col] = val
 
         return self.data
 
 
+    def _apply_jinja(self, row, template, col):
+        """
+        Extends util.apply_jinja_template_to_row().
+        Adds the ability to reference current column value using `value` key.
+        TODO: Let user specify name of column reference string.
 
-class DuplicateColumnsOperation(GenericColumnOperation):
+        :param row:
+        :param template:
+        :param col:
+        :return:
+        """
+        row["value"] = row[col]
+
+        row = util.apply_jinja_template_to_row(row, template, col, error_handler=self.error_handler)
+
+        del row["value"]
+
+        return row
+
+
+
+class DuplicateColumnsOperation(Operation):
     """
 
     """
@@ -214,7 +187,7 @@ class DuplicateColumnsOperation(GenericColumnOperation):
 
 
 
-class RenameColumnsOperation(GenericColumnOperation):
+class RenameColumnsOperation(Operation):
     """
 
     """
@@ -242,11 +215,13 @@ class RenameColumnsOperation(GenericColumnOperation):
         """
         super().execute()
 
-        return self.data.rename(columns=self.columns_dict)
+        self.data = self.data.rename(columns=self.columns_dict)
+
+        return self.data
 
 
 
-class DropColumnsOperation(GenericColumnOperation):
+class DropColumnsOperation(Operation):
     """
 
     """
@@ -288,11 +263,12 @@ class DropColumnsOperation(GenericColumnOperation):
         """
         super().execute()
 
-        return self.data.drop(columns=self.columns_to_drop)
+        self.data = self.data.drop(columns=self.columns_to_drop)
+
+        return self.data
 
 
-
-class KeepColumnsOperation(GenericColumnOperation):
+class KeepColumnsOperation(Operation):
     """
 
     """
@@ -335,11 +311,12 @@ class KeepColumnsOperation(GenericColumnOperation):
         """
         super().execute()
 
-        return self.data[self.header]
+        self.data = self.data[self.header]
+
+        return self.data
 
 
-
-class CombineColumnsOperation(GenericColumnOperation):
+class CombineColumnsOperation(Operation):
     """
 
     """
@@ -396,7 +373,7 @@ class CombineColumnsOperation(GenericColumnOperation):
 
 
 
-class MapValuesOperation(GenericColumnOperation):
+class MapValuesOperation(Operation):
     """
 
     """
@@ -499,7 +476,7 @@ class MapValuesOperation(GenericColumnOperation):
 
 
 
-class DateFormatOperation(GenericColumnOperation):
+class DateFormatOperation(Operation):
     """
 
     """
@@ -572,4 +549,5 @@ class DateFormatOperation(GenericColumnOperation):
                 self.error_handler.throw(
                     f"error during `date_format` operation, `{_column}` column... check format strings? ({err})"
                 )
+
         return self.data
