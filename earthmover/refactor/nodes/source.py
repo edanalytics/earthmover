@@ -48,8 +48,10 @@ class Source(Node):
 
         self.mode = None  # Documents which class was chosen.
         self.is_remote = False  # False only for local files.
-        self.skip = False  # A source can be turned off if `required=False` is specified in its configs.
         self.expectations = None
+
+        # A source can be turned off if `required=False` is specified in its configs.
+        self.skip = not self.config.get('required', True)
 
 
     @abc.abstractmethod
@@ -62,9 +64,6 @@ class Source(Node):
 
         if isinstance(self.config.get('expect'), list):
             self.expectations = self.config['expect']
-
-        if not self.config.get('required', True):
-            self.skip = True
 
         pass
 

@@ -26,7 +26,7 @@ class Earthmover:
         "macros": "",
         "show_graph": False,
         "log_level": "INFO",
-        "show_stacktrace": False
+        "show_stacktrace": True,
     }
 
     def __init__(self,
@@ -112,9 +112,11 @@ class Earthmover:
                 continue  # skip YAML line annotations
 
             node = Source(name, config, earthmover=self)
-            node.compile()
             self.sources.append(node)
             self.graph.add_node(f"$sources.{name}", data=node)
+
+            if not node.skip:
+                node.compile()
 
 
         # transformations:
@@ -275,7 +277,7 @@ class Earthmover:
                         self.logger.info("regenerating (changes since last run: ")
                         self.logger.info("   [{0}])".format(", ".join(_run_differences)))
                     else:
-                        _last_run_string = human_time(int(time.time()) - int(most_recent_run['run_timestamp']))
+                        _last_run_string = human_time(int(time.time()) - int(float(most_recent_run['run_timestamp'])))
                         self.logger.info(
                             f"skipping (no changes since the last run {_last_run_string} ago)"
                         )

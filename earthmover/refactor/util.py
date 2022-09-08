@@ -74,6 +74,8 @@ def contains_jinja(string):
     :param string:
     :return:
     """
+    string = str(string)  # Just in case a static int is passed.
+
     if '{{' in string and '}}' in string:
         return True
     elif '{%' in string and '%}' in string:

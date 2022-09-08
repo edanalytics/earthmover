@@ -368,6 +368,7 @@ class MapValuesOperation(Operation):
         super().__init__(*args, **kwargs)
 
         self.columns_list = None
+        self.map_file = None
         self.mapping = None
 
 
@@ -400,6 +401,7 @@ class MapValuesOperation(Operation):
 
         elif _map_file := self.config.get('map_file'):
             self.error_handler.assert_key_type_is(self.config, "map_file", str)
+            self.map_file = _map_file
             self.mapping = self._read_map_file(_map_file)
 
         else:

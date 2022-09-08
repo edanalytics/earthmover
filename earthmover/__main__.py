@@ -144,7 +144,7 @@ def main(argv=None):
         try:
             em.compile()
         except Exception as e:
-            logger.exception(e, exc_info=em.config['show_stacktrace'])
+            logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
             raise
         exit(0)
 
@@ -154,7 +154,7 @@ def main(argv=None):
         em.generate(selector=args.selector)
         em.logger.info("done!")
     except Exception as e:
-        logger.exception(e, exc_info=em.config['show_stacktrace'])
+        logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
 
 
 if __name__ == "__main__":
