@@ -66,15 +66,12 @@ class Node:
             result = self.data.copy()
 
             for expectation in self.expectations:
-                _template = jinja2.Template("{{" + expectation + "}}")
-                result = result.apply(
-                    util.apply_jinja_template_to_row,
-                    axis=1,
-                    kwargs={
-                        'template': _template,
-                        'col': "__expectation_result__",
-                        'error_handler': self.error_handler,
-                    }
+                template = jinja2.Template("{{" + expectation + "}}")
+
+                result["__expectation_result__"] = result.apply(
+                    util.render_jinja_template, axis=1, meta='str',
+                    template=template,
+                    error_handler = self.error_handler
                 )
 
                 num_failed = len(result.query("__expectation_result__=='False'"))

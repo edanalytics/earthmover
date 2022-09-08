@@ -30,3 +30,4 @@ examples/sample_output/*.json
 examples/sample_output/*.xml
 examples/ignore_data/
 examples/ignore_data/*
+earthmover/tests/outputs/*

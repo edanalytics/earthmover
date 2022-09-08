@@ -84,23 +84,19 @@ def contains_jinja(string):
         return False
 
 
-def apply_jinja_template_to_row(row, template, col, *, error_handler):
+def render_jinja_template(row, template, *, error_handler):
     """
 
     :param row:
     :param template:
-    :param col:
     :param error_handler:
     :return:
     """
     try:
-        _value = template.render(row)
-        row[col] = _value
+        return template.render(row)
 
     except Exception as err:
         error_handler.throw(
-            f"Error rendering Jinja template for column `{col}` ({err})"
+            f"Error rendering Jinja template: ({err})"
         )
         raise
-
-    return row

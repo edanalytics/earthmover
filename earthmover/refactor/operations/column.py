@@ -56,14 +56,10 @@ class AddColumnsOperation(Operation):
                     )
                     raise
 
-                self.data = self.data.apply(
-                    util.apply_jinja_template_to_row,
-                    axis=1,
-                    kwargs={
-                        'template': template,
-                        'col': col,
-                        'error_handler': self.error_handler,
-                    }
+                self.data[col] = self.data.apply(
+                    util.render_jinja_template, axis=1, meta='str',
+                    template=template,
+                    error_handler=self.error_handler
                 )
 
         return self.data
@@ -119,31 +115,18 @@ class ModifyColumnsOperation(Operation):
                     )
                     raise
 
-                self.data = self.data.apply(
-                    self._apply_jinja, axis=1, args=(template, col)
+                # TODO: Allow user to specify string that represents current column value.
+                self.data['value'] = self.data[col]
+
+                self.data[col] = self.data.apply(
+                    util.render_jinja_template, axis=1, meta='str',
+                    template=template,
+                    error_handler=self.error_handler
                 )
 
+                del self.data["value"]
+
         return self.data
-
-
-    def _apply_jinja(self, row, template, col):
-        """
-        Extends util.apply_jinja_template_to_row().
-        Adds the ability to reference current column value using `value` key.
-        TODO: Let user specify name of column reference string.
-
-        :param row:
-        :param template:
-        :param col:
-        :return:
-        """
-        row["value"] = row[col]
-
-        row = util.apply_jinja_template_to_row(row, template, col, error_handler=self.error_handler)
-
-        del row["value"]
-
-        return row
 
 
 
@@ -366,7 +349,7 @@ class CombineColumnsOperation(Operation):
 
         self.data[self.new_column] = self.data.apply(
             (lambda x: self.separator.join(x[col] for col in self.columns_list))
-        , axis=1)#, meta='str')
+        , axis=1, meta='str')
 
         return self.data
 
