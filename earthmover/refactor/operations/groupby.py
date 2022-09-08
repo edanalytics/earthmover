@@ -204,9 +204,6 @@ class GroupByOperation(Operation):
         """
         Note: There is a bug in Dask Groupby operations.
         Index columns are overwritten by 'index' after index reset.
-        https://stackoverflow.com/questions/62323279/how-do-keep-dask-dataframe-after-groupby-compute
-        https://stackoverflow.com/questions/73604953/dask-groupby-columns-are-not-there-even-after-reset-index
-
 
         :return:
         """
@@ -227,9 +224,9 @@ class GroupByOperation(Operation):
                 func
             )[0]
 
+            # User can pass in 1, 2, or 3 pieces. We want to default undefined pieces to empty strings.
             _pieces = list(_pieces) + ["", ""]  # Clever logic to simplify unpacking.
             _agg_type, _col, _sep, *_ = _pieces  # Unpack the pieces, adding blanks as necessary.
-            # _agg_type, _col, _sep, *_ = _pieces + ["", ""]  # Unpack the pieces, adding blanks as necessary.
 
             #
             if _agg_type in self.COLUMN_REQ_AGG_TYPES:
