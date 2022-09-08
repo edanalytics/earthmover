@@ -1,4 +1,3 @@
-import abc
 import re
 
 import pandas as pd
@@ -6,21 +5,20 @@ import pandas as pd
 from earthmover.refactor.operations.operation import Operation
 
 
-class GenericGroupByOperation(Operation):
+class GroupByWithCountOperation(Operation):
     """
 
     """
     GROUPED_COL_NAME = "____grouped_col____"
-    GROUPED_COL_SEP  = "_____"
+    GROUPED_COL_SEP = "_____"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.source = None
         self.group_by_columns = None
+        self.count_column = None
 
 
-    @abc.abstractmethod
     def compile(self):
         """
 
@@ -28,18 +26,15 @@ class GenericGroupByOperation(Operation):
         """
         super().compile()
 
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'source', str)
-        self.source = self.config['source']
-
         self.error_handler.assert_key_exists_and_type_is(self.config, 'group_by_columns', list)
         self.group_by_columns = self.config['group_by_columns']
 
-        pass
+        self.error_handler.assert_key_exists_and_type_is(self.config, 'count_column', str)
+        self.count_column = self.config['count_column']
 
 
     def verify(self):
         """
-        # This method is inherited as is to all child classes.
 
         :return:
         """
@@ -51,10 +46,7 @@ class GenericGroupByOperation(Operation):
             )
             raise
 
-        pass
 
-
-    @abc.abstractmethod
     def execute(self):
         """
 
@@ -62,84 +54,39 @@ class GenericGroupByOperation(Operation):
         """
         super().execute()
 
-        self.data = self.get_source_node(self.source).data
-        self.verify()
-        pass
-
-
-    def _group_by(self, data):
-        """
-
-        :param data:
-        :return:
-        """
-        data[self.GROUPED_COL_NAME] = data.apply(
+        self.data[self.GROUPED_COL_NAME] = self.data.apply(
             lambda x: self.GROUPED_COL_SEP.join([*self.group_by_columns])
         , axis=1, meta='str')
 
-        return data.groupby(self.GROUPED_COL_NAME, sort=False)
+        self.data = (
+            self.data
+                .groupby(self.GROUPED_COL_NAME, sort=False)
+                .size()
+                .reset_index()
+        )
 
-
-    def _revert_group_by(self, data):
-        """
-
-        :param data:
-        :return:
-        """
-        data = data.reset_index()
-
-        data[self.group_by_columns] = data[self.GROUPED_COL_NAME].str.split(
+        self.data[self.group_by_columns] = self.data[self.GROUPED_COL_NAME].str.split(
             self.GROUPED_COL_SEP, n=len(self.group_by_columns), expand=True
         )
-        del data[self.GROUPED_COL_NAME]
+        del self.data[self.GROUPED_COL_NAME]
 
-        return data
-
-
-
-class GroupByWithCountOperation(GenericGroupByOperation):
-    """
-
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.count_column = None
-
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'count_column', str)
-        self.count_column = self.config['count_column']
-
-
-    def execute(self):
-        """
-
-        :return:
-        """
-        super().execute()
-
-        _grouped = self._group_by(self.data)
-        _grouped = _grouped.size()
-        return self._revert_group_by(_grouped)
+        return self.data
 
 
 
-class GroupByWithAggOperation(GenericGroupByOperation):
+class GroupByWithAggOperation(Operation):
     """
 
     """
     DEFAULT_AGG_SEP = ","
 
+    GROUPED_COL_NAME = "____grouped_col____"
+    GROUPED_COL_SEP = "_____"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.group_by_columns = None
         self.agg_column = None
         self.separator = None
 
@@ -151,14 +98,30 @@ class GroupByWithAggOperation(GenericGroupByOperation):
         """
         super().compile()
 
+        self.error_handler.assert_key_exists_and_type_is(self.config, 'group_by_columns', list)
+        self.group_by_columns = self.config['group_by_columns']
+
         self.error_handler.assert_key_exists_and_type_is(self.config, 'agg_column', str)
         self.agg_column = self.config['agg_column']
 
-        if _separator := self.config.get('separator'):
+        if 'separator' in self.config:
             self.error_handler.assert_key_exists_and_type_is(self.config, 'separator', str)
-            self.separator = _separator
+            self.separator = self.config['separator']
         else:
             self.separator = self.DEFAULT_AGG_SEP
+
+    def verify(self):
+        """
+
+        :return:
+        """
+        super().verify()
+
+        if not set(self.group_by_columns).issubset(self.data.columns):
+            self.error_handler.throw(
+                "one or more specified group-by columns not in the dataset"
+            )
+            raise
 
 
     def execute(self):
@@ -168,13 +131,25 @@ class GroupByWithAggOperation(GenericGroupByOperation):
         """
         super().execute()
 
-        _grouped = self._group_by(self.data)
+        self.data[self.GROUPED_COL_NAME] = self.data.apply(
+            lambda x: self.GROUPED_COL_SEP.join([*self.group_by_columns])
+            , axis=1, meta='str')
+
+        _grouped = self.data.groupby(self.GROUPED_COL_NAME, sort=False)
         _grouped = _grouped[[self.agg_column]].agg(self.separator.join)
-        return self._revert_group_by(_grouped)
+
+        self.data = _grouped.reset_index()
+
+        self.data[self.group_by_columns] = self.data[self.GROUPED_COL_NAME].str.split(
+            self.GROUPED_COL_SEP, n=len(self.group_by_columns), expand=True
+        )
+        del self.data[self.GROUPED_COL_NAME]
+
+        return self.data
 
 
 
-class GroupByOperation(GenericGroupByOperation):
+class GroupByOperation(Operation):
     """
 
     """
@@ -193,6 +168,7 @@ class GroupByOperation(GenericGroupByOperation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.group_by_columns = None
         self.create_columns_dict = None
 
 
@@ -202,6 +178,9 @@ class GroupByOperation(GenericGroupByOperation):
         :return:
         """
         super().compile()
+
+        self.error_handler.assert_key_exists_and_type_is(self.config, 'group_by_columns', list)
+        self.group_by_columns = self.config['group_by_columns']
 
         self.error_handler.assert_key_exists_and_type_is(self.config, "create_columns", dict)
         self.create_columns_dict = self.config['create_columns']
@@ -213,7 +192,12 @@ class GroupByOperation(GenericGroupByOperation):
         :return:
         """
         super().verify()
-        pass
+
+        if not set(self.group_by_columns).issubset(self.data.columns):
+            self.error_handler.throw(
+                "one or more specified group-by columns not in the dataset"
+            )
+            raise
 
 
     def execute(self):

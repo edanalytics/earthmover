@@ -62,8 +62,12 @@ class Operation:
         self.earthmover = earthmover
         self.error_handler = self.earthmover.error_handler
 
+        # `source` and `source_list` are mutually-exclusive attributes.
         self.source = None
-        self.data = None
+        self.source_list = None  # For operations with multiple sources (i.e., dataframe operations)
+        self.source_data_list = None  # Retrieved data for operations with multiple sources
+
+        self.data = None  # Final dataframe after execute()
 
 
     def get_source_node(self, source):
@@ -76,20 +80,57 @@ class Operation:
 
     @abc.abstractmethod
     def compile(self):
+        """
+
+        :return:
+        """
         self.error_handler.ctx.update(
             file=self.earthmover.config_file, line=self.config["__line__"], node=None, operation=self
         )
+
+        if 'sources' in self.config:
+            self.error_handler.assert_key_type_is(self.config, 'sources', list)
+            self.source_list = self.config['sources']
+
+        elif 'source' in self.config:
+            self.error_handler.assert_key_type_is(self.config, 'source', str)
+            self.source = self.config['source']
+
+        else:
+            self.error_handler.throw(
+                "A `source` or a list of `sources` must be defined for any operation!"
+            )
+
+        pass
+
+
+    def verify(self):
+        """
+        Because verifications are optional, this is not an abstract method.
+
+        :return:
+        """
         pass
 
 
     @abc.abstractmethod
-    def verify(self):
-        pass  # Verifications are optional.
-
-
-    @abc.abstractmethod
     def execute(self):
+        """
+
+        :return:
+        """
         self.error_handler.ctx.update(
             file=self.earthmover.config_file, line=self.config["__line__"], node=None, operation=self
         )
+
+        # If multiple sources are required for an operation, self.data must be defined in the child class execute().
+        if self.source_list:
+            self.source_data_list = [
+                self.get_source_node(source).data for source in self.source_list
+            ]
+        else:
+            self.data = self.get_source_node(self.source).data
+
+        self.verify()
+
         pass

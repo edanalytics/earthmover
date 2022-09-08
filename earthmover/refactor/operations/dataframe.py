@@ -1,64 +1,9 @@
-import abc
-
 import pandas as pd
 
-from .operation import Operation
+from earthmover.refactor.operations.operation import Operation
 
 
-class GenericDataFrameOperation(Operation):
-    """
-    This class has alterative behavior to other operations.
-    More than one source is always required, so `source_list` and `data_list` are used.
-    Do NOT super() up to Operation.
-
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.source_list = None
-        self.data_list = None
-
-
-    @abc.abstractmethod
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'sources', list)
-        self.source_list = self.config['sources']
-        pass
-
-
-    @abc.abstractmethod
-    def verify(self):
-        """
-
-        :return:
-        """
-        super().verify()
-        pass
-
-
-    @abc.abstractmethod
-    def execute(self):
-        """
-
-        :return:
-        """
-        super().execute()
-
-        self.data_list = self.source_list = [
-            self.get_source_node(source).data for source in self.source_list
-        ]
-        self.verify()
-        pass
-
-
-
-class JoinOperation(GenericDataFrameOperation):
+class JoinOperation(Operation):
     """
 
     """
@@ -174,7 +119,7 @@ class JoinOperation(GenericDataFrameOperation):
         super().verify()
 
         # Build left dataset columns
-        self.left_data  = self.data_list[0]
+        self.left_data  = self.source_data_list[0]
         self.left_cols = self.left_data.columns
 
         if self.left_keep_cols:
@@ -196,7 +141,7 @@ class JoinOperation(GenericDataFrameOperation):
             self.left_cols = list(set(self.left_cols).difference(self.left_drop_cols))
 
         # Build right dataset columns
-        self.right_data = self.data_list[1]
+        self.right_data = self.source_data_list[1]
         self.right_cols = self.right_data.columns
 
         if self.right_keep_cols:
@@ -229,7 +174,7 @@ class JoinOperation(GenericDataFrameOperation):
         _right_data = self.right_data[ self.right_cols ]
 
         try:
-            return pd.merge(
+            self.data = pd.merge(
                 _left_data, _right_data, how=self.join_type,
                 left_on=self.left_keys, right_on=self.right_keys
             )
@@ -240,9 +185,11 @@ class JoinOperation(GenericDataFrameOperation):
             )
             raise
 
+        return self.data
 
 
-class UnionOperation(GenericDataFrameOperation):
+
+class UnionOperation(Operation):
     """
 
     """
@@ -271,9 +218,9 @@ class UnionOperation(GenericDataFrameOperation):
         """
         super().verify()
 
-        _data_columns = set( self.data_list[0].columns )
+        _data_columns = set( self.source_data_list[0].columns )
 
-        for data in self.data_list[1:]:
+        for data in self.source_data_list[1:]:
             if set(data.columns) != _data_columns:
                 self.error_handler.throw('dataframes to union do not share identical columns')
                 raise
@@ -288,15 +235,15 @@ class UnionOperation(GenericDataFrameOperation):
         """
         super().execute()
 
-        _result = self.data_list[0]
+        self.data = self.source_data_list[0]
 
-        for data in self.data_list[1:]:
+        for data in self.source_data_list[1:]:
             try:
-                _result = pd.concat([_result, data], ignore_index=True)
+                self.data = pd.concat([self.data, data], ignore_index=True)
             except Exception as _:
                 self.error_handler.throw(
                     "error during `union` operation... are sources same shape?"
                 )
                 raise
 
-        return _result
+        return self.data
