@@ -1,7 +1,8 @@
 import argparse
-import filecmp
+# import filecmp
 import logging
 import os
+import subprocess
 import sys
 
 from earthmover.refactor.earthmover import Earthmover  # TODO: Undo. Main import change to test refactor.
@@ -110,7 +111,10 @@ def main(argv=None):
 
             _expected_file  = os.path.join('earthmover/tests/expected', filename)
             _outputted_file = os.path.join('earthmover/tests/outputs', filename)
-            if not filecmp.cmp(_expected_file, _outputted_file):
+            diff_command = f"diff <(sort {_expected_file}) <(sort {_outputted_file})"
+
+            # Because dask shuffles dataframe contents, check the contents of the files, not the files themselves.
+            if subprocess.call(['bash', '-c', diff_command]):
                 em.logger.critical(f"Test output `{_outputted_file}` does not match expected output.")
                 exit(1)
 
@@ -140,7 +144,7 @@ def main(argv=None):
         try:
             em.compile()
         except Exception as e:
-            logger.exception(e, exc_info=em.config['show_stacktrace'])
+            logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
             raise
         exit(0)
 
@@ -150,7 +154,7 @@ def main(argv=None):
         em.generate(selector=args.selector)
         em.logger.info("done!")
     except Exception as e:
-        logger.exception(e, exc_info=em.config['show_stacktrace'])
+        logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
 
 
 if __name__ == "__main__":

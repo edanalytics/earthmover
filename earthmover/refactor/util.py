@@ -21,36 +21,6 @@ def human_time(seconds: int) -> str:
     return str(round(seconds/86400)) + " days"
 
 
-def get_chunksize(memory_limit: int) -> int:
-    """
-
-    :param memory_limit:
-    :return:
-    """
-    MB = 1024 * 1024
-    bytes_to_row_mapping = {
-        5 * 1024 * MB: 2 * 10 ** 7, #   >  5GB -> 20 M
-        2 * 1024 * MB: 1 * 10 ** 7, #   >  2GB -> 10 M
-            1024 * MB: 5 * 10 ** 6, #   >  1GB -> 5  M
-             500 * MB: 2 * 10 ** 6, #   >500MB -> 2  M
-             200 * MB: 1 * 10 ** 6, #   >200MB -> 1  M
-             100 * MB: 5 * 10 ** 5, #   >100MB -> 500K
-              50 * MB: 2 * 10 ** 5, #   > 50MB -> 200K
-              20 * MB: 1 * 10 ** 5, #   > 20MB -> 100K
-              10 * MB: 5 * 10 ** 4, #   > 10MB -> 50 K
-               5 * MB: 2 * 10 ** 4, #   >  5MB -> 20 K
-               2 * MB: 1 * 10 ** 4, #   >  2MB -> 10 K
-                   MB: 2 * 10 ** 3, #   >  1MB -> 5  K
-    }
-
-    #
-    for key, val in bytes_to_row_mapping.items():
-        if memory_limit > key:
-            return val
-    else:
-        return 5 * 10 ** 2 #  <=1MB -> 500
-
-
 def get_sep(file: str) -> Optional[str]:
     """
     Determine field separator from file extension
@@ -74,6 +44,8 @@ def contains_jinja(string):
     :param string:
     :return:
     """
+    string = str(string)  # Just in case a static int is passed.
+
     if '{{' in string and '}}' in string:
         return True
     elif '{%' in string and '%}' in string:
@@ -84,23 +56,19 @@ def contains_jinja(string):
         return False
 
 
-def apply_jinja_template_to_row(row, template, col, *, error_handler):
+def render_jinja_template(row, template, *, error_handler):
     """
 
     :param row:
     :param template:
-    :param col:
     :param error_handler:
     :return:
     """
     try:
-        _value = template.render(row)
-        row[col] = _value
+        return template.render(row)
 
     except Exception as err:
         error_handler.throw(
-            f"Error rendering Jinja template for column `{col}` ({err})"
+            f"Error rendering Jinja template: ({err})"
         )
         raise
-
-    return row

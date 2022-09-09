@@ -1,5 +1,6 @@
 import abc
 import jinja2
+import pandas as pd
 
 from earthmover.refactor import util
 
@@ -58,6 +59,8 @@ class Node:
 
         :return:
         """
+        expectation_result_col = "__expectation_result__"
+
         if not self.data:
             self.logger.debug("skipping checking expectations (not yet loaded)")
             return
@@ -66,21 +69,19 @@ class Node:
             result = self.data.copy()
 
             for expectation in self.expectations:
-                _template = jinja2.Template("{{" + expectation + "}}")
-                result = result.apply(
-                    util.apply_jinja_template_to_row,
-                    axis=1,
-                    kwargs={
-                        'template': _template,
-                        'col': "__expectation_result__",
-                        'error_handler': self.error_handler,
-                    }
+                template = jinja2.Template("{{" + expectation + "}}")
+
+                result[expectation_result_col] = result.apply(
+                    util.render_jinja_template, axis=1,
+                    meta=pd.Series(dtype='str', name=expectation_result_col),
+                    template=template,
+                    error_handler = self.error_handler
                 )
 
-                num_failed = len(result.query("__expectation_result__=='False'"))
+                num_failed = len(result.query(f"{expectation_result_col}=='False'"))
                 if num_failed > 0:
                     self.error_handler.throw(
                         f"Source `${self.type}s.{self.name}` failed expectation `{expectation}` ({num_failed} rows fail)"
                     )
 
-            result.drop(columns="__expectation_result__")
+            result.drop(columns=expectation_result_col)

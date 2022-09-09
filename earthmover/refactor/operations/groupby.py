@@ -1,3 +1,4 @@
+import dask.dataframe as dd
 import pandas as pd
 import re
 
@@ -201,15 +202,17 @@ class GroupByOperation(Operation):
 
     def execute(self):
         """
+        Note: There is a bug in Dask Groupby operations.
+        Index columns are overwritten by 'index' after index reset.
 
         :return:
         """
         super().execute()
 
         #
-        _grouped = self.data.groupby(self.group_by_columns)
+        grouped = self.data.groupby(self.group_by_columns)
 
-        result = _grouped.size().reset_index()
+        result = grouped.size().reset_index()
         result.columns = self.group_by_columns + [self.GROUP_SIZE_COL]
 
         for new_col_name, func in self.create_columns_dict.items():
@@ -221,9 +224,9 @@ class GroupByOperation(Operation):
                 func
             )[0]
 
+            # User can pass in 1, 2, or 3 pieces. We want to default undefined pieces to empty strings.
             _pieces = list(_pieces) + ["", ""]  # Clever logic to simplify unpacking.
             _agg_type, _col, _sep, *_ = _pieces  # Unpack the pieces, adding blanks as necessary.
-            # _agg_type, _col, _sep, *_ = _pieces + ["", ""]  # Unpack the pieces, adding blanks as necessary.
 
             #
             if _agg_type in self.COLUMN_REQ_AGG_TYPES:
@@ -233,7 +236,7 @@ class GroupByOperation(Operation):
                         f"aggregation function `{_agg_type}`(column) missing required column"
                     )
 
-                if _col not in result.columns:
+                if _col not in self.data.columns:
                     self.error_handler.throw(
                         f"aggregation function `{_agg_type}`({_col}) refers to a column {_col} which does not exist"
                     )
@@ -244,18 +247,23 @@ class GroupByOperation(Operation):
                 )
 
             #
-            _computed = (
-                _grouped
-                    .apply(agg_lambda)
-                    .to_frame(new_col_name)
-                    .reset_index()
+            # ddf.apply() requires the index be defined, at least in structure.
+            meta = pd.Series(
+                dtype='object',
+                name=new_col_name,
+                index=pd.MultiIndex.from_tuples(
+                    tuples=[(None,) * len(self.group_by_columns)],
+                    names=self.group_by_columns
+                )
             )
+
+            _computed = grouped.apply(agg_lambda, meta=meta).reset_index()
             result = result.merge(_computed, how="left", on=self.group_by_columns)
 
-        result = result.query(f"{self.GROUP_SIZE_COL} > 0")
-        del result[self.GROUP_SIZE_COL]
+        self.data = result.query(f"{self.GROUP_SIZE_COL} > 0")
+        del self.data[self.GROUP_SIZE_COL]
 
-        return result
+        return self.data
 
 
     @staticmethod

@@ -20,8 +20,6 @@ class Destination(Node):
 
         self.mode = None  # Documents which class was chosen.
         self.source = None
-        self.template = None
-        self.jinja_template = None
 
 
     @abc.abstractmethod
@@ -35,9 +33,6 @@ class Destination(Node):
         self.error_handler.assert_key_exists_and_type_is(self.config, "source", str)
         self.source = self.config['source']
 
-        self.error_handler.assert_key_exists_and_type_is(self.config, "template", str)
-        self.template = self.config['template']
-
         pass
 
 
@@ -48,6 +43,8 @@ class Destination(Node):
         :return:
         """
         super().execute()
+        self.data = self.earthmover.graph.ref(self.source).data
+
         pass
 
 
@@ -58,11 +55,15 @@ class FileDestination(Destination):
     """
     EXP = re.compile(r"\s+")
 
+    TEMPLATED_COL = "____OUTPUT____"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.mode = 'file'
 
         self.file_path = None
+        self.template = None
+        self.jinja_template = None
 
 
     def compile(self):
@@ -71,6 +72,9 @@ class FileDestination(Destination):
         :return:
         """
         super().compile()
+
+        self.error_handler.assert_key_exists_and_type_is(self.config, "template", str)
+        self.template = self.config['template']
 
         self.error_handler.assert_key_exists_and_type_is(self.config, "extension", str)
         self.file_path = os.path.join(
@@ -102,7 +106,7 @@ class FileDestination(Destination):
         #
         try:
             self.jinja_template = jinja2.Environment(
-                    loader=jinja2.FileSystemLoader(os.path.dirname('/'))
+                    loader=jinja2.FileSystemLoader(os.path.dirname('./'))
                 ).from_string(self.earthmover.state_configs['macros'] + template_string)
 
         except Exception as err:
@@ -119,18 +123,16 @@ class FileDestination(Destination):
         """
         super().execute()
 
-        target = self.earthmover.graph.ref(self.source)
-        target.data.fillna('', inplace=True)
+        self.data = self.data.fillna('')
 
-        #
         os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
         with open(self.file_path, 'w') as fp:
-            for row in target.data.to_records(index=False):
 
-                row_data = list(zip(target.data.columns, row))
+            for row_data in self.data.itertuples(index=False):
+                _data_tuple = row_data._asdict().items()
 
                 try:
-                    json_string = self.jinja_template.render(row_data)
+                    json_string = self.jinja_template.render(_data_tuple)
 
                 except Exception as err:
                     self.error_handler.throw(

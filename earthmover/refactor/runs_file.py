@@ -128,18 +128,13 @@ class RunsFile:
 
         # Hash the sources
         sources_hash = ""
-        for name, source in self.earthmover.sources.items():
+        for source in self.earthmover.sources:
 
-            if f"$sources.{name}" not in node_data.keys():
-                continue
-            if name == "__line__":
+            if f"$sources.{source.name}" not in node_data.keys():
                 continue
 
-            if "file" in source.keys():
-                if "://" in source["file"]:
-                    continue
-
-                sources_hash += self.get_file_hash(source['file'])
+            if not source.is_remote:
+                sources_hash += self.get_file_hash(source.file)
 
         if sources_hash:
             sources_hash = self.get_string_hash(sources_hash)
@@ -149,15 +144,12 @@ class RunsFile:
 
         # Hash the templates
         templates_hash = ""
-        for name, destination in self.earthmover.destinations.items():
+        for destination in self.earthmover.destinations:
 
-            if f"$destinations.{name}" not in node_data.keys():
-                continue
-            if name == "__line__":
+            if f"$destinations.{destination.name}" not in node_data.keys():
                 continue
 
-            if "template" in destination.keys():
-                templates_hash += self.get_file_hash(destination["template"])
+            templates_hash += self.get_file_hash(destination.template)
 
         if templates_hash != "":
             templates_hash = self.get_string_hash(templates_hash)
@@ -167,19 +159,15 @@ class RunsFile:
 
         # Hash the transformation mapping files
         mappings_hash = ""
-        for name, transformation in self.earthmover.transformations.items():
+        for transformation in self.earthmover.transformations:
 
-            if name == "__line__":
-                continue
-
-            for op in transformation:
-                if "operation" in op.keys() and op["operation"] == "map_values" and "map_file" in op.keys():
-                    mappings_hash += self.get_file_hash(op["map_file"])
+            for op in transformation.operations:
+                if op.type == "map_values" and op.map_file:
+                    mappings_hash += self.get_file_hash(op.map_file)
 
         if mappings_hash != "":
             mappings_hash = self.get_string_hash(mappings_hash)
-        else:
-            mappings_hash = ""
+
         row['mappings_hash'] = mappings_hash
 
         return row

@@ -1,4 +1,5 @@
 import abc
+import dask.dataframe as dd
 import ftplib
 import io
 import re
@@ -17,6 +18,8 @@ class Source(Node):
     """
 
     """
+    CHUNKSIZE = 1024 * 1024 * 100  # 100 MB
+
     def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
         """
         Logic for assigning sources to their respective classes.
@@ -47,8 +50,10 @@ class Source(Node):
 
         self.mode = None  # Documents which class was chosen.
         self.is_remote = False  # False only for local files.
-        self.skip = False  # A source can be turned off if `required=False` is specified in its configs.
         self.expectations = None
+
+        # A source can be turned off if `required=False` is specified in its configs.
+        self.skip = not self.config.get('required', True)
 
 
     @abc.abstractmethod
@@ -61,9 +66,6 @@ class Source(Node):
 
         if isinstance(self.config.get('expect'), list):
             self.expectations = self.config['expect']
-
-        if not self.config.get('required', True):
-            self.skip = True
 
         pass
 
@@ -167,6 +169,9 @@ class FileSource(Source):
             self.data = self.read_lambda(self.file, self.config)
             self.verify()  # Verify the column list provided matches the number of columns in the dataframe.
 
+            if self.columns_list:
+                self.data.columns = self.columns_list
+
             self.logger.debug(
                 f"source `{self.name}` loaded ({self.size} bytes, {self.rows} rows)"
             )
@@ -180,14 +185,14 @@ class FileSource(Source):
             self.error_handler.throw(
                 f"source file {self.file} not found"
             )
-        except pd.errors.EmptyDataError:
-            self.error_handler.throw(
-                f"no data in source file {self.file}"
-            )
-        except pd.errors.ParserError:
-            self.error_handler.throw(
-                f"error parsing source file {self.file}"
-            )
+        # except pd.errors.EmptyDataError:
+        #     self.error_handler.throw(
+        #         f"no data in source file {self.file}"
+        #     )
+        # except pd.errors.ParserError:
+        #     self.error_handler.throw(
+        #         f"error parsing source file {self.file}"
+        #     )
         except Exception as err:
             self.error_handler.throw(
                 f"error with source file {self.file} ({err})"
@@ -230,8 +235,7 @@ class FileSource(Source):
         return ext_mapping.get(ext)
 
 
-    @staticmethod
-    def _get_read_lambda(file_type: str, sep: str = None):
+    def _get_read_lambda(self, file_type: str, sep: str = None):
         """
 
         :param file_type:
@@ -240,19 +244,19 @@ class FileSource(Source):
         """
         # We don't watn to activate the function inside this helper function.
         read_lambda_mapping = {
-            'csv'       : lambda file, config: pd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8")),
-            'excel'     : lambda file, config: pd.read_excel(file, sheet_name=config.get("sheet", 0)),
-            'feather'   : lambda file, _     : pd.read_feather(file),
-            'fixedwidth': lambda file, _     : pd.read_fwf(file),
-            'html'      : lambda file, config: pd.read_html(file, match=config.get('match', ".+")),
-            'orc'       : lambda file, _     : pd.read_orc(file),
-            'json'      : lambda file, config: pd.read_json(file, typ=config.get('object_type', "frame"), orient=config.get('orientation', "columns")),
-            'parquet'   : lambda file, _     : pd.read_parquet(file),
-            'sas'       : lambda file, _     : pd.read_sas(file),
-            'spss'      : lambda file, _     : pd.read_spss(file),
-            'stata'     : lambda file, _     : pd.read_stata(file),
-            'xml'       : lambda file, config: pd.read_xml(file, xpath=config.get('xpath', "./*")),
-            'tsv'       : lambda file, config: pd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8")),
+            'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8")),
+            'excel'     : lambda file, config: dd.from_pandas(pd.read_excel(file, sheet_name=config.get("sheet", 0)), chunksize=self.CHUNKSIZE),
+            'feather'   : lambda file, _     : dd.from_pandas(pd.read_feather(file), chunksize=self.CHUNKSIZE),
+            'fixedwidth': lambda file, _     : dd.read_fwf(file),
+            'html'      : lambda file, config: dd.from_pandas(pd.read_html(file, match=config.get('match', ".+"))[0], chunksize=self.CHUNKSIZE),
+            'orc'       : lambda file, _     : dd.read_orc(file),
+            'json'      : lambda file, config: dd.read_json(file, typ=config.get('object_type', "frame"), orient=config.get('orientation', "columns")),
+            'parquet'   : lambda file, _     : dd.read_parquet(file),
+            'sas'       : lambda file, _     : dd.from_pandas(pd.read_sas(file), chunksize=self.CHUNKSIZE),
+            'spss'      : lambda file, _     : dd.from_pandas(pd.read_spss(file), chunksize=self.CHUNKSIZE),
+            'stata'     : lambda file, _     : dd.from_pandas(pd.read_stata(file), chunksize=self.CHUNKSIZE),
+            'xml'       : lambda file, config: dd.from_pandas(pd.read_xml(file, xpath=config.get('xpath', "./*")), chunksize=self.CHUNKSIZE),
+            'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8")),
         }
         return read_lambda_mapping.get(file_type)
 
@@ -266,6 +270,7 @@ class FtpSource(Source):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.mode = 'ftp'
+        self.is_remote = True
 
         self.connection = None
         self.ftp = None
@@ -307,10 +312,11 @@ class FtpSource(Source):
         super().execute()
 
         try:
+            # TODO: Can Dask read from FTP directly without this workaround?
             flo = io.BytesIO()
             self.ftp.retrbinary('RETR ' + self.file, flo.write)
             flo.seek(0)
-            self.data = pd.read_csv(flo)
+            self.data = dd.from_pandas(pd.read_csv(flo), chunksize=self.CHUNKSIZE)
 
         except Exception as err:
             self.error_handler.throw(
@@ -331,6 +337,7 @@ class SqlSource(Source):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.mode = 'sql'
+        self.is_remote = True
 
         self.connection = None
         self.query = None

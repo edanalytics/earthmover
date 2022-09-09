@@ -1,4 +1,4 @@
-import pandas as pd
+import dask.dataframe as dd
 
 from earthmover.refactor.operations.operation import Operation
 
@@ -174,7 +174,7 @@ class JoinOperation(Operation):
         _right_data = self.right_data[ self.right_cols ]
 
         try:
-            self.data = pd.merge(
+            self.data = dd.merge(
                 _left_data, _right_data, how=self.join_type,
                 left_on=self.left_keys, right_on=self.right_keys
             )
@@ -237,9 +237,10 @@ class UnionOperation(Operation):
 
         self.data = self.source_data_list[0]
 
-        for data in self.source_data_list[1:]:
+        for _data in self.source_data_list[1:]:
             try:
-                self.data = pd.concat([self.data, data], ignore_index=True)
+                self.data = dd.concat([self.data, _data], ignore_index=True)
+            
             except Exception as _:
                 self.error_handler.throw(
                     "error during `union` operation... are sources same shape?"
