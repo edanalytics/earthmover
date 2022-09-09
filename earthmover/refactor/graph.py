@@ -4,9 +4,10 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import re
 
-from typing import Optional
+from typing import Dict, Optional
 
 from earthmover.refactor.error_handler import ErrorHandler
+from earthmover.refactor.node import Node
 
 
 class Graph(nx.DiGraph):
@@ -17,8 +18,7 @@ class Graph(nx.DiGraph):
     LABEL_OPTIONS = {"font_size": 12, "font_color": "whitesmoke"}
     SIZE_OPTIONS  = {"font_size": 8 , "font_color": "black"}
 
-
-    def __init__(self, error_handler: Optional[ErrorHandler] = None, graph=None):
+    def __init__(self, error_handler: Optional[ErrorHandler] = None, graph: Optional['Graph'] = None):
         """
         Note: Defining `error_handler` as optional is a hack
         to allow networkx methods to still act on `Graph`.
@@ -32,14 +32,14 @@ class Graph(nx.DiGraph):
         else:
             super().__init__()  # Empty init for an empty graph
 
-        self.error_handler = error_handler
+        self.error_handler: ErrorHandler = error_handler
 
 
-    def get_node_data(self) -> dict:
+    def get_node_data(self) -> Dict[str, Node]:
         return {node[0]: node[1]["data"] for node in self.nodes(data=True)}
 
 
-    def ref(self, ref):
+    def ref(self, ref) -> Optional[Node]:
         """
         Destinations can reference either sources directly, or an intermediate transformation.
         This function determines which a reference refers to, and returns the appropriate target.
@@ -53,15 +53,16 @@ class Graph(nx.DiGraph):
             return None
 
 
-    def select_subgraph(self, selector) -> 'Graph':
+    def select_subgraph(self, selector: str) -> 'Graph':
         """
 
         :param selector:
         :return:
         """
-        _graph = self
+        if selector == '*':
+            return self
 
-        if selector != '*':
+        else:
             if "," in selector:
                 selectors = selector.split(",")
             else:
@@ -90,9 +91,7 @@ class Graph(nx.DiGraph):
                 all_selected_nodes += selected_nodes
 
             _graph = nx.subgraph(self, all_selected_nodes)
-
-        # Return as an Earthmover Graph to give better flexibility
-        return Graph(graph=_graph, error_handler=self.error_handler)
+            return Graph(graph=_graph, error_handler=self.error_handler)
 
 
     def draw(self, image_width=20, image_height=14):
@@ -116,7 +115,11 @@ class Graph(nx.DiGraph):
             node_class = node[1]["data"]
 
             node_labels[node_id] = node_class.name
-            node_sizes[node_id] = f"{node_class.num_rows} rows; {node_class.num_cols} cols" + f"; {node_class.size} bytes" if node_class.size else ""
+
+            _node_size_label = f"{node_class.num_rows} rows; {node_class.num_cols} cols"
+            if node_class.size:
+                _node_size_label += f"; {node_class.size} bytes"
+            node_sizes[node_id] =  _node_size_label
 
             # Classify node as source, transformation, or destination
             _type = node_class.type

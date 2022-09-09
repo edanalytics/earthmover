@@ -1,4 +1,8 @@
+import jinja2
+
 from typing import Optional
+
+from earthmover.refactor.error_handler import ErrorHandler
 
 
 def human_time(seconds: int) -> str:
@@ -38,7 +42,7 @@ def get_sep(file: str) -> Optional[str]:
     return ext_mapping.get(ext)
 
 
-def contains_jinja(string):
+def contains_jinja(string: str) -> bool:
     """
 
     :param string:
@@ -56,7 +60,7 @@ def contains_jinja(string):
         return False
 
 
-def render_jinja_template(row, template, *, error_handler):
+def render_jinja_template(row, template: jinja2.Template, *, error_handler: ErrorHandler) -> str:
     """
 
     :param row:

@@ -3,6 +3,7 @@ import abc
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from earthmover.refactor.earthmover import Earthmover
+    from earthmover.refactor.node import Node
 
 
 class Operation:
@@ -71,7 +72,7 @@ class Operation:
         self.expectations = None  # Similar to Node.expectations, but run within Transformation.execute().
 
 
-    def get_source_node(self, source):
+    def get_source_node(self, source) -> 'Node':
         """
 
         :return:

@@ -37,16 +37,16 @@ class Earthmover:
         force: bool = False,
         skip_hashing: bool = False
     ):
-        self.config_file = config_file
-        self.params = json.loads(params) if params else {}
+        self.do_generate = True
         self.force = force
         self.skip_hashing = skip_hashing
 
-        self.error_handler = ErrorHandler(file=config_file)
-        self.do_generate = True
+        self.config_file = config_file
+        self.error_handler = ErrorHandler(file=self.config_file)
 
         # Parse the user-provided config file and retrieve state-configs.
         # Merge the optional user state configs into the defaults, then clean as necessary.
+        self.params = json.loads(params) if params else {}
         self.user_configs = self.load_config_file()
 
         _state_configs = {**self.config_defaults, **self.user_configs.get('config', {})}
@@ -81,9 +81,10 @@ class Earthmover:
         self.node_shapes = {}  # Dictionary linking node names to their data shapes.
 
 
-    def load_config_file(self):
+    def load_config_file(self) -> dict:
         """
 
+        :param: params
         :return:
         """
         _env_backup = os.environ.copy()
@@ -269,7 +270,7 @@ class Earthmover:
                 self.logger.info("checking for prior runs...")
 
                 # Find the latest run that matched our selector(s)...
-                most_recent_run = runs_file.get_newest_compatible_destination_run(
+                most_recent_run = runs_file.get_newest_compatible_run(
                     active_nodes=active_graph.get_node_data()
                 )
 

@@ -3,6 +3,11 @@ class ErrorContext:
 
     """
     def __init__(self, file=None, line=None, node=None, operation=None):
+        self.file = None
+        self.line = None
+        self.node = None
+        self.operation = None
+
         self.update(file=file, line=line, node=node, operation=operation)
 
 
@@ -36,7 +41,7 @@ class ErrorContext:
                 self.operation = None
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Example error messages:
             "(near line 79 of `config.yaml` in `$transformations.joined_inventories` operation `join`)
