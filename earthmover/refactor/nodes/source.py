@@ -18,6 +18,8 @@ class Source(Node):
     """
 
     """
+    CHUNKSIZE = 1024 * 1024 * 100  # 100 MB
+
     def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
         """
         Logic for assigning sources to their respective classes.
@@ -230,8 +232,7 @@ class FileSource(Source):
         return ext_mapping.get(ext)
 
 
-    @staticmethod
-    def _get_read_lambda(file_type: str, sep: str = None):
+    def _get_read_lambda(self, file_type: str, sep: str = None):
         """
 
         :param file_type:
@@ -241,17 +242,17 @@ class FileSource(Source):
         # We don't watn to activate the function inside this helper function.
         read_lambda_mapping = {
             'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8")),
-            'excel'     : lambda file, config: dd.from_pandas(pd.read_excel(file, sheet_name=config.get("sheet", 0)), npartitions=1),
-            'feather'   : lambda file, _     : dd.from_pandas(pd.read_feather(file), npartitions=1),
+            'excel'     : lambda file, config: dd.from_pandas(pd.read_excel(file, sheet_name=config.get("sheet", 0)), chunksize=self.CHUNKSIZE),
+            'feather'   : lambda file, _     : dd.from_pandas(pd.read_feather(file), chunksize=self.CHUNKSIZE),
             'fixedwidth': lambda file, _     : dd.read_fwf(file),
-            'html'      : lambda file, config: dd.from_pandas(pd.read_html(file, match=config.get('match', ".+"))[0], npartitions=1),
+            'html'      : lambda file, config: dd.from_pandas(pd.read_html(file, match=config.get('match', ".+"))[0], chunksize=self.CHUNKSIZE),
             'orc'       : lambda file, _     : dd.read_orc(file),
             'json'      : lambda file, config: dd.read_json(file, typ=config.get('object_type', "frame"), orient=config.get('orientation', "columns")),
             'parquet'   : lambda file, _     : dd.read_parquet(file),
-            'sas'       : lambda file, _     : dd.from_pandas(pd.read_sas(file), npartitions=1),
-            'spss'      : lambda file, _     : dd.from_pandas(pd.read_spss(file), npartitions=1),
-            'stata'     : lambda file, _     : dd.from_pandas(pd.read_stata(file), npartitions=1),
-            'xml'       : lambda file, config: dd.from_pandas(pd.read_xml(file, xpath=config.get('xpath', "./*")), npartitions=1),
+            'sas'       : lambda file, _     : dd.from_pandas(pd.read_sas(file), chunksize=self.CHUNKSIZE),
+            'spss'      : lambda file, _     : dd.from_pandas(pd.read_spss(file), chunksize=self.CHUNKSIZE),
+            'stata'     : lambda file, _     : dd.from_pandas(pd.read_stata(file), chunksize=self.CHUNKSIZE),
+            'xml'       : lambda file, config: dd.from_pandas(pd.read_xml(file, xpath=config.get('xpath', "./*")), chunksize=self.CHUNKSIZE),
             'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8")),
         }
         return read_lambda_mapping.get(file_type)
@@ -308,10 +309,11 @@ class FtpSource(Source):
         super().execute()
 
         try:
+            # TODO: Can Dask read from FTP directly without this workaround?
             flo = io.BytesIO()
             self.ftp.retrbinary('RETR ' + self.file, flo.write)
             flo.seek(0)
-            self.data = dd.read_csv(flo)
+            self.data = dd.from_pandas(pd.read_csv(flo), chunksize=self.CHUNKSIZE)
 
         except Exception as err:
             self.error_handler.throw(
