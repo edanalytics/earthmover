@@ -76,10 +76,9 @@ class Earthmover:
         self.transformations = []
         self.destinations = []
 
-        self.node_shapes = {}  # Dictionary linking node names to their data shapes.
-
         # Initialize the NetworkX DiGraph
         self.graph = Graph(error_handler=self.error_handler)
+        self.node_shapes = {}  # Dictionary linking node names to their data shapes.
 
 
     def load_config_file(self):
@@ -207,7 +206,6 @@ class Earthmover:
 
     def execute(self, subgraph, exclude_nodes=()):
         """
-        # TODO: `start_nodes` is not used.
 
         :param subgraph:
         :param exclude_nodes:
@@ -228,7 +226,6 @@ class Earthmover:
                     # Create an entry for the shape of each node's data.
                     # Number of rows is delayed and only computed if show_graph is True.
                     self.node_shapes[node_name] = _node.data.shape
-
 
 
     def generate(self, selector):

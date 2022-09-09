@@ -77,10 +77,10 @@ class Node:
             )
             raise
 
-        if self.expectations:
+        if expectations:
             result = self.data.copy()
 
-            for expectation in self.expectations:
+            for expectation in expectations:
                 template = jinja2.Template("{{" + expectation + "}}")
 
                 result[expectation_result_col] = result.apply(
