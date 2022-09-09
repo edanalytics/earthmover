@@ -3,7 +3,7 @@ import os
 import jinja2
 import re
 
-from earthmover.refactor.nodes.node import Node
+from earthmover.refactor.node import Node
 
 
 class Destination(Node):
@@ -44,6 +44,7 @@ class Destination(Node):
         """
         super().execute()
         self.data = self.earthmover.graph.ref(self.source).data
+        self.check_expectations(self.expectations)
 
         pass
 

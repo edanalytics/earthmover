@@ -213,14 +213,15 @@ class Earthmover:
         """
         for layer in list(nx.topological_generations(subgraph)):
 
-            for node in layer:
-                if node in exclude_nodes:
+            for node_name in layer:
+                if node_name in exclude_nodes:
                     continue
 
-                node_data = self.graph.get_node_data()
+                nodes_dict = self.graph.get_node_data()
 
-                if not node_data[node].data:
-                    node_data[node].execute()  # Sets self.data in each node.
+                if not nodes_dict[node_name].data:
+                    nodes_dict[node_name].execute()  # Sets self.data in each node.
+
 
 
     def generate(self, selector):

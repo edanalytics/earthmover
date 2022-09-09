@@ -1,7 +1,5 @@
-from dask.dataframe.core import DataFrame as DaskDataFrame
-
-from earthmover.refactor.nodes.node import Node
-from earthmover.refactor.operations.operation import Operation
+from earthmover.refactor.node import Node
+from earthmover.refactor.operation import Operation
 
 
 class Transformation(Node):
@@ -59,3 +57,6 @@ class Transformation(Node):
 
         for operation in self.operations:
             self.data = operation.execute()
+            self.check_expectations(operation.expectations)  # Operation-level expectation checks
+
+        self.check_expectations(self.expectations)  # Post-transformation expectation checks

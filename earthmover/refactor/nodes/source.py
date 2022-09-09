@@ -6,7 +6,7 @@ import re
 import os
 import pandas as pd
 
-from earthmover.refactor.nodes.node import Node
+from earthmover.refactor.node import Node
 from earthmover.refactor import util
 
 from typing import TYPE_CHECKING
@@ -50,35 +50,9 @@ class Source(Node):
 
         self.mode = None  # Documents which class was chosen.
         self.is_remote = False  # False only for local files.
-        self.expectations = None
 
         # A source can be turned off if `required=False` is specified in its configs.
         self.skip = not self.config.get('required', True)
-
-
-    @abc.abstractmethod
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-
-        if isinstance(self.config.get('expect'), list):
-            self.expectations = self.config['expect']
-
-        pass
-
-
-    @abc.abstractmethod
-    def execute(self):
-        """
-
-        :return:
-        """
-        super().execute()
-        pass
-
 
 
 class FileSource(Source):
@@ -173,7 +147,7 @@ class FileSource(Source):
                 self.data.columns = self.columns_list
 
             self.logger.debug(
-                f"source `{self.name}` loaded ({self.size} bytes, {self.rows} rows)"
+                f"source `{self.name}` loaded"
             )
 
         # error handling:
@@ -185,18 +159,12 @@ class FileSource(Source):
             self.error_handler.throw(
                 f"source file {self.file} not found"
             )
-        # except pd.errors.EmptyDataError:
-        #     self.error_handler.throw(
-        #         f"no data in source file {self.file}"
-        #     )
-        # except pd.errors.ParserError:
-        #     self.error_handler.throw(
-        #         f"error parsing source file {self.file}"
-        #     )
         except Exception as err:
             self.error_handler.throw(
                 f"error with source file {self.file} ({err})"
             )
+
+        self.check_expectations(self.expectations)
 
 
     @staticmethod
@@ -328,6 +296,8 @@ class FtpSource(Source):
             f"source `{self.name}` loaded {self.rows} rows (via FTP)"
         )
 
+        self.check_expectations(self.expectations)
+
 
 
 class SqlSource(Source):
@@ -386,3 +356,5 @@ class SqlSource(Source):
                 f"source {self.name} error ({err}); check `connection` and `query`"
             )
             raise
+
+        self.check_expectations(self.expectations)

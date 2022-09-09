@@ -1,8 +1,7 @@
-import dask.dataframe as dd
 import pandas as pd
 import re
 
-from earthmover.refactor.operations.operation import Operation
+from earthmover.refactor.operation import Operation
 
 
 class GroupByWithCountOperation(Operation):

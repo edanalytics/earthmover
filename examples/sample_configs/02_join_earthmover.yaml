@@ -16,7 +16,7 @@ sources:
     # specifying more than 1 header row (and no columns) will use the last header row as column names:
     header_rows: 1
     # if file has no header row, or you want to overwrite column names, list them here:
-    assertions:
+    expect:
       - "low_grade != ''"
       - "high_grade != ''"
   state_abbr:

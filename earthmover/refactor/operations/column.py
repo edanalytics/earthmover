@@ -4,7 +4,7 @@ import jinja2
 import os
 import pandas as pd
 
-from earthmover.refactor.operations.operation import Operation
+from earthmover.refactor.operation import Operation
 from earthmover.refactor import util
 
 
