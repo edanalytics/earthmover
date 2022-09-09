@@ -4,3 +4,4 @@ pandas
 networkx
 matplotlib
 jinja2
+dask[dataframe]
