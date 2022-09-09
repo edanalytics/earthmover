@@ -210,9 +210,9 @@ class GroupByOperation(Operation):
         super().execute()
 
         #
-        _grouped = self.data.groupby(self.group_by_columns)
+        grouped = self.data.groupby(self.group_by_columns)
 
-        result = _grouped.size().reset_index()
+        result = grouped.size().reset_index()
         result.columns = self.group_by_columns + [self.GROUP_SIZE_COL]
 
         for new_col_name, func in self.create_columns_dict.items():
@@ -236,7 +236,7 @@ class GroupByOperation(Operation):
                         f"aggregation function `{_agg_type}`(column) missing required column"
                     )
 
-                if _col not in result.columns:
+                if _col not in self.data.columns:
                     self.error_handler.throw(
                         f"aggregation function `{_agg_type}`({_col}) refers to a column {_col} which does not exist"
                     )
@@ -246,7 +246,8 @@ class GroupByOperation(Operation):
                     f"invalid aggregation function `{_agg_type}` in `group_by` operation"
                 )
 
-            # Groupbys require the index be defined, at least in structure.
+            #
+            # ddf.apply() requires the index be defined, at least in structure.
             meta = pd.Series(
                 dtype='object',
                 name=new_col_name,
@@ -256,13 +257,7 @@ class GroupByOperation(Operation):
                 )
             )
 
-            #
-            _computed = (
-                _grouped
-                    .apply(agg_lambda, meta=meta)
-                    .reset_index()
-            )
-
+            _computed = grouped.apply(agg_lambda, meta=meta).reset_index()
             result = result.merge(_computed, how="left", on=self.group_by_columns)
 
         self.data = result.query(f"{self.GROUP_SIZE_COL} > 0")
@@ -283,19 +278,19 @@ class GroupByOperation(Operation):
         agg_lambda_mapping = {
             'agg'      : lambda x: separator.join(x[column]),
             'aggregate': lambda x: separator.join(x[column]),
-            'avg'      : lambda x: dd.to_numeric(x[column]).sum() / max(1, len(x)),
+            'avg'      : lambda x: pd.to_numeric(x[column]).sum() / max(1, len(x)),
             'count'    : lambda x: len(x),
-            'max'      : lambda x: dd.to_numeric(x[column]).max(),
-            'maximum'  : lambda x: dd.to_numeric(x[column]).max(),
-            'mean'     : lambda x: dd.to_numeric(x[column]).sum() / max(1, len(x)),
-            'min'      : lambda x: dd.to_numeric(x[column]).min(),
-            'minimum'  : lambda x: dd.to_numeric(x[column]).min(),
+            'max'      : lambda x: pd.to_numeric(x[column]).max(),
+            'maximum'  : lambda x: pd.to_numeric(x[column]).max(),
+            'mean'     : lambda x: pd.to_numeric(x[column]).sum() / max(1, len(x)),
+            'min'      : lambda x: pd.to_numeric(x[column]).min(),
+            'minimum'  : lambda x: pd.to_numeric(x[column]).min(),
             'size'     : lambda x: len(x),
-            'std'      : lambda x: dd.to_numeric(x[column]).std(),
-            'stdev'    : lambda x: dd.to_numeric(x[column]).std(),
-            'stddev'   : lambda x: dd.to_numeric(x[column]).std(),
-            'sum'      : lambda x: dd.to_numeric(x[column]).sum(),
-            'var'      : lambda x: dd.to_numeric(x[column]).var(),
-            'variance' : lambda x: dd.to_numeric(x[column]).var(),
+            'std'      : lambda x: pd.to_numeric(x[column]).std(),
+            'stdev'    : lambda x: pd.to_numeric(x[column]).std(),
+            'stddev'   : lambda x: pd.to_numeric(x[column]).std(),
+            'sum'      : lambda x: pd.to_numeric(x[column]).sum(),
+            'var'      : lambda x: pd.to_numeric(x[column]).var(),
+            'variance' : lambda x: pd.to_numeric(x[column]).var(),
         }
         return agg_lambda_mapping.get(agg_type)
