@@ -169,6 +169,9 @@ class FileSource(Source):
             self.data = self.read_lambda(self.file, self.config)
             self.verify()  # Verify the column list provided matches the number of columns in the dataframe.
 
+            if self.columns_list:
+                self.data.columns = self.columns_list
+
             self.logger.debug(
                 f"source `{self.name}` loaded ({self.size} bytes, {self.rows} rows)"
             )
