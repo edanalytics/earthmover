@@ -8,8 +8,6 @@ from typing import Dict, List, Optional
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from typing import List
-
     from earthmover.refactor.earthmover import Earthmover
     from earthmover.refactor.nodes import Node
 
