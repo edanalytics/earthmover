@@ -266,6 +266,7 @@ class FtpSource(Source):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.mode = 'ftp'
+        self.is_remote = True
 
         self.connection = None
         self.ftp = None
@@ -331,6 +332,7 @@ class SqlSource(Source):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.mode = 'sql'
+        self.is_remote = True
 
         self.connection = None
         self.query = None
