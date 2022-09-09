@@ -62,7 +62,7 @@ class FileDestination(Destination):
         super().__init__(*args, **kwargs)
         self.mode = 'file'
 
-        self.file_path = None
+        self.file = None
         self.template = None
         self.jinja_template = None
 
@@ -78,7 +78,7 @@ class FileDestination(Destination):
         self.template = self.config['template']
 
         self.error_handler.assert_key_exists_and_type_is(self.config, "extension", str)
-        self.file_path = os.path.join(
+        self.file = os.path.join(
             self.earthmover.state_configs['output_dir'],
             f"{self.name}.{self.config['extension']}"
         )
@@ -126,8 +126,8 @@ class FileDestination(Destination):
 
         self.data = self.data.fillna('')
 
-        os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
-        with open(self.file_path, 'w') as fp:
+        os.makedirs(os.path.dirname(self.file), exist_ok=True)
+        with open(self.file, 'w') as fp:
 
             for row_data in self.data.itertuples(index=False):
                 _data_tuple = row_data._asdict().items()
@@ -143,4 +143,5 @@ class FileDestination(Destination):
 
                 fp.write(json_string + "\n")
 
-        self.logger.debug(f"output `{self.file_path}` written")
+        self.logger.debug(f"output `{self.file}` written")
+        self.size = os.path.getsize(self.file)

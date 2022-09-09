@@ -26,8 +26,8 @@ class Node:
 
         self.data = None
         self.size = None
-        self.rows = None
-        self.cols = None
+        self.num_rows = None
+        self.num_cols = None
 
         self.expectations = None
 

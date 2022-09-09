@@ -2,7 +2,7 @@ config:
   output_dir: earthmover/tests/outputs/
   log_level: INFO
   show_stacktrace: True
-  show_graph: False
+  show_graph: True
 
 
 sources:

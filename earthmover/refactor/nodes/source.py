@@ -1,4 +1,3 @@
-import abc
 import dask.dataframe as dd
 import ftplib
 import io
@@ -293,7 +292,7 @@ class FtpSource(Source):
             raise
 
         self.logger.debug(
-            f"source `{self.name}` loaded {self.rows} rows (via FTP)"
+            f"source `{self.name}` loaded (via FTP)"
         )
 
         self.check_expectations(self.expectations)
@@ -326,15 +325,15 @@ class SqlSource(Source):
         self.error_handler.assert_key_type_is(self.config, "query", str)
         self.query = self.config['query']
 
-        # replace columns from outer query with count(*), to measure the size of the datasource (and determine is_chunked):
-        count_query = re.sub(
-            r"(^select\s+)(.*?)(\s+from.*$)",
-            r"\1count(*)\3",
-            self.query,
-            count=1,
-            flags=re.M | re.I
-        )
-        self.size = pd.read_sql(sql=count_query, con=self.connection).iloc[0, 0]
+        # # replace columns from outer query with count(*), to measure the size of the datasource (and determine is_chunked):
+        # count_query = re.sub(
+        #     r"(^select\s+)(.*?)(\s+from.*$)",
+        #     r"\1count(*)\3",
+        #     self.query,
+        #     count=1,
+        #     flags=re.M | re.I
+        # )
+        # self.size = pd.read_sql(sql=count_query, con=self.connection).iloc[0, 0]
 
 
     def execute(self):
@@ -348,7 +347,7 @@ class SqlSource(Source):
             self.data = pd.read_sql(sql=self.query, con=self.connection)
 
             self.logger.debug(
-                f"source `{self.name}` loaded ({self.rows} rows)"
+                f"source `{self.name}` loaded (via SQL)"
             )
 
         except Exception as err:

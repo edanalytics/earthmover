@@ -39,14 +39,6 @@ class Graph(nx.DiGraph):
         return {node[0]: node[1]["data"] for node in self.nodes(data=True)}
 
 
-    def lookup_node(self, name):
-        for node in self.nodes(data=True):
-            if node[0] == name:
-                return node[1]["data"]
-        else:
-            return False
-
-
     def ref(self, ref):
         """
         Destinations can reference either sources directly, or an intermediate transformation.
@@ -55,7 +47,10 @@ class Graph(nx.DiGraph):
         :param ref:
         :return:
         """
-        return self.nodes[ref]["data"]
+        if _node := self.nodes.get(ref):
+            return _node['data']
+        else:
+            return None
 
 
     def select_subgraph(self, selector) -> 'Graph':
@@ -115,21 +110,22 @@ class Graph(nx.DiGraph):
         transformations = []
 
         node_labels = {}
-        # node_sizes = {}
+        node_sizes = {}
         for node in self.nodes(data=True):
-            node_labels[node[0]] = node[1]["data"].name
+            node_id = node[0]
+            node_class = node[1]["data"]
 
-            # Extract sizing data about the node (i.e., num rows, num cols, size on disk)
-            # TODO: Make sizing-parsing function.
+            node_labels[node_id] = node_class.name
+            node_sizes[node_id] = f"{node_class.num_rows} rows; {node_class.num_cols} cols" + f"; {node_class.size} bytes" if node_class.size else ""
 
             # Classify node as source, transformation, or destination
-            _type = node[1]["data"].type
+            _type = node_class.type
             if _type == "source":
-                sources.append(node[0])
+                sources.append(node_id)
             elif _type == "destination":
-                destinations.append(node[0])
+                destinations.append(node_id)
             else:
-                transformations.append(node[0])
+                transformations.append(node_id)
 
         # Position nodes using PyGraphViz (needs to be apt/pip installed separately):
         try:
@@ -147,41 +143,56 @@ class Graph(nx.DiGraph):
         label_off = round(7 * math.sqrt(len(self.nodes)))  # offset on the x axis
         size_off = max(1, len(self.nodes) - 4)
 
-        for k, v in node_positions.items():
-            if k in sources:
-                label_positions[k] = (v[0] - label_off, v[1])
-            elif k in destinations:
-                label_positions[k] = (v[0] + label_off, v[1])
+        for key, val in node_positions.items():
+            if key in sources:
+                label_positions[key] = (val[0] - label_off, val[1])
+            elif key in destinations:
+                label_positions[key] = (val[0] + label_off, val[1])
             else:
-                label_positions[k] = (v[0], v[1] + size_off + 1)
+                label_positions[key] = (val[0], val[1] + size_off + 1)
 
-            if k in sources:
-                size_positions[k] = (v[0] - label_off, v[1] - size_off)
-            elif k in destinations:
-                size_positions[k] = (v[0] + label_off, v[1] - size_off)
+            if key in sources:
+                size_positions[key] = (val[0] - label_off, val[1] - size_off)
+            elif key in destinations:
+                size_positions[key] = (val[0] + label_off, val[1] - size_off)
             else:
-                size_positions[k] = (v[0] + size_off, v[1] + 1)
+                size_positions[key] = (val[0] + size_off, val[1] + 1)
 
         # Draw sources:
         nx.draw_networkx_nodes(self, pos=node_positions, nodelist=sources, node_color="tab:green")
-        nx.draw_networkx_labels(self, pos=label_positions, horizontalalignment="right", **self.LABEL_OPTIONS,
-                                labels={k: v for k, v in node_labels.items() if k in sources},
-                                bbox=dict(facecolor="tab:green", edgecolor="black", boxstyle=self.BOXSTYLE, zorder=-1.0))
-        nx.draw_networkx_labels(self, pos=size_positions, horizontalalignment="right", **self.SIZE_OPTIONS)
+        nx.draw_networkx_labels(self,
+            pos=label_positions, horizontalalignment="right", **self.LABEL_OPTIONS,
+            labels={k: v for k, v in node_labels.items() if k in sources},
+            bbox=dict(facecolor="tab:green", edgecolor="black", boxstyle=self.BOXSTYLE, zorder=-1.0)
+        )
+        nx.draw_networkx_labels(self,
+            pos=size_positions, horizontalalignment="right", **self.SIZE_OPTIONS,
+            labels={k: v for k, v in node_sizes.items() if k in sources}
+        )
 
         # Draw transformations:
         nx.draw_networkx_nodes(self, pos=node_positions, nodelist=transformations, node_color="tab:blue")
-        nx.draw_networkx_labels(self, pos=label_positions, horizontalalignment="center", **self.LABEL_OPTIONS,
-                                labels={k: v for k, v in node_labels.items() if k in transformations},
-                                bbox=dict(facecolor="tab:blue", edgecolor="black", boxstyle=self.BOXSTYLE, zorder=-1.0))
-        nx.draw_networkx_labels(self, pos=size_positions, horizontalalignment="left", **self.SIZE_OPTIONS)
+        nx.draw_networkx_labels(self,
+            pos=label_positions, horizontalalignment="center", **self.LABEL_OPTIONS,
+            labels={k: v for k, v in node_labels.items() if k in transformations},
+            bbox=dict(facecolor="tab:blue", edgecolor="black", boxstyle=self.BOXSTYLE, zorder=-1.0)
+        )
+        nx.draw_networkx_labels(self,
+            pos=size_positions, horizontalalignment="left", **self.SIZE_OPTIONS,
+            labels={k: v for k, v in node_sizes.items() if k in transformations}
+        )
 
         # Draw destinations:
         nx.draw_networkx_nodes(self, pos=node_positions, nodelist=destinations, node_color="tab:red")
-        nx.draw_networkx_labels(self, pos=label_positions, horizontalalignment="left", **self.LABEL_OPTIONS,
-                                labels={k: v for k, v in node_labels.items() if k in destinations},
-                                bbox=dict(facecolor="tab:red", edgecolor="black", boxstyle=self.BOXSTYLE, zorder=-1.0))
-        nx.draw_networkx_labels(self, pos=size_positions, horizontalalignment="left", **self.SIZE_OPTIONS)
+        nx.draw_networkx_labels(self,
+            pos=label_positions, horizontalalignment="left", **self.LABEL_OPTIONS,
+            labels={k: v for k, v in node_labels.items() if k in destinations},
+            bbox=dict(facecolor="tab:red", edgecolor="black", boxstyle=self.BOXSTYLE, zorder=-1.0)
+        )
+        nx.draw_networkx_labels(self,
+            pos=size_positions, horizontalalignment="left", **self.SIZE_OPTIONS,
+            labels={k: v for k, v in node_sizes.items() if k in destinations}
+        )
 
         # Draw edges:
         nx.draw_networkx_edges(self, pos=node_positions, arrowsize=20)

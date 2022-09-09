@@ -1,3 +1,4 @@
+import dask
 import json
 import logging
 import networkx as nx
@@ -26,7 +27,7 @@ class Earthmover:
         "macros": "",
         "show_graph": False,
         "log_level": "INFO",
-        "show_stacktrace": True,
+        "show_stacktrace": False,
     }
 
     def __init__(self,
@@ -74,6 +75,8 @@ class Earthmover:
         self.sources = []
         self.transformations = []
         self.destinations = []
+
+        self.node_shapes = {}  # Dictionary linking node names to their data shapes.
 
         # Initialize the NetworkX DiGraph
         self.graph = Graph(error_handler=self.error_handler)
@@ -133,7 +136,7 @@ class Earthmover:
                 self.graph.add_node(f"$transformations.{name}", data=node)
 
                 for source in node.sources:
-                    if not self.graph.lookup_node(source):
+                    if not self.graph.ref(source):
                         self.error_handler.throw(
                             f"invalid source {source}"
                         )
@@ -154,7 +157,7 @@ class Earthmover:
             self.destinations.append(node)
             self.graph.add_node(f"$destinations.{name}", data=node)
 
-            if not self.graph.lookup_node(node.source):
+            if not self.graph.ref(node.source):
                 self.error_handler.throw(
                     f"invalid source {node.source}"
                 )
@@ -202,12 +205,11 @@ class Earthmover:
             self.graph.remove_node(node)
 
 
-    def execute(self, subgraph, start_nodes=(), exclude_nodes=()):
+    def execute(self, subgraph, exclude_nodes=()):
         """
         # TODO: `start_nodes` is not used.
 
         :param subgraph:
-        :param start_nodes:
         :param exclude_nodes:
         :return:
         """
@@ -219,8 +221,13 @@ class Earthmover:
 
                 nodes_dict = self.graph.get_node_data()
 
-                if not nodes_dict[node_name].data:
-                    nodes_dict[node_name].execute()  # Sets self.data in each node.
+                _node = nodes_dict[node_name]
+                if not _node.data:
+                    _node.execute()  # Sets self.data in each node.
+
+                    # Create an entry for the shape of each node's data.
+                    # Number of rows is delayed and only computed if show_graph is True.
+                    self.node_shapes[node_name] = _node.data.shape
 
 
 
@@ -303,14 +310,8 @@ class Earthmover:
             self.logger.debug(f"processing component {idx}")
 
             # load all sources! (in topological sort order)
-            subgraph = active_graph.subgraph(component)
-
-            start_nodes = [
-                node for node in subgraph.nodes(data=True)
-                if node[1]["data"].type == "source"
-            ]
-            start_node_names = [node[0] for node in start_nodes]
-            self.execute(subgraph, start_nodes=start_node_names, exclude_nodes=[])
+            _subgraph = active_graph.subgraph(component)
+            self.execute(_subgraph, exclude_nodes=[])
 
 
         ### Save run log only after a successful run! (in case of errors)
@@ -327,10 +328,22 @@ class Earthmover:
             runs_file.write_row(selector=destinations)
 
 
-        ### (Draw the graph again, this time we can add metadata about rows/cols/size at each node)
-        # TODO: Re-incorporate metadata.
+        ### Draw the graph again, this time add metadata about rows/cols/size at each node
         if self.state_configs['show_graph']:
             self.logger.info("saving dataflow graph image to `graph.png` and `graph.svg`")
+
+            # Number of columns is easily accessible. Number of rows is delayed and must be computed.
+            num_node_rows = {key: shape[0] for key, shape in self.node_shapes.items()}
+            num_node_cols = {key: shape[1] for key, shape in self.node_shapes.items()}
+
+            # Compute all row number values at once for performance.
+            num_node_rows = dask.compute(num_node_rows)[0]
+
+            for node_name in self.node_shapes:
+                _node = self.graph.ref(node_name)
+                _node.num_cols = num_node_cols.get(node_name)
+                _node.num_rows = num_node_rows.get(node_name)
+
             active_graph.draw()
 
 
