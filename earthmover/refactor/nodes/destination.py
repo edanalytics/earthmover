@@ -20,10 +20,6 @@ class Destination(Node):
 
         self.mode = None  # Documents which class was chosen.
         self.source = None
-        self.template = None
-        self.jinja_template = None
-
-        self.data = None
 
 
     @abc.abstractmethod
@@ -36,9 +32,6 @@ class Destination(Node):
 
         self.error_handler.assert_key_exists_and_type_is(self.config, "source", str)
         self.source = self.config['source']
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, "template", str)
-        self.template = self.config['template']
 
         pass
 
@@ -69,6 +62,8 @@ class FileDestination(Destination):
         self.mode = 'file'
 
         self.file_path = None
+        self.template = None
+        self.jinja_template = None
 
 
     def compile(self):
@@ -77,6 +72,9 @@ class FileDestination(Destination):
         :return:
         """
         super().compile()
+
+        self.error_handler.assert_key_exists_and_type_is(self.config, "template", str)
+        self.template = self.config['template']
 
         self.error_handler.assert_key_exists_and_type_is(self.config, "extension", str)
         self.file_path = os.path.join(
@@ -108,7 +106,7 @@ class FileDestination(Destination):
         #
         try:
             self.jinja_template = jinja2.Environment(
-                    loader=jinja2.FileSystemLoader(os.path.dirname('/'))
+                    loader=jinja2.FileSystemLoader(os.path.dirname('./'))
                 ).from_string(self.earthmover.state_configs['macros'] + template_string)
 
         except Exception as err:
