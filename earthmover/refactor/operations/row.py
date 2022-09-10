@@ -8,7 +8,7 @@ class DistinctRowsOperation(Operation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.columns_list = None
+        self.columns_list = []
 
 
     def compile(self):
@@ -26,9 +26,6 @@ class DistinctRowsOperation(Operation):
         elif _columns := self.config.get('columns'):
             self.error_handler.assert_key_type_is(self.config, 'columns', list)
             self.columns_list = _columns
-
-        else:  # Do not subset the columns.
-            self.columns_list = []  # TODO: Check whether this logic works.
 
 
     def verify(self):
@@ -51,6 +48,9 @@ class DistinctRowsOperation(Operation):
         :return:
         """
         super().execute()
+
+        if not self.columns_list:
+            self.columns_list = self.data.columns
 
         self.data = self.data.drop_duplicates(subset=self.columns_list)
 
