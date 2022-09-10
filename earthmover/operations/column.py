@@ -48,7 +48,7 @@ class AddColumnsOperation(Operation):
             else:
                 try:
                     template = jinja2.Environment(
-                        loader=jinja2.FileSystemLoader(os.path.dirname('/'))
+                        loader=jinja2.FileSystemLoader(os.path.dirname('./'))
                     ).from_string(self.earthmover.state_configs['macros'] + val)
 
                 except Exception as err:
@@ -108,7 +108,7 @@ class ModifyColumnsOperation(Operation):
             else:
                 try:
                     template = jinja2.Environment(
-                        loader=jinja2.FileSystemLoader(os.path.dirname('/'))
+                        loader=jinja2.FileSystemLoader(os.path.dirname('./'))
                     ).from_string(self.earthmover.state_configs['macros'] + val)
 
                 except Exception as err:
