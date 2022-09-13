@@ -19,7 +19,9 @@ class Destination(Node):
         self.type = 'destination'
 
         self.mode = None  # Documents which class was chosen.
-        self.source = None
+
+        self.error_handler.assert_key_exists_and_type_is(self.config, "source", str)
+        self.source = self.config['source']
 
 
     @abc.abstractmethod
@@ -29,10 +31,6 @@ class Destination(Node):
         :return:
         """
         super().compile()
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, "source", str)
-        self.source = self.config['source']
-
         pass
 
 

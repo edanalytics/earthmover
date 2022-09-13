@@ -66,8 +66,21 @@ class Operation:
         # `source` and `source_list` are mutually-exclusive attributes.
         self.source = None
         self.source_list = None  # For operations with multiple sources (i.e., dataframe operations)
-        self.source_data_list = None  # Retrieved data for operations with multiple sources
 
+        if 'sources' in self.config:
+            self.error_handler.assert_key_type_is(self.config, 'sources', list)
+            self.source_list = self.config['sources']
+
+        elif 'source' in self.config:
+            self.error_handler.assert_key_type_is(self.config, 'source', str)
+            self.source = self.config['source']
+
+        else:
+            self.error_handler.throw(
+                "A `source` or a list of `sources` must be defined for any operation!"
+            )
+
+        self.source_data_list = None  # Retrieved data for operations with multiple sources
         self.data = None  # Final dataframe after execute()
         self.expectations = None  # Similar to Node.expectations, but run within Transformation.execute().
 
@@ -89,19 +102,6 @@ class Operation:
         self.error_handler.ctx.update(
             file=self.earthmover.config_file, line=self.config["__line__"], node=None, operation=self
         )
-
-        if 'sources' in self.config:
-            self.error_handler.assert_key_type_is(self.config, 'sources', list)
-            self.source_list = self.config['sources']
-
-        elif 'source' in self.config:
-            self.error_handler.assert_key_type_is(self.config, 'source', str)
-            self.source = self.config['source']
-
-        else:
-            self.error_handler.throw(
-                "A `source` or a list of `sources` must be defined for any operation!"
-            )
 
         # Always check for expectations
         if 'expect' in self.config:

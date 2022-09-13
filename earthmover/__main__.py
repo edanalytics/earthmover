@@ -142,6 +142,10 @@ def main(argv=None):
     if args.compile:
         em.logger.info(f"compiling earthmover")
         try:
+            if args.selector != '*':
+                em.logger.info("Selector is ignored for compile-only run.")
+
+            em.build_graph()
             em.compile()
         except Exception as e:
             logger.exception(e, exc_info=em.state_configs['show_stacktrace'])

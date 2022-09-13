@@ -104,7 +104,11 @@ class Earthmover:
         return configs
 
 
-    def compile(self):
+    def build_graph(self):
+        """
+
+        :return:
+        """
         self.logger.debug("building dataflow graph")
 
         ### Build all nodes into a graph
@@ -115,12 +119,7 @@ class Earthmover:
                 continue  # skip YAML line annotations
 
             node = Source(name, config, earthmover=self)
-            self.sources.append(node)
             self.graph.add_node(f"$sources.{name}", data=node)
-
-            if not node.skip:
-                node.compile()
-
 
         # transformations:
         if 'transformations' in self.user_configs:
@@ -131,8 +130,6 @@ class Earthmover:
                     continue  # skip YAML line annotations
 
                 node = Transformation(name, config, earthmover=self)
-                node.compile()
-                self.transformations.append(node)
                 self.graph.add_node(f"$transformations.{name}", data=node)
 
                 for source in node.sources:
@@ -145,7 +142,6 @@ class Earthmover:
                     if source != f"$transformations.{name}":
                         self.graph.add_edge(source, f"$transformations.{name}")
 
-
         # destinations:
         self.error_handler.assert_key_exists_and_type_is(self.user_configs, 'destinations', dict)
         for name, config in self.user_configs['destinations'].items():
@@ -153,8 +149,6 @@ class Earthmover:
                 continue  # skip YAML line annotations
 
             node = Destination(name, config, earthmover=self)
-            node.compile()
-            self.destinations.append(node)
             self.graph.add_node(f"$destinations.{name}", data=node)
 
             if not self.graph.ref(node.source):
@@ -165,7 +159,6 @@ class Earthmover:
 
             self.graph.add_edge(node.source, f"$destinations.{name}")
 
-
         ### Confirm that the graph is a DAG
         self.logger.debug("checking dataflow graph")
         if not nx.is_directed_acyclic_graph(self.graph):
@@ -174,7 +167,6 @@ class Earthmover:
                 f"the graph is not a DAG! it has the cycle {_cycle}"
             )
             raise
-
 
         ### Delete all trees emanating from a missing/blank source
         node_data = self.graph.get_node_data()
@@ -205,28 +197,58 @@ class Earthmover:
             self.graph.remove_node(node)
 
 
-    def execute(self, subgraph, exclude_nodes=()):
+    def compile(self, subgraph = None):
         """
 
         :param subgraph:
-        :param exclude_nodes:
+        :return:
+        """
+        if subgraph is None:
+            subgraph = self.graph
+
+        for layer in list(nx.topological_generations(subgraph)):
+
+            for node_name in layer:
+
+                nodes_dict = self.graph.get_node_data()
+                node = nodes_dict[node_name]
+                node.compile()
+
+                # Add the active nodes to the class attribute lists for the hashing file.
+                if node.type == 'source':
+                    if node.skip:
+                        continue
+
+                    self.sources.append(node)
+
+                elif node.type == 'transformation':
+                    self.transformations.append(node)
+
+                elif node.type == 'destination':
+                    self.destinations.append(node)
+
+                node.compile()
+
+
+    def execute(self, subgraph):
+        """
+
+        :param subgraph:
         :return:
         """
         for layer in list(nx.topological_generations(subgraph)):
 
             for node_name in layer:
-                if node_name in exclude_nodes:
-                    continue
 
                 nodes_dict = self.graph.get_node_data()
 
-                _node = nodes_dict[node_name]
-                if not _node.data:
-                    _node.execute()  # Sets self.data in each node.
+                node = nodes_dict[node_name]
+                if not node.data:
+                    node.execute()  # Sets self.data in each node.
 
                     # Create an entry for the shape of each node's data.
                     # Number of rows is delayed and only computed if show_graph is True.
-                    self.node_shapes[node_name] = _node.data.shape
+                    self.node_shapes[node_name] = node.data.shape
 
 
     def generate(self, selector):
@@ -242,12 +264,13 @@ class Earthmover:
         :param selector:
         :return:
         """
-        self.compile()
+        self.build_graph()
 
         if selector != "*":
             self.logger.info(f"filtering dataflow graph using selector `{selector}`")
 
         active_graph = self.graph.select_subgraph(selector)
+        self.compile(active_graph)
 
 
         ### Hashing requires an entire class mixin and multiple additional steps.
@@ -309,7 +332,7 @@ class Earthmover:
 
             # load all sources! (in topological sort order)
             _subgraph = active_graph.subgraph(component)
-            self.execute(_subgraph, exclude_nodes=[])
+            self.execute(_subgraph)
 
 
         ### Save run log only after a successful run! (in case of errors)
