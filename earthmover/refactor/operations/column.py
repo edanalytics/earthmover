@@ -401,7 +401,9 @@ class MapValuesOperation(Operation):
         elif _map_file := self.config.get('map_file'):
             self.error_handler.assert_key_type_is(self.config, "map_file", str)
             self.map_file = _map_file
+            print(self.map_file)
             self.mapping = self._read_map_file(_map_file)
+            print(self.mapping)
 
         else:
             self.error_handler.throw(
@@ -453,8 +455,9 @@ class MapValuesOperation(Operation):
 
         try:
             with open(file, 'r') as fp:
-                _translations_list = list(csv.DictReader(fp, delimiter=sep))
-                return {key: val for trans in _translations_list for key, val in trans.items()}
+                _translations_list = list(csv.reader(fp, delimiter=sep))
+                return dict(_translations_list[1:])
+                # return {key: val for trans in _translations_list for key, val in trans.items()}
 
         except Exception as err:
             self.error_handler.throw(
