@@ -342,7 +342,6 @@ class CombineColumnsOperation(Operation):
             )
             raise
 
-
     def execute(self):
         """
 

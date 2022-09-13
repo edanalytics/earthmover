@@ -211,11 +211,11 @@ class FileSource(Source):
         """
         # We don't watn to activate the function inside this helper function.
         read_lambda_mapping = {
-            'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8")),
-            'excel'     : lambda file, config: dd.from_pandas(pd.read_excel(file, sheet_name=config.get("sheet", 0)), chunksize=self.CHUNKSIZE),
+            'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False),
+            'excel'     : lambda file, config: dd.from_pandas(pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False), chunksize=self.CHUNKSIZE),
             'feather'   : lambda file, _     : dd.from_pandas(pd.read_feather(file), chunksize=self.CHUNKSIZE),
             'fixedwidth': lambda file, _     : dd.read_fwf(file),
-            'html'      : lambda file, config: dd.from_pandas(pd.read_html(file, match=config.get('match', ".+"))[0], chunksize=self.CHUNKSIZE),
+            'html'      : lambda file, config: dd.from_pandas(pd.read_html(file, match=config.get('match', ".+"), keep_default_na=False)[0], chunksize=self.CHUNKSIZE),
             'orc'       : lambda file, _     : dd.read_orc(file),
             'json'      : lambda file, config: dd.read_json(file, typ=config.get('object_type', "frame"), orient=config.get('orientation', "columns")),
             'parquet'   : lambda file, _     : dd.read_parquet(file),
@@ -223,7 +223,7 @@ class FileSource(Source):
             'spss'      : lambda file, _     : dd.from_pandas(pd.read_spss(file), chunksize=self.CHUNKSIZE),
             'stata'     : lambda file, _     : dd.from_pandas(pd.read_stata(file), chunksize=self.CHUNKSIZE),
             'xml'       : lambda file, config: dd.from_pandas(pd.read_xml(file, xpath=config.get('xpath', "./*")), chunksize=self.CHUNKSIZE),
-            'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8")),
+            'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False),
         }
         return read_lambda_mapping.get(file_type)
 
@@ -344,7 +344,7 @@ class SqlSource(Source):
         super().execute()
 
         try:
-            self.data = pd.read_sql(sql=self.query, con=self.connection)
+            self.data = dd.from_pandas(pd.read_sql(sql=self.query, con=self.connection), chunksize=self.CHUNKSIZE)
 
             self.logger.debug(
                 f"source `{self.name}` loaded (via SQL)"

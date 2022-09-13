@@ -44,7 +44,7 @@ class JoinOperation(Operation):
             self.left_keys = [_key]
 
         elif _keys := self.config.get('left_keys'):
-            self.error_handler.assert_key_type_is(self.config, 'left_keys', str)
+            self.error_handler.assert_key_type_is(self.config, 'left_keys', list)
             self.left_keys = _keys
         else:
             self.error_handler.throw(
@@ -63,7 +63,7 @@ class JoinOperation(Operation):
             self.right_keys = [_key]
 
         elif _keys := self.config.get('right_keys'):
-            self.error_handler.assert_key_type_is(self.config, 'right_keys', str)
+            self.error_handler.assert_key_type_is(self.config, 'right_keys', list)
             self.right_keys = _keys
         else:
             self.error_handler.throw(
