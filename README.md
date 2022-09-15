@@ -198,9 +198,9 @@ Each source must have a name (which is how it is referenced by transformations a
     - `.dta`: a [Stata data file](https://www.stata.com/manuals/gsw5.pdf)
 
   
-  File type is inferred from the file extension, however you may manually specify `type:` (`csv`, `tsv`, `fixedwidth`, `parquet`, `feather`, `orc`, `json`, `xml`, `html`, `excel`, `pickle`, `sas`, `spss`, or `stata`) to force `earthmover` to treat a file with an arbitrary extension as a certain type. Remote file paths (`https://somesite.com/path/to/file.csv`) generally work, but do not support chunking. (Download large files to a local disk for [chunking](#chunking).)
-* Database sources are supported via [SQLAlchemy](https://www.sqlalchemy.org/). They must specify a database `connection` string and SQL `query` to run. Large database sources support [chunking](#chunking).
-* FTP file sources are supported via [ftplib](https://docs.python.org/3/library/ftplib.html). They must specify an FTP `connection` string. FTP sources must fit in memory, chunking not supported at this time. 
+  File type is inferred from the file extension, however you may manually specify `type:` (`csv`, `tsv`, `fixedwidth`, `parquet`, `feather`, `orc`, `json`, `xml`, `html`, `excel`, `pickle`, `sas`, `spss`, or `stata`) to force `earthmover` to treat a file with an arbitrary extension as a certain type. Remote file paths (`https://somesite.com/path/to/file.csv`) generally work.
+* Database sources are supported via [SQLAlchemy](https://www.sqlalchemy.org/). They must specify a database `connection` string and SQL `query` to run.
+* FTP file sources are supported via [ftplib](https://docs.python.org/3/library/ftplib.html). They must specify an FTP `connection` string.
 
 For any source, optionally specify conditions you `expect` data to meet which, if not true for any row, will cause the run to fail with an error. (This can be useful for detecing and rejecting NULL or missing values before processing the data.) The format must be a Jinja expression that returns a boolean value. This is enables casting values (which are all treated as strings) to numeric formats like int and float for numeric comparisons.
 
@@ -251,7 +251,6 @@ Concatenates two or more sources sources of the same shape.
         - $sources.courses_list_2
         - $sources.courses_list_3
 ```
-At most one source may be large (chunked).
 </details>
 
 
@@ -293,8 +292,6 @@ Joins two sources.
 Joining can lead to a wide result; the `..._keep_columns` and `..._drop_columns` options enable narrowing it.
 
 Besides the join column(s), if a column `my_column` with the same name exists in both tables and is not dropped, it will be renamed `my_column_x` and `my_column_y`, from the left and right respectively, in the result.
-
-At most one source may be large (chunked).
 </details>
 
 
@@ -313,7 +310,7 @@ Adds columns with specified values.
         - new_column_3: "Reference values from {{AnotherColumn}} in this new column"
         - new_column_4: "{% if col1>col2 %}{{col1|float + col2|float}}{% else %}{{col1|float - col2|float}}{% endif %}"
 ```
-Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers to another column's value. Any [Jinja filters](https://jinja.palletsprojects.com/en/3.1.x/templates/#builtin-filters) and [math operations](https://jinja.palletsprojects.com/en/3.0.x/templates/#math) should work. Reference the current row number with `{{___row_id___}}` (only works with transformations of non-chunked sources).
+Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers to another column's value. Any [Jinja filters](https://jinja.palletsprojects.com/en/3.1.x/templates/#builtin-filters) and [math operations](https://jinja.palletsprojects.com/en/3.0.x/templates/#math) should work. Reference the current row number with `{{___row_id___}}`.
 </details>
 
 
@@ -403,7 +400,7 @@ Modify the values in the specified columns.
         school_year: "20{{value[-2:]}}"
         zipcode: "{{ value|int ** 2 }}"
 ```
-Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers to another column's value. Any [Jinja filters](https://jinja.palletsprojects.com/en/3.1.x/templates/#builtin-filters) and [math operations](https://jinja.palletsprojects.com/en/3.0.x/templates/#math) should work. Reference the current row number with `{{___row_id___}}` (only works with transformations of non-chunked sources).
+Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers to another column's value. Any [Jinja filters](https://jinja.palletsprojects.com/en/3.1.x/templates/#builtin-filters) and [math operations](https://jinja.palletsprojects.com/en/3.0.x/templates/#math) should work. Reference the current row number with `{{___row_id___}}`.
 </details>
 
 
@@ -461,7 +458,7 @@ Removes duplicate rows.
         - distinctness_column_1
         - distinctness_column_2
 ```
-Optionally specify the `columns` to use for uniqueness, otherwise all columns are used. If duplicate rows are found, only the first is kept. This operation is only valid for non-chunked sources.
+Optionally specify the `columns` to use for uniqueness, otherwise all columns are used. If duplicate rows are found, only the first is kept.
 </details>
 
 
@@ -653,18 +650,6 @@ Each component is materialized in [topological order](https://en.wikipedia.org/w
 
 ## Dataframes
 All data processing is done using [Pandas Dataframes](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) with values stored as strings (or [Categoricals](https://pandas.pydata.org/docs/user_guide/categorical.html), for memory efficiency in columns with few unique values). This choice of datatypes prevents issues arising from Pandas' datatype inference (like inferring numbers as dates), but does require casting string-representations of numeric values using Jinja when doing comparisons or computations.
-
-## Chunking
-Some effort has been made to enable this tool to work with data larger than available memory. This is possible via a process we call *chunking*, where large data sources are processed as a series of smaller chunks that do fit in memory. We call large `sources` that require chunking *chunked sources*.
-
-File and database `sources` support chunking; FTP `sources` do not. Likewise, some `transformation` operations are impossible on chunked sources: `join` may have at most one chunked source (depending on the `join_type`), and `distinct_rows` and `group_by` operations raise an error if invoked on a chunked source.
-
-In the [DAG](#dag), each component may have at most one chunked source. Suppose *C* is the chunked source, and *T* is the tree emanating from *C*. Nodes outside (up to) *T* are processed first as usual, and nodes adjacent to *T* are retained in memory. Then *T* is processed repeatedly on each chunk separately.
-
-![dataflow graph layers](images/dataflow-graph-bigsource.gif)
-
-**Above:** dashed arrows indicate the flow of chunked data from the chunked data source *C* (they form the tree *T*). Green nodes are those retained in memory during chunked processing.
-
 
 
 # Performance & Limitations
