@@ -1,0 +1,45 @@
+config:
+  output_dir: examples/sample_output/
+  # memory_limit: 2GB
+  # show_stacktrace: True
+  # show_graph: True
+  # log_level: DEBUG
+
+sources:
+  attendance:
+    file: examples/ignore_data/big_attendance.tsv
+    header_rows: 1
+  # testing_source:
+  #   file: 
+  #   header_rows: 1
+  #   required: False # this prevents an error due to `file` being blank... testing_destination just won't be created
+
+transformations:
+  attendance:
+    - operation: map_values
+      source: $sources.attendance
+      column: attended
+      mapping:
+        "TRUE": absent
+        "FALSE": present
+    - operation: rename_columns
+      source: $transformations.attendance
+      columns:
+        attended: status
+        # section: session
+    - operation: add_columns
+      source: $transformations.attendance
+      columns:
+        school: 12345
+
+destinations:
+  studentSchoolAttendanceEvents:
+    source: $transformations.attendance
+    template: examples/sample_templates/studentSchoolAttendanceEvent.jsont
+    extension: jsonl
+    linearize: True
+  # testing_destination:
+  #   source: $sources.testing_source
+  #   template: examples/sample_templates/studentSchoolAttendanceEvent.jsont
+  #   extension: jsonl
+  #   linearize: True
