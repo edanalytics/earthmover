@@ -110,19 +110,18 @@ class Graph(nx.DiGraph):
 
         node_labels = {}
         node_sizes = {}
-        for node in self.nodes(data=True):
-            node_id = node[0]
-            node_class = node[1]["data"]
+        for node_id, node in self.get_node_data().items():
 
-            node_labels[node_id] = node_class.name
+            node_labels[node_id] = node.name
 
-            _node_size_label = f"{node_class.num_rows} rows; {node_class.num_cols} cols"
-            if node_class.size:
-                _node_size_label += f"; {node_class.size} bytes"
+            _node_size_label = f"{node.num_rows} rows; {node.num_cols} cols"
+            if node.size:
+                _node_size_label += f"; {node.size} bytes"
+
             node_sizes[node_id] =  _node_size_label
 
             # Classify node as source, transformation, or destination
-            _type = node_class.type
+            _type = node.type
             if _type == "source":
                 sources.append(node_id)
             elif _type == "destination":

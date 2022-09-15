@@ -78,7 +78,6 @@ class Earthmover:
 
         # Initialize the NetworkX DiGraph
         self.graph = Graph(error_handler=self.error_handler)
-        self.node_shapes = {}  # Dictionary linking node names to their data shapes.
 
 
     def load_config_file(self) -> dict:
@@ -246,9 +245,7 @@ class Earthmover:
                 if not node.data:
                     node.execute()  # Sets self.data in each node.
 
-                    # Create an entry for the shape of each node's data.
-                    # Number of rows is delayed and only computed if show_graph is True.
-                    self.node_shapes[node_name] = node.data.shape
+                node.num_rows, node.num_cols = node.data.shape
 
 
     def generate(self, selector):
@@ -353,17 +350,14 @@ class Earthmover:
         if self.state_configs['show_graph']:
             self.logger.info("saving dataflow graph image to `graph.png` and `graph.svg`")
 
-            # Number of columns is easily accessible. Number of rows is delayed and must be computed.
-            num_node_rows = {key: shape[0] for key, shape in self.node_shapes.items()}
-            num_node_cols = {key: shape[1] for key, shape in self.node_shapes.items()}
+            # Compute all row number values at once for performance, then update the nodes.
+            computed_node_rows = dask.compute(
+                {node_name: node.num_rows for node_name, node in self.graph.get_node_data().items()}
+            )[0]
 
-            # Compute all row number values at once for performance.
-            num_node_rows = dask.compute(num_node_rows)[0]
-
-            for node_name in self.node_shapes:
-                _node = self.graph.ref(node_name)
-                _node.num_cols = num_node_cols.get(node_name)
-                _node.num_rows = num_node_rows.get(node_name)
+            for node_name, num_rows in computed_node_rows.items():
+                node = self.graph.ref(node_name)
+                node.num_rows = num_rows
 
             active_graph.draw()
 
