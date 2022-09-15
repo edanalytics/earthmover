@@ -8,6 +8,7 @@ from typing import Dict, Optional
 
 from earthmover.refactor.error_handler import ErrorHandler
 from earthmover.refactor.node import Node
+from earthmover.refactor import util
 
 
 class Graph(nx.DiGraph):
@@ -116,7 +117,7 @@ class Graph(nx.DiGraph):
 
             _node_size_label = f"{node.num_rows} rows; {node.num_cols} cols"
             if node.size:
-                _node_size_label += f"; {node.size} bytes"
+                _node_size_label += f"; {util.human_size(node.size)}"
 
             node_sizes[node_id] =  _node_size_label
 

@@ -25,6 +25,9 @@ def human_time(seconds: int) -> str:
     return str(round(seconds/86400)) + " days"
 
 
+def human_size(bytes, units=['B','KB','MB','GB','TB', 'PB', 'EB']):
+    return str(bytes) + units[0] if bytes < 1024 else human_size(bytes>>10, units[1:])
+
 def get_sep(file: str) -> Optional[str]:
     """
     Determine field separator from file extension
