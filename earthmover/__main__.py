@@ -5,7 +5,7 @@ import os
 import subprocess
 import sys
 
-from earthmover.refactor.earthmover import Earthmover  # TODO: Undo. Main import change to test refactor.
+from earthmover.earthmover import Earthmover  # TODO: Undo. Main import change to test refactor.
 
 
 class ExitOnExceptionHandler(logging.StreamHandler):
