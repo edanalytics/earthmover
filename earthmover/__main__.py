@@ -84,6 +84,14 @@ def main(argv=None):
         action='store_true',
         help='only compile earthmover (does not process any actual data)'
     )
+    parser.add_argument("-g", "--show-graph",
+        action='store_true',
+        help='overwrites `show_graph` config in the config file to true'
+    )
+    parser.add_argument("-e", "--show-stacktrace",
+        action='store_true',
+        help='overwrites `show_stacktrace` config in the config file to true; sets `log_level` to DEBUG'
+    )
     
     _defaults = { "selector":"*", "params": "" }
     parser.set_defaults(**_defaults)
@@ -124,6 +132,16 @@ def main(argv=None):
     if not args.config_file:
         logger.exception("please pass a config YAML file as a command line argument (try the -h flag for help)")
 
+    # Update state configs with those forced via the command line.
+    cli_state_configs = {}
+
+    if args.show_graph:
+        cli_state_configs['show_graph'] = True
+
+    if args.show_stacktrace:
+        cli_state_configs['show_stacktrace'] = True
+        cli_state_configs['log_level'] = 'DEBUG'
+
 
     # Main run
     try:
@@ -132,7 +150,8 @@ def main(argv=None):
             logger=logger,
             params=args.params,
             force=args.force,
-            skip_hashing=args.skip_hashing
+            skip_hashing=args.skip_hashing,
+            cli_state_configs=cli_state_configs
         )
     except Exception as err:
         logger.exception(err, exc_info=False)

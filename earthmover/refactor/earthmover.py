@@ -6,6 +6,7 @@ import os
 import time
 import yaml
 
+from typing import Optional
 from yaml import SafeLoader
 
 from earthmover.refactor.error_handler import ErrorHandler
@@ -35,7 +36,8 @@ class Earthmover:
         logger: logging.Logger,
         params: str = "",
         force: bool = False,
-        skip_hashing: bool = False
+        skip_hashing: bool = False,
+        cli_state_configs: Optional[dict] = None
     ):
         self.do_generate = True
         self.force = force
@@ -49,7 +51,10 @@ class Earthmover:
         self.params = json.loads(params) if params else {}
         self.user_configs = self.load_config_file()
 
-        _state_configs = {**self.config_defaults, **self.user_configs.get('config', {})}
+        if cli_state_configs is None:
+            cli_state_configs = {}
+
+        _state_configs = {**self.config_defaults, **self.user_configs.get('config', {}), **cli_state_configs}
         self.state_configs = {
             'state_file': os.path.expanduser(_state_configs['state_file']),
             'output_dir': os.path.expanduser(_state_configs['output_dir']),
