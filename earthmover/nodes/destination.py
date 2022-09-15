@@ -105,7 +105,7 @@ class FileDestination(Destination):
         #
         try:
             self.jinja_template = jinja2.Environment(
-                    loader=jinja2.FileSystemLoader(os.path.dirname('/'))
+                    loader=jinja2.FileSystemLoader(os.path.dirname('./'))
                 ).from_string(self.earthmover.state_configs['macros'] + template_string)
 
         except Exception as err:

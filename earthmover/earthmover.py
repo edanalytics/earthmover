@@ -20,7 +20,7 @@ from earthmover import util
 
 class Earthmover:
 
-    version = "0.2.0"
+    version = "0.0.2"
 
     config_defaults = {
         "state_file": os.path.join(os.path.expanduser("~"), ".earthmover.csv"),
