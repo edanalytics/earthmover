@@ -208,8 +208,14 @@ class Graph(nx.DiGraph):
         ]
         plt.legend(handles=legend, loc='lower center', ncol=3)
 
-        # Save graph image
+        # If the graph is just a single line, the y-range is tiny and so the size labels don't appear.
+        # This is a silly hack to artificially increase the y-range if it's small, so the labels show up.
         plt.margins(0.3)
+        axes = plt.gca()
+        y_min, y_max = axes.get_ylim()
+        plt.ylim([min(0, y_min), max(40, y_max)])
+        
+        # Save graph image
         plt.savefig("graph.svg")
         plt.savefig("graph.png")
         plt.clf()
