@@ -98,7 +98,9 @@ def main(argv=None):
     args, remaining_argv = parser.parse_known_args()
     
     if args.version:
-        with open('VERSION.txt', 'r') as f:
+        em_dir = os.path.dirname(os.path.abspath(__file__))
+        version_file = os.path.join(em_dir, '..', 'VERSION.txt')
+        with open(version_file, 'r') as f:
             VERSION = f.read().strip()
             print(f"earthmover, version {VERSION}")
         exit(0)
