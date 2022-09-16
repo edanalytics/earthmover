@@ -94,12 +94,12 @@ class FileDestination(Destination):
 
         #
         if 'linearize' in self.config:
-            template_string = (
-                template_string
-                    .replace("\n", "")
-                    .replace("\r", "")
-                    .strip()
-            )
+            # template_string = (
+            #     template_string
+            #         .replace("\n", "")
+            #         .replace("\r", "")
+            #         .strip()
+            # )
             template_string = self.EXP.sub(" ", template_string)  # Replace multiple spaces with a single space.
 
         #

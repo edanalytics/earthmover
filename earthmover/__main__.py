@@ -2,7 +2,6 @@ import argparse
 # import filecmp
 import logging
 import os
-import subprocess
 import sys
 
 from earthmover.earthmover import Earthmover  # TODO: Undo. Main import change to test refactor.
@@ -104,28 +103,17 @@ def main(argv=None):
         exit(0)
 
     if args.test:
+        tests_dir = os.path.join( os.path.realpath(os.path.dirname(__file__)), "tests" )
+        
         em = Earthmover(
-            config_file="earthmover/tests/config.yaml",
+            config_file=os.path.join(tests_dir, "config.yaml"),
             logger=logger,
-            params="",
+            params='{"BASE_DIR": "' + tests_dir + '"}',
             force=True,
             skip_hashing=True
         )
         em.logger.info("running tests...")
-        em.generate(selector='*')
-
-        # compare tests/outputs/* against tests/expected/*
-        for filename in os.listdir('earthmover/tests/expected/'):
-
-            _expected_file  = os.path.join('earthmover/tests/expected', filename)
-            _outputted_file = os.path.join('earthmover/tests/outputs', filename)
-            diff_command = f"diff <(sort {_expected_file}) <(sort {_outputted_file})"
-
-            # Because dask shuffles dataframe contents, check the contents of the files, not the files themselves.
-            if subprocess.call(['bash', '-c', diff_command]):
-                em.logger.critical(f"Test output `{_outputted_file}` does not match expected output.")
-                exit(1)
-
+        em.test(tests_dir)
         em.logger.info('tests passed successfully.')
         exit(0)
 

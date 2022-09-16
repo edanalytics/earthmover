@@ -1,5 +1,5 @@
 config:
-  output_dir: earthmover/tests/outputs/
+  output_dir: ${BASE_DIR}/outputs/
   log_level: INFO
   show_stacktrace: False
   show_graph: False
@@ -7,22 +7,22 @@ config:
 
 sources:
   mammal_species:
-    file: earthmover/tests/sources/mammals.csv
+    file: ${BASE_DIR}/sources/mammals.csv
     header_rows: 1
   bird_species:
-    file: earthmover/tests/sources/birds.csv
+    file: ${BASE_DIR}/sources/birds.csv
     header_rows: 1
   fish_species:
-    file: earthmover/tests/sources/fishes.csv
+    file: ${BASE_DIR}/sources/fishes.csv
     header_rows: 1
   reptile_species:
-    file: earthmover/tests/sources/reptiles.csv
+    file: ${BASE_DIR}/sources/reptiles.csv
     header_rows: 1
   zoos:
-    file: earthmover/tests/sources/zoos.csv
+    file: ${BASE_DIR}/sources/zoos.csv
     header_rows: 1
   zoo_inventories:
-    file: earthmover/tests/sources/inventories.csv
+    file: ${BASE_DIR}/sources/inventories.csv
 
 
 transformations:
@@ -222,59 +222,59 @@ transformations:
         - species
       new_column: scientific_name
       separator: " "
-  # total_of_each_species:
-  #   - operation: group_by
-  #     source: $transformations.joined_inventories
-  #     function: sum
-  #     group_by_columns:
-  #       - animal
-  #       - species_name
-  #     create_column:
-  #      count: count()
-  #   - operation: duplicate_columns
-  #     source: $transformations.total_of_each_species
-  #     columns:
-  #       species_name: name
-  #   - operation: keep_columns
-  #     source: $transformations.total_of_each_species
-  #     columns:
-  #       - name
-  #       - count
-  #   - operation: add_columns
-  #     source: $transformations.total_of_each_species
-  #     columns:
-  #       entity: species
-  #       count_column: total_count
+  total_of_each_species:
+    - operation: group_by
+      source: $transformations.joined_inventories
+      function: sum
+      group_by_columns:
+        - animal
+        - species_name
+      create_columns:
+        count: count()
+    - operation: duplicate_columns
+      source: $transformations.total_of_each_species
+      columns:
+        species_name: name
+    - operation: keep_columns
+      source: $transformations.total_of_each_species
+      columns:
+        - name
+        - count
+    - operation: add_columns
+      source: $transformations.total_of_each_species
+      columns:
+        entity: species
+        count_column: total_count
 
 
 destinations:
   animals:
     source: $transformations.animal_species
-    template: earthmover/tests/templates/animal.jsont
+    template: ${BASE_DIR}/templates/animal.jsont
     extension: jsonl
     linearize: True
   species_count_by_zoo:
     source: $transformations.species_count_by_zoo
-    template: earthmover/tests/templates/count.jsont
+    template: ${BASE_DIR}/templates/count.jsont
     extension: jsonl
     linearize: True
   zoo_count_by_species:
     source: $transformations.zoo_count_by_species
-    template: earthmover/tests/templates/count.jsont
+    template: ${BASE_DIR}/templates/count.jsont
     extension: jsonl
     linearize: True
   zoo_count_by_year_founded:
     source: $transformations.zoo_count_by_year_founded
-    template: earthmover/tests/templates/count.jsont
+    template: ${BASE_DIR}/templates/count.jsont
     extension: jsonl
     linearize: True
   big_cats:
     source: $transformations.big_cats
-    template: earthmover/tests/templates/cats.jsont
+    template: ${BASE_DIR}/templates/cats.jsont
     extension: jsonl
     linearize: True
-  # total_of_each_species:
-  #   source: $transformations.total_of_each_species
-  #   template: tests/templates/count.jsont
-  #   extension: jsonl
-  #   linearize: True
+  total_of_each_species:
+    source: $transformations.total_of_each_species
+    template: ${BASE_DIR}/templates/count.jsont
+    extension: jsonl
+    linearize: True

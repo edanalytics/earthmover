@@ -5,6 +5,7 @@ import networkx as nx
 import os
 import time
 import yaml
+import pandas as pd
 
 from typing import Optional
 from yaml import SafeLoader
@@ -365,6 +366,35 @@ class Earthmover:
                 node.num_rows = num_rows
 
             active_graph.draw()
+
+
+    def test(self, tests_dir):
+        # delete files in tests/output/
+        output_dir = os.path.join(tests_dir, "outputs")
+        for f in os.listdir(output_dir):
+            os.remove(os.path.join(output_dir, f))
+
+        # run earthmover!
+        self.generate(selector="*")
+
+        # compare tests/outputs/* against tests/expected/*
+        for filename in os.listdir( os.path.join(tests_dir, 'expected') ):
+
+            # load expected and outputted content as dataframes, and sort them
+            # because dask may shuffle output order
+            _expected_file  = os.path.join(tests_dir, 'expected', filename)
+            with open(_expected_file, "r") as f:
+                _expected_df = pd.DataFrame([l.strip() for l in f.readlines()])
+                _expected_df = _expected_df.sort_values(by=_expected_df.columns.tolist()).reset_index(drop=True)
+            _outputted_file = os.path.join(tests_dir, 'outputs', filename)
+            with open(_outputted_file, "r") as f:
+                _outputted_df = pd.DataFrame([l.strip() for l in f.readlines()])
+                _outputted_df = _outputted_df.sort_values(by=_outputted_df.columns.tolist()).reset_index(drop=True)
+            
+            # compare sorted contents
+            if not _expected_df.equals(_outputted_df):
+                self.logger.critical(f"Test output `{_outputted_file}` does not match expected output.")
+                exit(1)
 
 
 
