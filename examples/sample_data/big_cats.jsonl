@@ -1,0 +1,3 @@
+{ "name": "Cheetah", "scientific_name": "Acinonyx jubatus", "family": "mammal", "branch": "", "genus": "Acinonyx", "species": "jubatus" }
+{ "name": "Lion", "scientific_name": "Panthera leo", "family": "mammal", "branch": "panther", "genus": "Panthera", "species": "leo" }
+{ "name": "Bengal Tiger", "scientific_name": "Panthera tigris tigris", "family": "mammal", "branch": "panther", "genus": "Panthera", "species": "tigris tigris" }

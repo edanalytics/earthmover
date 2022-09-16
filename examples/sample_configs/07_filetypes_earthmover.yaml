@@ -34,6 +34,9 @@ sources:
     file: https://raw.githubusercontent.com/Teradata/kylo/master/samples/sample-data/csv/userdata3.csv
     # ^ from https://github.com/Teradata/kylo/tree/master/samples/sample-data/csv
     header_rows: 1
+  big-cats:
+    file: examples/sample_data/big_cats.jsonl
+    type: jsonl
 
 destinations:
   users/1:
@@ -51,3 +54,18 @@ destinations:
     template: examples/sample_templates/user.jsont
     extension: jsonl
     linearize: True
+  big-cats:
+    source: $sources.big-cats
+    template: examples/sample_templates/bigcats.htmlt
+    extension: html
+    header: >-2
+      <html>
+        <body>
+          <h1>A List of Big Cats</h1>
+          <ul>
+    footer: >2
+          </ul>
+        </body>
+      </html>
+
+  

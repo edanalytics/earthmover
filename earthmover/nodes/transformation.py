@@ -54,5 +54,7 @@ class Transformation(Node):
         for operation in self.operations:
             self.data = operation.execute()
             self.check_expectations(operation.expectations)  # Operation-level expectation checks
+            # TODO: figure out how to display row and col counts:
+            # if "debug" in operation.config: self.logger.debug(self.data.columns)
 
         self.check_expectations(self.expectations)  # Post-transformation expectation checks

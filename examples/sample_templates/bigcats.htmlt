@@ -1,0 +1,7 @@
+      <li>
+        <h3>{{name}} (<em>{{scientific_name}}</em>)</h3>
+        Family: <em>{{family}}</em><br />
+        Branch: <em>{{branch}}</em><br />
+        Genus: <em>{{genus}}</em><br />
+        Species: <em>{{species}}</em><br />
+      </li>

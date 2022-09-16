@@ -188,6 +188,7 @@ Each source must have a name (which is how it is referenced by transformations a
   - Column-based formats: `.parquet`, `.feather`, `.orc` &mdash; these require the [`pyarrow` library](https://arrow.apache.org/docs/python/index.html), which can be installed with `pip install pyarrow` or similar
   - Structured formats:
     - `.json`: Optionally specify a `object_type` (`frame` or `series`) and `orientation` (see [these docs](https://pandas.pydata.org/docs/reference/api/pandas.read_json.html)) to interpret different JSON structures.
+    - `.jsonl` or `.ndjson`: reads files with a flat JSON structure per line.
     - `.xml`: Optionally specify an `xpath` to [select a set of nodes](https://pandas.pydata.org/docs/reference/api/pandas.read_xml.html) deeper in the XML.
     - `.html`: Optionally specify a regex to `match` for [selecting one of many tables](https://pandas.pydata.org/docs/reference/api/pandas.read_html.html) in the HTML. This can be used to extract tables from a live web page.
   - Excel formats: `.xls`, `.xlsx`, `.xlsm`, `.xlsb`, `.odf`, `.ods` and `.odt` &mdash; optionally specify the `sheet` name (as a string) or index (as an integer) to load.
@@ -198,7 +199,7 @@ Each source must have a name (which is how it is referenced by transformations a
     - `.dta`: a [Stata data file](https://www.stata.com/manuals/gsw5.pdf)
 
   
-  File type is inferred from the file extension, however you may manually specify `type:` (`csv`, `tsv`, `fixedwidth`, `parquet`, `feather`, `orc`, `json`, `xml`, `html`, `excel`, `pickle`, `sas`, `spss`, or `stata`) to force `earthmover` to treat a file with an arbitrary extension as a certain type. Remote file paths (`https://somesite.com/path/to/file.csv`) generally work.
+  File type is inferred from the file extension, however you may manually specify `type:` (`csv`, `tsv`, `fixedwidth`, `parquet`, `feather`, `orc`, `json`, `jsonl`, `xml`, `html`, `excel`, `pickle`, `sas`, `spss`, or `stata`) to force `earthmover` to treat a file with an arbitrary extension as a certain type. Remote file paths (`https://somesite.com/path/to/file.csv`) generally work.
 * Database sources are supported via [SQLAlchemy](https://www.sqlalchemy.org/). They must specify a database `connection` string and SQL `query` to run.
 * FTP file sources are supported via [ftplib](https://docs.python.org/3/library/ftplib.html). They must specify an FTP `connection` string.
 
@@ -223,7 +224,7 @@ transformations:
         03: 3 (History)
         04: 4 (Language)
         05: 5 (Computer and Information Systems)
-    - operations: join
+    - operation: join
       sources:
         - $transformations.courses
         - $sources.schools
@@ -542,7 +543,7 @@ Any operation may also specify `debug: True` which will output the dataframe sha
 
 
 ### **`destinations`**
-The `destinations` section of the [YAML configuration](#yaml-configuration) specifies how transformed data is materialized to files of JSON payloads.
+The `destinations` section of the [YAML configuration](#yaml-configuration) specifies how transformed data is materialized to files.
 
 A sample `destinations` section is shown here; the options are explained below.
 ```yaml
@@ -557,8 +558,17 @@ destinations:
     template: ./json_templates/course.jsont
     extension: jsonl
     linearize: True
+  course_report:
+    source: $transformations.course_list
+    template: ./json_templates/course.htmlt
+    extension: html
+    linearize: False
+    header: <html><body><h1>Course List:</h1>
+    footer: </body></html>
 ```
-Provide an entry for each Ed-Fi resource you want to POST to, with the `source` and the JSON `template` (a JSON payload will be generated for each row of the source). Files are materialized using the `extension` you specify. If `linearize` is `True`, all line breaks are removed from the template, resulting in one output line per row. (This is useful for creating JSONL and other linear output formats.)
+For each file you want materialized, provide the `source` and the `template` file &mdash; a text file (JSON, XML, HTML, etc.) containing Jinja with references to the columns of `source`. The materialized file will contain `template` rendered for each row of `source`, with an optional `header` prefix and `footer` postfix. Files are materialized using your specified `extension` (which is required).
+
+If `linearize` is `True`, all line breaks are removed from the template, resulting in one output line per row. (This is useful for creating JSONL and other linear output formats.) If omitted, `linearize` is `True`.
 
 
 

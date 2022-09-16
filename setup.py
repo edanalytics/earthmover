@@ -2,12 +2,14 @@ import os
 import pathlib
 import setuptools
 
-
 # The directory containing this file
 HERE = pathlib.Path(__file__).parent
 
 # The text of the README file
 README = (HERE / "README.md").read_text()
+
+# The current version
+VERSION = (HERE / "VERSION.txt").read_text()
 
 # automatically captured required modules for install_requires in requirements.txt
 with open(os.path.join(HERE, 'requirements.txt'), encoding='utf-8') as fp:
@@ -16,7 +18,7 @@ with open(os.path.join(HERE, 'requirements.txt'), encoding='utf-8') as fp:
 setuptools.setup (
     name = 'earthmover',
     description = 'Transforms tabular data sources into text-based data via YAML configuration',
-    version = '0.0.2',
+    version = VERSION,
     packages = ['earthmover'],
     install_requires = all_reqs,
     python_requires = '>=3',

@@ -1,5 +1,4 @@
 import argparse
-# import filecmp
 import logging
 import os
 import sys
@@ -53,23 +52,23 @@ def main(argv=None):
         nargs="?",
         type=str,
         help='Specify YAML config file',
-        metavar="FILE"
+        metavar="CONFIG_FILE"
     )
     parser.add_argument("-v", "--version",
         action='store_true',
-        help='view tool version'
+        help='view tool version and exit'
     )
     parser.add_argument("-t", "--test",
         action='store_true',
-        help="Run transformation tests"
+        help="run transformation test suite"
     )
     parser.add_argument("-s", "--selector",
         nargs='?',
-        help='subgraph selector to run'
+        help='select a subset of nodes to run [node1,node2,subnode*]'
     )
     parser.add_argument("-f", "--force",
         action='store_true',
-        help='force regenerating data - even if nothing has changed'
+        help='force regeneration (even if data and configs have not changed)'
     )
     parser.add_argument("-k", "--skip-hashing",
         action='store_true',
@@ -99,7 +98,9 @@ def main(argv=None):
     args, remaining_argv = parser.parse_known_args()
     
     if args.version:
-        logger.info(f"earthmover, version {Earthmover.version}")
+        with open('VERSION.txt', 'r') as f:
+            VERSION = f.read().strip()
+            print(f"earthmover, version {VERSION}")
         exit(0)
 
     if args.test:

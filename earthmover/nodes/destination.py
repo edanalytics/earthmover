@@ -63,6 +63,8 @@ class FileDestination(Destination):
         self.file = None
         self.template = None
         self.jinja_template = None
+        self.header = None
+        self.footer = None
 
 
     def compile(self):
@@ -94,13 +96,13 @@ class FileDestination(Destination):
 
         #
         if 'linearize' in self.config:
-            # template_string = (
-            #     template_string
-            #         .replace("\n", "")
-            #         .replace("\r", "")
-            #         .strip()
-            # )
             template_string = self.EXP.sub(" ", template_string)  # Replace multiple spaces with a single space.
+        
+        if 'header' in self.config:
+            self.header = self.config["header"]
+
+        if 'footer' in self.config:
+            self.footer = self.config["footer"]
 
         #
         try:
@@ -127,6 +129,9 @@ class FileDestination(Destination):
         os.makedirs(os.path.dirname(self.file), exist_ok=True)
         with open(self.file, 'w') as fp:
 
+            if self.header:
+                fp.write(self.header + "\n")
+
             for row_data in self.data.itertuples(index=False):
                 _data_tuple = row_data._asdict().items()
 
@@ -140,6 +145,9 @@ class FileDestination(Destination):
                     raise
 
                 fp.write(json_string + "\n")
+
+            if self.footer:
+                fp.write(self.footer)
 
         self.logger.debug(f"output `{self.file}` written")
         self.size = os.path.getsize(self.file)
