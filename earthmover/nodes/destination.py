@@ -95,7 +95,7 @@ class FileDestination(Destination):
             raise
 
         #
-        if 'linearize' in self.config:
+        if self.config.get('linearize', True):
             template_string = self.EXP.sub(" ", template_string)  # Replace multiple spaces with a single space.
         
         if 'header' in self.config:

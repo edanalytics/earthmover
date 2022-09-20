@@ -60,6 +60,7 @@ class Operation:
 
         self.earthmover = earthmover
         self.error_handler = self.earthmover.error_handler
+        self.logger = self.earthmover.logger
 
         # `source` and `source_list` are mutually-exclusive attributes.
         self.source = None

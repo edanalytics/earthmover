@@ -251,6 +251,9 @@ class Earthmover:
 
                 node.num_rows, node.num_cols = node.data.shape
 
+                if node.type=='transformation' and [cfg.get('debug', False) for cfg in node.config]:
+                    node.num_rows = dask.compute(node.num_rows)[0]
+
 
     def generate(self, selector):
         """
@@ -314,7 +317,7 @@ class Earthmover:
                         self.do_generate = False
 
         else:  # Skip hashing
-            self.logger.info("skipping hashing and run logging")
+            self.logger.info("skipping hashing and run-logging")
             runs_file = None  # This instantiation will never be used, but this avoids linter alerts.
 
 
