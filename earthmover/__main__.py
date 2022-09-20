@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 
-from earthmover.earthmover import Earthmover  # TODO: Undo. Main import change to test refactor.
+from earthmover.earthmover import Earthmover
 
 
 class ExitOnExceptionHandler(logging.StreamHandler):
@@ -15,6 +15,7 @@ class ExitOnExceptionHandler(logging.StreamHandler):
         if record.levelno in (logging.ERROR, logging.CRITICAL):
             raise SystemExit(-1)
 
+DEFAULT_CONFIG_FILE = 'earthmover.yaml'
 
 # Set up logging
 handler = ExitOnExceptionHandler()
@@ -48,7 +49,12 @@ def main(argv=None):
         description=description,
         epilog="Full documentation at https://github.com/edanalytics/earthmover"
     )
-    parser.add_argument('config_file',
+    parser.add_argument('command',
+        nargs="?",
+        type=str,
+        help='the command to run: `run`, `compile`, `visualize`'
+        )
+    parser.add_argument("-c", "--config-file",
         nargs="?",
         type=str,
         help='Specify YAML config file',
@@ -78,10 +84,6 @@ def main(argv=None):
         type=str,
         help='specify parameters as a JSON object via CLI (overrides environment variables)'
     )
-    parser.add_argument("-c", "--compile",
-        action='store_true',
-        help='only compile earthmover (does not process any actual data)'
-    )
     parser.add_argument("-g", "--show-graph",
         action='store_true',
         help='overwrites `show_graph` config in the config file to true'
@@ -94,7 +96,6 @@ def main(argv=None):
     _defaults = { "selector":"*", "params": "" }
     parser.set_defaults(**_defaults)
 
-    #
     args, remaining_argv = parser.parse_known_args()
     
     if args.version:
@@ -109,7 +110,7 @@ def main(argv=None):
         tests_dir = os.path.join( os.path.realpath(os.path.dirname(__file__)), "tests" )
         
         em = Earthmover(
-            config_file=os.path.join(tests_dir, "config.yaml"),
+            config_file=os.path.join(tests_dir, "earthmover.yaml"),
             logger=logger,
             params='{"BASE_DIR": "' + tests_dir + '"}',
             force=True,
@@ -121,7 +122,7 @@ def main(argv=None):
         exit(0)
 
     if not args.config_file:
-        logger.exception("please pass a config YAML file as a command line argument (try the -h flag for help)")
+        logger.info(f"config file not specified with `-c` flag; looking for `{DEFAULT_CONFIG_FILE}` in current directory...")
 
     # Update state configs with those forced via the command line.
     cli_state_configs = {}
@@ -137,7 +138,7 @@ def main(argv=None):
     # Main run
     try:
         em = Earthmover(
-            config_file=args.config_file,
+            config_file=args.config_file or f"./{DEFAULT_CONFIG_FILE}",
             logger=logger,
             params=args.params,
             force=args.force,
@@ -148,27 +149,33 @@ def main(argv=None):
         logger.exception(err, exc_info=False)
         raise  # Avoids linting error
 
-    #
-    if args.compile:
-        em.logger.info(f"compiling earthmover")
+    if args.command == 'compile':
+        em.logger.info(f"compiling project...")
         try:
             if args.selector != '*':
-                em.logger.info("Selector is ignored for compile-only run.")
+                em.logger.info("selector is ignored for compile-only run.")
 
             em.build_graph()
             em.compile()
+            em.logger.info("looks ok")
         except Exception as e:
             logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
             raise
-        exit(0)
 
-    #
-    try:
-        em.logger.info("starting...")
-        em.generate(selector=args.selector)
-        em.logger.info("done!")
-    except Exception as e:
-        logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
+    elif args.command == 'run' or not args.command:
+        if not args.command:
+            em.logger.warning("[no command specified; proceeding with `run` but we recommend explicitly giving a command]")
+        try:
+            em.logger.info("starting...")
+            em.generate(selector=args.selector)
+            em.logger.info("done!")
+        except Exception as e:
+            logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
+            raise
+
+    else:
+        logger.exception("unknown command, use -h flag for help")
+        raise
 
 
 if __name__ == "__main__":

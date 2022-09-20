@@ -9,8 +9,8 @@ edfi_api:
   version: 3 # or 2, although this isn't really supported
   mode: sandbox # or year_specific
   year: 2021 # for year_specific mode
-  client_id: populated
-  client_secret: populatedSecret
+  client_id: populated # default for Docker sandbox API
+  client_secret: populatedSecret # default for Docker sandbox API
 connection:
   pool_size: 8 # simultaneous connections
   timeout: 60 # seconds

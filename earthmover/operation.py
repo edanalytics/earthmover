@@ -79,6 +79,18 @@ class Operation(Node):
                 "A `source` or a list of `sources` must be defined for any operation!"
             )
 
+        self.source_data_list = None  # Retrieved data for operations with multiple sources
+        self.data = None  # Final dataframe after execute()
+        self.expectations = None  # Similar to Node.expectations, but run within Transformation.execute().
+
+
+    def get_source_node(self, source) -> 'Node':
+        """
+
+        :return:
+        """
+        return self.earthmover.graph.ref(source)
+
 
     @abc.abstractmethod
     def compile(self):

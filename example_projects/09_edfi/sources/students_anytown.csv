@@ -1,6 +1,6 @@
 school_id,student_id,state_student_id,first_name,last_name,gender,race,grade,birth_date
 60918,680572,4344687,David,Lucas,Male,White,12,4/4/2005
-60918,667023,7189423,Aileen,Brandt,Female,Multiple,12,6/25/2005
+60918,667024,7189423,Aileen,Brandt,Female,Multiple,12,6/25/2005
 60918,342169,2527807,Joyce,Riley,Female,Asian,12,11/21/2005
 60918,776777,1647309,Chris,Short,Male,Black,8,11/5/2010
 60918,561733,6923796,Sara,Leon,Female,White,8,4/12/2008
@@ -569,7 +569,7 @@ school_id,student_id,state_student_id,first_name,last_name,gender,race,grade,bir
 60919,854848,2563383,Johnny,Lam,Male,Black,9,8/26/2009
 60919,128006,3141504,Richard,Gilbert,Male,White,10,8/8/2007
 60919,282830,7100497,Ariel,Bradley,Male,White,9,6/21/2007
-60919,764436,6500129,Mary,Smith,Female,Asian,8,10/3/2009
+60919,764435,6500129,Mary,Smith,Female,Asian,8,10/3/2009
 60919,897181,2681143,Lana,Gates,Female,Asian,11,4/27/2006
 60919,887783,2329495,Laura,Page,Female,Multiple,10,6/14/2007
 60919,323665,3053308,John,Munoz,Female,Asian,9,7/17/2008

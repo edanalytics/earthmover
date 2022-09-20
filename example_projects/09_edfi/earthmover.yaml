@@ -5,14 +5,6 @@ config:
 
 sources:
   # this is fake data!
-  districts:
-    file: ./sources/districts.csv
-    header_rows: 1
-    columns:
-      - district_id
-      - district_name
-      - category
-      - category2
   schools:
     file: ./sources/schools.csv
     header_rows: 1
@@ -26,6 +18,7 @@ sources:
       - city
       - state
       - zip
+  # this is fake data!
   students_anytown:
     file: ./sources/students_anytown.csv
     header_rows: 1
@@ -39,6 +32,7 @@ sources:
       - race
       - grade
       - birth_date
+  # this is fake data!
   students_someville:
     file: ./sources/students_someville.csv
     header_rows: 1
@@ -80,11 +74,6 @@ transformations:
 
 
 destinations:
-  localEducationAgencies:
-    source: $sources.districts
-    template: ./templates/localEducationAgency.jsont
-    extension: jsonl
-    linearize: True
   schools:
     source: $sources.schools
     template: ./templates/school.jsont

@@ -153,6 +153,31 @@ class DuplicateColumnsOperation(Operation):
         self.error_handler.assert_key_exists_and_type_is(self.config, "columns", dict)
         self.columns_dict = self.config['columns']
 
+    
+    def verify(self):
+        """
+        
+        :return:
+        """
+        _columns = set(self.data.columns)
+
+        for old_col, new_col in self.columns_dict.items():
+            if old_col == "__line__":
+                continue
+
+            if new_col in _columns:
+                self.logger.warning(
+                    f"Duplicate column operation overwrites existing column `{new_col}`."
+                )
+
+            if old_col not in _columns:
+                self.error_handler.throw(
+                    f"column {old_col} not present in the dataset"
+                )
+            
+            _columns.remove(old_col)
+            _columns.add(new_col)
+
 
     def execute(self):
         """
@@ -191,6 +216,31 @@ class RenameColumnsOperation(Operation):
 
         self.error_handler.assert_key_exists_and_type_is(self.config, "columns", dict)
         self.columns_dict = self.config['columns']
+
+
+    def verify(self):
+        """
+        
+        :return:
+        """
+        _columns = set(self.data.columns)
+
+        for old_col, new_col in self.columns_dict.items():
+            if old_col == "__line__":
+                continue
+
+            if new_col in _columns:
+                self.logger.warning(
+                    f"Rename column operation overwrites existing column `{new_col}`."
+                )
+
+            if old_col not in _columns:
+                self.error_handler.throw(
+                    f"column {old_col} not present in the dataset"
+                )
+            
+            _columns.remove(old_col)
+            _columns.add(new_col)
 
 
     def execute(self):

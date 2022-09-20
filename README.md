@@ -62,7 +62,7 @@ Note that templates may [include](https://jinja.palletsprojects.com/en/3.1.x/tem
 
 
 ## YAML configuration
-All the instructions for this tool &mdash; where to find the source data, what transformations to apply to it, and how and where to save the output &mdash; are specified in a single YAML configuration file. Example YAML configuration files can be found in `examples/sample_configs/`.
+All the instructions for this tool &mdash; where to find the source data, what transformations to apply to it, and how and where to save the output &mdash; are specified in a single YAML configuration file. Example YAML configuration files and projects can be found in `example_projects/`.
 
 The general structure of the YAML involves four main sections:
 1. [`config`](#config), which specifies options like the memory limit and logging level
@@ -573,10 +573,11 @@ If `linearize` is `True`, all line breaks are removed from the template, resulti
 
 
 # Usage
-Once you have the required [setup](#setup) and your source data, generate the JSONL payloads with
+Once you have the required [setup](#setup) and your source data, run the transformations with
 ```bash
-earthmover path/to/config.yaml
+earthmover run -c path/to/config.yaml
 ```
+If you omit the optional `-c` flag, `earthmover` will look for an `earthmover.yaml` in the current directory.
 
 See a help message with
 ```bash
@@ -597,7 +598,7 @@ This tool includes several special features:
 ## Selectors
 Run only portions of the [DAG](#dag) by using a selector:
 ```bash
-earthmover path/to/config.yaml -s people,people_*
+earthmover run -c path/to/config.yaml -s people,people_*
 ```
 This processes all DAG paths (from sources to destinations) through any matched nodes.
 
@@ -616,21 +617,21 @@ sources:
 ## Command-line parameters
 Similarly, you can specify parameters via the command line with
 ```bash
-earthmover path/to/config.yaml -p '{"BASE_DIR":"path/to/my/base/dir"}'
-earthmover path/to/config.yaml --params '{"BASE_DIR":"path/to/my/base/dir"}'
+earthmover run -c path/to/config.yaml -p '{"BASE_DIR":"path/to/my/base/dir"}'
+earthmover run -c path/to/config.yaml --params '{"BASE_DIR":"path/to/my/base/dir"}'
 ```
 Command-line parameters override any environment variables of the same name.
 
 ## State
 This tool *maintains state about past runs.* Subsequent runs only re-process if something has changed &ndash; the [YAML configuration](#yaml-configuration) itself, data files of `sources`, `value_mapping` CSVs of `transformations`, template files of `destinations`, or CLI parameters. (Changes are tracked by hashing files; hashes and run timestamps are stored in the file specified by [config](#config)/`state_file`.) You may choose to override this behavior and force reprocessing of the whole DAG, regardless of whether files have changed or not, using the `-f` or `--force` command-line flag:
 ```bash
-earthmover path/to/config.yaml -f
-earthmover path/to/config.yaml --force-regenerate
+earthmover run -c path/to/config.yaml -f
+earthmover run -c path/to/config.yaml --force-regenerate
 ```
 To further avoid computing input hashes and not log a run to the `state_file`, use the `-k` or `--skip-hashing` flag:
 ```bash
-earthmover path/to/config.yaml -k
-earthmover path/to/config.yaml --skip-hashing
+earthmover run -c path/to/config.yaml -k
+earthmover run -c path/to/config.yaml --skip-hashing
 ```
 (This makes a one-time run on large input files faster.)
 
@@ -659,11 +660,11 @@ Each component is materialized in [topological order](https://en.wikipedia.org/w
 ![dataflow graph layers](images/dataflow-graph-layers.gif)
 
 ## Dataframes
-All data processing is done using [Pandas Dataframes](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) with values stored as strings (or [Categoricals](https://pandas.pydata.org/docs/user_guide/categorical.html), for memory efficiency in columns with few unique values). This choice of datatypes prevents issues arising from Pandas' datatype inference (like inferring numbers as dates), but does require casting string-representations of numeric values using Jinja when doing comparisons or computations.
+All data processing is done using [Pandas Dataframes](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) and [Dask](https://www.dask.org/), with values stored as strings (or [Categoricals](https://pandas.pydata.org/docs/user_guide/categorical.html), for memory efficiency in columns with few unique values). This choice of datatypes prevents issues arising from Pandas' datatype inference (like inferring numbers as dates), but does require casting string-representations of numeric values using Jinja when doing comparisons or computations.
 
 
 # Performance & Limitations
-Tool performance depends on a variety of factors including source file size and/or database performance, the system's storage performance (HDD vs. SSD), and transformation complexity. But some effort has been made to engineer this tool for high throughput and to work in memory- and compute-constrained environments.
+Tool performance depends on a variety of factors including source file size and/or database performance, the system's storage performance (HDD vs. SSD), memory, and transformation complexity. But some effort has been made to engineer this tool for high throughput and to work in memory- and compute-constrained environments.
 
 Smaller source data (which all fits into memory) processes very quickly. Larger chunked sources are necessarily slower. We have tested with sources files of 3.3GB, 100M rows (synthetic attendance data): creating 100M lines of JSONL (50GB) takes around 45 minutes on a modern laptop.
 
@@ -679,7 +680,7 @@ A typical `earthmover` project might have a structure like this:
 ```
 project/
 ├── README.md
-├── data/
+├── sources/
 │   └── source_file_1.csv
 │   └── source_file_2.csv
 │   └── source_file_3.csv
@@ -697,8 +698,8 @@ project/
 │   └── xml_template_2.xmlt
 ```
 Generally you should separate the mappings, transformations, and structure of your data &ndash; which are probably *not* sensitive &ndash; from the actual input and output &ndash; which may be large and/or sensitive, and therefore should not be committed to a version control system. This can be accomplished in two ways:
-1. include a `.gitignore` or similar file in your project which excludes the `data/` and `output/` directories from being committed the repository
-1. remove the `data/` and `output/` directories from your project and update `earthmover.yaml`'s `sources` and `destinations` to reference another location outside the `project/` directory
+1. include a `.gitignore` or similar file in your project which excludes the `sources/` and `output/` directories from being committed the repository
+1. remove the `sources/` and `output/` directories from your project and update `earthmover.yaml`'s `sources` and `destinations` to reference another location outside the `project/` directory
 
 When dealing with sensitive source data, you may have to comply with security protocols, such as referencing sensitive data from a network storage location rather than copying it to your own computer. In this situation, option 2 above is a good choice.
 
@@ -766,6 +767,7 @@ Remember that [code is poetry](https://medium.com/@launchyard/code-is-poetry-3d1
   - Good names for `transformations` indicate what they do (e.g. `students_with_mailing_addresses`)
   - Good names for `destinations` could be based on the destination file (e.g. `student_mail_merge.xml`)
 * Add good, descriptive comments throughout your YAML explaining any assumptions or non-intuitive operations (including complex Jinja).
+* Likewise put Jinja comments in your templates, explaining any complex logic and structures.
 * Keep YAML concise by composing `transformation` operations where possible. Many operations like `add_columns`, `map_values`, and others can operate on multiple `columns` in a dataframe.
 * At the same time, avoid doing too much at once in a single `transformation`; splitting multiple `join` operations into separate transformations can make [debugging](#debugging-practices) easier.
 
