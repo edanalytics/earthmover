@@ -1,16 +1,17 @@
 import abc
 
+from earthmover.node import Node
+
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from earthmover.earthmover import Earthmover
-    from earthmover.node import Node
 
 
-class Operation:
+class Operation(Node):
     """
 
     """
-    def __new__(cls, config, *, earthmover: 'Earthmover'):
+    def __new__(cls, config: dict, *, earthmover: 'Earthmover'):
         """
         :param config:
         :param earthmover:
@@ -54,17 +55,16 @@ class Operation:
         return object.__new__(operation_class)
 
 
-    def __init__(self, config, *, earthmover: 'Earthmover'):
-        self.config = config
-        self.type = self.config.get('operation')
+    def __init__(self, config: dict, *, earthmover: 'Earthmover'):
+        _name = config.get('operation')
+        super().__init__(_name, config, earthmover=earthmover)
 
-        self.earthmover = earthmover
-        self.error_handler = self.earthmover.error_handler
-        self.logger = self.earthmover.logger
+        self.type = self.config.get('operation')
 
         # `source` and `source_list` are mutually-exclusive attributes.
         self.source = None
         self.source_list = None  # For operations with multiple sources (i.e., dataframe operations)
+        self.source_data_list = None  # Retrieved data for operations with multiple sources
 
         if 'sources' in self.config:
             self.error_handler.assert_key_type_is(self.config, 'sources', list)
@@ -98,16 +98,7 @@ class Operation:
 
         :return:
         """
-        self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config["__line__"], node=None, operation=self
-        )
-
-        # Always check for expectations
-        if 'expect' in self.config:
-            self.error_handler.assert_key_type_is(self.config, 'expect', list)
-            self.expectations = self.config['expect']
-
-        pass
+        super().compile()
 
 
     def verify(self):
@@ -125,9 +116,7 @@ class Operation:
 
         :return:
         """
-        self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config["__line__"], node=None, operation=self
-        )
+        super().execute()
 
         # If multiple sources are required for an operation, self.data must be defined in the child class execute().
         if self.source_list:

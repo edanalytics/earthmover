@@ -212,16 +212,11 @@ class Earthmover:
         for layer in list(nx.topological_generations(subgraph)):
 
             for node_name in layer:
-
-                nodes_dict = self.graph.get_node_data()
-                node = nodes_dict[node_name]
+                node = self.graph.ref(node_name)
                 node.compile()
 
                 # Add the active nodes to the class attribute lists for the hashing file.
-                if node.type == 'source':
-                    if node.skip:
-                        continue
-
+                if node.type == 'source' and not node.skip:
                     self.sources.append(node)
 
                 elif node.type == 'transformation':
@@ -240,16 +235,11 @@ class Earthmover:
         :return:
         """
         for layer in list(nx.topological_generations(subgraph)):
-
             for node_name in layer:
-
-                nodes_dict = self.graph.get_node_data()
-
-                node = nodes_dict[node_name]
+                node = self.graph.ref(node_name)
                 if not node.data:
                     node.execute()  # Sets self.data in each node.
-
-                node.num_rows, node.num_cols = node.data.shape
+                    node.post_execute()
 
                 # this doesn't seem necessary? row/col numbers are on the graph (after completion)
                 # if node.type=='transformation' and [cfg.get('debug', False) for cfg in node.config]:
@@ -388,6 +378,7 @@ class Earthmover:
             with open(_expected_file, "r") as f:
                 _expected_df = pd.DataFrame([l.strip() for l in f.readlines()])
                 _expected_df = _expected_df.sort_values(by=_expected_df.columns.tolist()).reset_index(drop=True)
+
             _outputted_file = os.path.join(tests_dir, 'outputs', filename)
             with open(_outputted_file, "r") as f:
                 _outputted_df = pd.DataFrame([l.strip() for l in f.readlines()])
