@@ -110,7 +110,7 @@ def main(argv=None):
         tests_dir = os.path.join( os.path.realpath(os.path.dirname(__file__)), "tests" )
         
         em = Earthmover(
-            config_file=os.path.join(tests_dir, "config.yaml"),
+            config_file=os.path.join(tests_dir, "earthmover.yaml"),
             logger=logger,
             params='{"BASE_DIR": "' + tests_dir + '"}',
             force=True,

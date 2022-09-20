@@ -251,8 +251,9 @@ class Earthmover:
 
                 node.num_rows, node.num_cols = node.data.shape
 
-                if node.type=='transformation' and [cfg.get('debug', False) for cfg in node.config]:
-                    node.num_rows = dask.compute(node.num_rows)[0]
+                # this doesn't seem necessary? row/col numbers are on the graph (after completion)
+                # if node.type=='transformation' and [cfg.get('debug', False) for cfg in node.config]:
+                #     node.num_rows = dask.compute(node.num_rows)[0]
 
 
     def generate(self, selector):
