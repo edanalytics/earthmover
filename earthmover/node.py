@@ -1,4 +1,5 @@
 import abc
+import dask
 import jinja2
 import pandas as pd
 
@@ -30,6 +31,7 @@ class Node:
         self.num_cols = None
 
         self.expectations = None
+        self.debug = self.config.get('debug', False) if isinstance(self.config, dict) else False
 
 
     @abc.abstractmethod
@@ -62,20 +64,42 @@ class Node:
         pass
 
 
+    def post_execute(self):
+        """
+        Function to run generic logic following execute.
+
+        1. Check the dataframe aligns with expectations
+        2. Prepare row and column counts for graphing
+
+        :return:
+        """
+        self.check_expectations(self.expectations)
+
+        self.num_rows, self.num_cols = self.data.shape
+
+        if self.debug:
+            self.num_rows = dask.compute(self.num_rows)[0]
+            self.logger.debug(
+                f"Node {self.name}: {self.num_rows} rows; {self.num_cols} columns\n"
+                f"Header: {self.data.columns}"
+            )
+
+
+
+    def get_source_node(self, source) -> 'Node':
+        """
+
+        :return:
+        """
+        return self.earthmover.graph.ref(source)
+
+
     def check_expectations(self, expectations: List[str]):
         """
 
         :return:
         """
         expectation_result_col = "__expectation_result__"
-
-        # Verify Node.execute() has been run before completing the expectation check.
-        # Note: This condition should never be met by the end-user.
-        if self.data is None:
-            self.error_handler.throw(
-                "data not initialized yet to complete expectations!"
-            )
-            raise
 
         if expectations:
             result = self.data.copy()

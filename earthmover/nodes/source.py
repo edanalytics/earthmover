@@ -1,9 +1,9 @@
 import dask.dataframe as dd
 import ftplib
 import io
-import re
 import os
 import pandas as pd
+import re
 
 from earthmover.node import Node
 from earthmover import util
@@ -163,8 +163,6 @@ class FileSource(Source):
                 f"error with source file {self.file} ({err})"
             )
 
-        self.check_expectations(self.expectations)
-
 
     @staticmethod
     def _get_filetype(file):
@@ -298,8 +296,6 @@ class FtpSource(Source):
             f"source `{self.name}` loaded (via FTP)"
         )
 
-        self.check_expectations(self.expectations)
-
 
 
 class SqlSource(Source):
@@ -358,5 +354,3 @@ class SqlSource(Source):
                 f"source {self.name} error ({err}); check `connection` and `query`"
             )
             raise
-
-        self.check_expectations(self.expectations)

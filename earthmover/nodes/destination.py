@@ -41,8 +41,7 @@ class Destination(Node):
         :return:
         """
         super().execute()
-        self.data = self.earthmover.graph.ref(self.source).data
-        self.check_expectations(self.expectations)
+        self.data = self.get_source_node(self.source).data
 
         pass
 

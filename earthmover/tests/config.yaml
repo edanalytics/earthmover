@@ -31,6 +31,7 @@ transformations:
       source: $sources.mammal_species
       columns:
         family: mammal
+      debug: True
     - operation: modify_columns
       source: $transformations.mammal_species
       columns:
