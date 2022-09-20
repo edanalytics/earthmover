@@ -1,0 +1,107 @@
+config:
+  log_level: DEBUG
+  output_dir: ./output/
+  # show_graph: True
+
+sources:
+  # this is fake data!
+  districts:
+    file: ./sources/districts.csv
+    header_rows: 1
+    columns:
+      - district_id
+      - district_name
+      - category
+      - category2
+  schools:
+    file: ./sources/schools.csv
+    header_rows: 1
+    columns:
+      - district_id
+      - school_id
+      - school_name
+      - low_grade
+      - high_grade
+      - address
+      - city
+      - state
+      - zip
+  students_anytown:
+    file: ./sources/students_anytown.csv
+    header_rows: 1
+    columns:
+      - school_id
+      - student_id
+      - state_student_id
+      - first_name
+      - last_name
+      - gender
+      - race
+      - grade
+      - birth_date
+  students_someville:
+    file: ./sources/students_someville.csv
+    header_rows: 1
+    columns:
+      - school_id
+      - student_id
+      - state_student_id
+      - first_name
+      - last_name
+      - gender
+      - race
+      - grade
+      - birth_date
+
+transformations:
+  all_students:
+    - operation: union
+      sources:
+        - $sources.students_anytown
+        - $sources.students_someville
+    # add district_id:
+    - operation: join
+      sources:
+        - $transformations.all_students
+        - $sources.schools
+      join_type: inner
+      left_key: school_id
+      right_key: school_id
+      right_keep_columns:
+        - district_id
+    # map race to Ed-Fi values:
+    - operation: map_values
+      source: $transformations.all_students
+      column: race
+      mapping:
+        Black: Black - African American
+        Hispanic: Other
+        Multiple: Other
+
+
+destinations:
+  localEducationAgencies:
+    source: $sources.districts
+    template: ./templates/localEducationAgency.jsont
+    extension: jsonl
+    linearize: True
+  schools:
+    source: $sources.schools
+    template: ./templates/school.jsont
+    extension: jsonl
+    linearize: True
+  students:
+    source: $transformations.all_students
+    template: ./templates/student.jsont
+    extension: jsonl
+    linearize: True
+  studentEducationOrganizationAssociations:
+    source: $transformations.all_students
+    template: ./templates/studentEducationOrganizationAssociation.jsont
+    extension: jsonl
+    linearize: True
+  studentSchoolAssociations:
+    source: $transformations.all_students
+    template: ./templates/studentSchoolAssociation.jsont
+    extension: jsonl
+    linearize: True

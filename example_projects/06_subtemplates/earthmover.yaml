@@ -1,18 +1,18 @@
 config:
   # log_level: DEBUG
-  output_dir: examples/sample_output/
+  output_dir: ./output/
   # memory_limit: 2GB
   # show_stacktrace: True
   # show_graph: True
 
 sources:
   vocabulary:
-    file: examples/sample_data/adjectives_and_moods.csv
+    file: ./sources/adjectives_and_moods.csv
     header_rows: 1
 
 destinations:
   messages:
     source: $sources.vocabulary
-    template: examples/sample_templates/mood.jsont
+    template: ./templates/mood.jsont
     extension: jsonl
     linearize: True

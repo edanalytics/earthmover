@@ -1,0 +1,28 @@
+config:
+  # log_level: DEBUG
+  output_dir: ./output/
+  # memory_limit: 2GB
+  # show_stacktrace: True
+  # show_graph: True
+
+sources:
+  big-cats:
+    file: ./sources/big_cats.jsonl
+    type: jsonl
+
+destinations:
+  big-cats:
+    source: $sources.big-cats
+    template: ./templates/bigcats.htmlt
+    extension: html
+    header: >-2
+      <html>
+        <body>
+          <h1>A List of Big Cats</h1>
+          <ul>
+    footer: >2
+          </ul>
+        </body>
+      </html>
+
+  

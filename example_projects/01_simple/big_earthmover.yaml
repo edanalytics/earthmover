@@ -1,5 +1,5 @@
 config:
-  output_dir: examples/sample_output/
+  output_dir: ./output/
   # memory_limit: 2GB
   # show_stacktrace: True
   # show_graph: True
@@ -7,26 +7,26 @@ config:
 
 sources:
   attendance:
-    file: examples/sample_data/attendance.tsv
+    # this file isn't included in the repo, but it's a 3+GB file with 100M rows
+    # (we use this for performance testing)
+    # you can create it locally using https://github.com/memsql/datafiller
+    # together with the enclosed big_attendance.sql file
+    file: ./sources/big_attendance.tsv
     header_rows: 1
-  testing_source:
-    file: 
-    header_rows: 1
-    required: False # this prevents an error due to `file` being blank... testing_destination just won't be created
 
 transformations:
   attendance:
     - operation: map_values
       source: $sources.attendance
-      column: absent
+      column: attended
       mapping:
         "TRUE": absent
         "FALSE": present
     - operation: rename_columns
       source: $transformations.attendance
       columns:
-        absent: status
-        section: session
+        attended: status
+        # section: session
     - operation: add_columns
       source: $transformations.attendance
       columns:
@@ -35,11 +35,6 @@ transformations:
 destinations:
   studentSchoolAttendanceEvents:
     source: $transformations.attendance
-    template: examples/sample_templates/studentSchoolAttendanceEvent.jsont
-    extension: jsonl
-    linearize: True
-  testing_destination:
-    source: $sources.testing_source
-    template: examples/sample_templates/studentSchoolAttendanceEvent.jsont
+    template: ./templates/studentSchoolAttendanceEvent.jsont
     extension: jsonl
     linearize: True

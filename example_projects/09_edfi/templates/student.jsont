@@ -1,0 +1,11 @@
+{
+  "studentUniqueId": "{{student_id}}",
+  "birthDate": "{{birth_date}}",
+  "firstName": "{{first_name}}",
+  "lastSurname": "{{last_name}}",
+  "maidenName": "",
+  "middleName": "",
+  "identificationDocuments": [],
+  "personalIdentificationDocuments": [],
+  "visas": []
+}

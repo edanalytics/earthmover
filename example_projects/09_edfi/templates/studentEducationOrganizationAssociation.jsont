@@ -1,0 +1,35 @@
+{
+    "educationOrganizationReference": {
+      "educationOrganizationId": {{district_id}}
+    },
+    "studentReference": {
+      "studentUniqueId": "{{student_id}}"
+    },
+    "hispanicLatinoEthnicity": false,
+    "sexDescriptor": "uri://ed-fi.org/SexDescriptor#{{gender}}",
+    "cohortYears": [],
+    "disabilities": [],
+    "electronicMails": [],
+    "internationalAddresses": [],
+    "limitedEnglishProficiency": [],
+    "programParticipations": [],
+    "races": [
+      {
+        "raceDescriptor": "uri://ed-fi.org/RaceDescriptor#{{race}}"
+      }
+    ],
+    "studentIdentificationCodes": [
+      {
+        "assigningOrganizationIdentificationCode": "District",
+        "studentIdentificationSystemDescriptor": "uri://ed-fi.org/StudentIdentificationSystemDescriptor#District",
+        "identificationCode": "{{student_id}}"
+      },
+      {
+        "assigningOrganizationIdentificationCode": "State",
+        "studentIdentificationSystemDescriptor": "uri://ed-fi.org/StudentIdentificationSystemDescriptor#State",
+        "identificationCode": "{{state_student_id}}"
+      }
+    ],
+    "studentIndicators": [],
+    "tribalAffiliations": []
+  }

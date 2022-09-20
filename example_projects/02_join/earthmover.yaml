@@ -1,5 +1,5 @@
 config:
-  output_dir: examples/sample_output/
+  output_dir: ./output/
   memory_limit: 4GB
   # log_level: DEBUG
   # show_stacktrace: True
@@ -7,12 +7,12 @@ config:
 
 sources:
   school_directory_no_grades:
-    file: examples/sample_data/fake_school_directory_no_grades.csv
+    file: ./sources/fake_school_directory_no_grades.csv
     # specifying more than 1 header row (and no columns) will use the last header row as column names:
     header_rows: 1
     # if file has no header row, or you want to overwrite column names, list them here:
   school_directory_grades_only:
-    file: examples/sample_data/fake_school_directory_grades_only.csv
+    file: ./sources/fake_school_directory_grades_only.csv
     # specifying more than 1 header row (and no columns) will use the last header row as column names:
     header_rows: 1
     # if file has no header row, or you want to overwrite column names, list them here:
@@ -20,7 +20,7 @@ sources:
       - "low_grade != ''"
       - "high_grade != ''"
   state_abbr:
-    file: examples/sample_data/state_abbr.tsv
+    file: ./sources/state_abbr.tsv
     header_rows: 1
 
 transformations:
@@ -78,6 +78,6 @@ transformations:
 destinations:
   schools:
     source: $transformations.school_directory
-    template: examples/sample_templates/school.jsont
+    template: ./templates/school.jsont
     extension: jsonl
     linearize: True

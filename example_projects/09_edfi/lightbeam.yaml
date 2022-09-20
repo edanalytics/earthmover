@@ -1,0 +1,22 @@
+# This file is meant to be used with lightbeam (https://github.com/edanalytics/lightbeam)
+# to send the data generated with earthmover into an Ed-Fi API running in Docker.
+state_dir: ~/.lightbeam/
+data_dir: ./output/
+namespace: ed-fi
+edfi_api:
+  # base_url: https://api.ed-fi.org/v5.3/api
+  base_url: https://localhost/api
+  version: 3 # or 2, although this isn't really supported
+  mode: sandbox # or year_specific
+  year: 2021 # for year_specific mode
+  client_id: populated
+  client_secret: populatedSecret
+connection:
+  pool_size: 8 # simultaneous connections
+  timeout: 60 # seconds
+  num_retries: 10
+  retry_statuses: [429, 500, 501, 503, 504]
+  backoff_factor: 1.5
+  verify_ssl: False
+log_level: DEBUG
+# show_stacktrace: True

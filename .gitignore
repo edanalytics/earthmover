@@ -25,9 +25,8 @@ MANIFEST
 
 graph.png
 graph.svg
-examples/sample_output/*.jsonl
-examples/sample_output/*.json
-examples/sample_output/*.xml
-examples/ignore_data/
-examples/ignore_data/*
+example_projects/*/graph.png
+example_projects/*/graph.svg
+example_projects/*/output/*
+example_projects/01_simple/sources/big_attendance.tsv
 earthmover/tests/outputs/*

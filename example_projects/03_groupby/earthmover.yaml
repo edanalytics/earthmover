@@ -1,12 +1,12 @@
 config:
   # log_level: DEBUG
-  output_dir: examples/sample_output/
+  output_dir: ./output/
   # show_graph: True
   # show_stacktrace: True
 
 sources:
   scores:
-    file: examples/sample_data/scores.csv
+    file: ./sources/scores.csv
 
 transformations:
   grouped_scores:
@@ -24,6 +24,6 @@ transformations:
 destinations:
   grouped_score:
     source: $transformations.grouped_scores
-    template: examples/sample_templates/aggregated_score.jsont
+    template: ./templates/aggregated_score.jsont
     extension: jsonl
     linearize: True

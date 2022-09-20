@@ -1,0 +1,15 @@
+{% set grade_mapping = { 1:"First", 2:"Second", 3:"Third", 4:"Fourth", 5:"Fifth", 6:"Sixth", 7:"Seventh", 8:"Eighth", 9:"Ninth", 10:"Tenth", 11:"Eleventh", 12:"Twelfth",  } %}
+{
+    "schoolReference": {
+      "schoolId": {{school_id}}
+    },
+    "studentReference": {
+      "studentUniqueId": "{{student_id}}"
+    },
+    "entryDate": "2020-08-23",
+    "entryTypeDescriptor": "uri://ed-fi.org/EntryTypeDescriptor#Next year school",
+    "entryGradeLevelDescriptor": "uri://ed-fi.org/GradeLevelDescriptor#{{grade_mapping[grade|int]}} grade",
+    "exitWithdrawDate": "2021-06-05",
+    "exitWithdrawTypeDescriptor": "uri://ed-fi.org/ExitWithdrawTypeDescriptor#Completed",
+    "educationPlans": []
+}

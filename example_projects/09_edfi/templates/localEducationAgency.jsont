@@ -1,0 +1,10 @@
+{
+    "localEducationAgencyId": {{district_id}},
+    "nameOfInstitution": "{{district_name}}",
+    "localEducationAgencyCategoryDescriptor": "uri://ed-fi.org/LocalEducationAgencyCategoryDescriptor#{{category}}",
+    "categories": [
+        {
+            "educationOrganizationCategoryDescriptor":"uri://ed-fi.org/EducationOrganizationCategoryDescriptor#{{category2}}"
+        }
+    ]
+}

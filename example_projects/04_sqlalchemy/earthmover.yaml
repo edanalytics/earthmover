@@ -1,5 +1,5 @@
 config:
-  output_dir: examples/sample_output/
+  output_dir: ./output/
   # show_graph: True
   # log_level: DEBUG
   # show_stacktrace: True
@@ -16,6 +16,6 @@ sources:
 destinations:
   rna:
     source: $sources.rna
-    template: examples/sample_templates/rna.jsont
+    template: ./templates/rna.jsont
     extension: jsonl
     linearize: True

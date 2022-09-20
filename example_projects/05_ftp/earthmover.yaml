@@ -1,5 +1,5 @@
 config:
-  output_dir: examples/sample_output/
+  output_dir: ./output/
   #show_graph: True
   # log_level: DEBUG
 
@@ -11,6 +11,6 @@ sources:
 destinations:
   data:
     source: $sources.data
-    template: examples/sample_templates/data.jsont
+    template: ./templates/data.jsont
     extension: jsonl
     linearize: True

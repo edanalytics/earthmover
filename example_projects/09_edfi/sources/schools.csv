@@ -1,0 +1,7 @@
+district_id,school_id,school_name,low_grade,high_grade,address,city,state,zip
+40817,15628,Someville Academy of Science,7,12,51 Main St.,Someville,IA,53722
+40817,15631,Someville Academy of Mathematics,7,12,794 Commerce Ave.,Someville,IA,53722
+40817,15632,Someville Prepatory Academy,1,6,5018 Fair Oaks Dr.,Someville,IA,53722
+40845,60918,Anytown Achievement High East,9,12,8510 Center Ave.,Anytown,IA,53763
+40845,60919,Anytown Achievement High West,9,12,58 Periwinkle St.,Anytown,IA,53763
+40845,60920,Anytown Achievement High Central,9,12,418 Town Line Rd.,Anytown,IA,53763
