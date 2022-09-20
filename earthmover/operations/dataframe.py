@@ -1,6 +1,6 @@
 import dask.dataframe as dd
 
-from earthmover.operation import Operation
+from earthmover.nodes.operation import Operation
 
 
 class JoinOperation(Operation):

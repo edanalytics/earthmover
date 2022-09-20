@@ -4,7 +4,7 @@ import jinja2
 import os
 import pandas as pd
 
-from earthmover.operation import Operation
+from earthmover.nodes.operation import Operation
 from earthmover import util
 
 

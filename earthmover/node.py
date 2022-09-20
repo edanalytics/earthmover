@@ -85,7 +85,6 @@ class Node:
             )
 
 
-
     def get_source_node(self, source) -> 'Node':
         """
 

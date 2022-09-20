@@ -1,7 +1,7 @@
 import pandas as pd
 import re
 
-from earthmover.operation import Operation
+from earthmover.nodes.operation import Operation
 
 
 class GroupByWithCountOperation(Operation):
