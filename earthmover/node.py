@@ -50,7 +50,7 @@ class Node:
         for _config in self.config:
             if _config not in self.allowed_configs:
                 self.logger.warning(
-                    f"Config `{_config}` not defined for node {self.name}."
+                    f"Config `{_config}` not defined for node `{self.name}`."
                 )
 
         # Always check for expectations
