@@ -1,5 +1,5 @@
 from earthmover.node import Node
-from earthmover.operation import Operation
+from earthmover.nodes.operation import Operation
 
 
 class Transformation(Node):

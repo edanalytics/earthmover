@@ -1,4 +1,4 @@
-from earthmover.operation import Operation
+from earthmover.nodes.operation import Operation
 
 
 class DistinctRowsOperation(Operation):
