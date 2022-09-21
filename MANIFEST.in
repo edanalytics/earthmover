@@ -1,0 +1,1 @@
+recursive include earthmover/tests *.jsonl *.jsont *.yaml *.csv
