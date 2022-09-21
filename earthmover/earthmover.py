@@ -22,7 +22,6 @@ from earthmover import util
 class Earthmover:
 
     config_defaults = {
-        "state_file": os.path.join(os.path.expanduser("~"), ".earthmover.csv"),
         "output_dir": "./",
         "macros": "",
         "show_graph": False,
@@ -55,7 +54,6 @@ class Earthmover:
 
         _state_configs = {**self.config_defaults, **self.user_configs.get('config', {}), **cli_state_configs}
         self.state_configs = {
-            'state_file': os.path.expanduser(_state_configs['state_file']),
             'output_dir': os.path.expanduser(_state_configs['output_dir']),
             'macros': _state_configs['macros'].strip(),
             'show_graph': _state_configs['show_graph'],
@@ -265,8 +263,9 @@ class Earthmover:
 
 
         ### Hashing requires an entire class mixin and multiple additional steps.
-        if not self.skip_hashing:
-            _runs_path = self.state_configs['state_file']
+        if not self.skip_hashing and 'state_file' in self.state_configs:
+            _runs_path = os.path.expanduser(self.state_configs['state_file'])
+            
             self.logger.info(f"computing input hashes for run log at {_runs_path}")
 
             runs_file = RunsFile(_runs_path, earthmover=self)
@@ -303,8 +302,12 @@ class Earthmover:
                         )
                         self.do_generate = False
 
+        elif 'state_file' not in self.state_configs:
+            self.logger.info("skipping hashing and run-logging (no `state_file` defined in config)")
+            runs_file = None  # This instantiation will never be used, but this avoids linter alerts.
+         
         else:  # Skip hashing
-            self.logger.info("skipping hashing and run-logging")
+            self.logger.info("skipping hashing and run-logging (run initiated with `--skip-hashing` flag)")
             runs_file = None  # This instantiation will never be used, but this avoids linter alerts.
 
 
