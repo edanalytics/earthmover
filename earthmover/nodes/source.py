@@ -47,6 +47,8 @@ class Source(Node):
         super().__init__(*args, **kwargs)
         self.type = 'source'
 
+        self.allowed_configs.update(['required'])
+
         self.mode = None  # Documents which class was chosen.
         self.is_remote = False  # False only for local files.
 
@@ -61,6 +63,11 @@ class FileSource(Source):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.mode = 'file'
+
+        self.allowed_configs.update([
+            'file', 'type', 'columns',
+            'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath'
+        ])
 
         self.file = None
         self.file_type = None
@@ -240,6 +247,8 @@ class FtpSource(Source):
         self.mode = 'ftp'
         self.is_remote = True
 
+        self.allowed_configs.update(['connection', 'query'])
+
         self.connection = None
         self.ftp = None
         self.file = None
@@ -306,6 +315,8 @@ class SqlSource(Source):
         super().__init__(*args, **kwargs)
         self.mode = 'sql'
         self.is_remote = True
+
+        self.allowed_configs.update(['connection', 'query'])
 
         self.connection = None
         self.query = None
