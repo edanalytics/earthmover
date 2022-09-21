@@ -19,7 +19,7 @@ setuptools.setup (
     name = 'earthmover',
     description = 'Transforms tabular data sources into text-based data via YAML configuration',
     version = VERSION,
-    packages = ['earthmover'],
+    packages = setuptools.find_namespace_packages(include=['earthmover', 'earthmover.*']),
     install_requires = all_reqs,
     python_requires = '>=3',
     entry_points = '''
