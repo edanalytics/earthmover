@@ -15,7 +15,7 @@ class ExitOnExceptionHandler(logging.StreamHandler):
         if record.levelno in (logging.ERROR, logging.CRITICAL):
             raise SystemExit(-1)
 
-DEFAULT_CONFIG_FILE = 'earthmover.yaml'
+DEFAULT_CONFIG_FILES = ['earthmover.yaml', 'earthmover.yml']
 
 # Set up logging
 handler = ExitOnExceptionHandler()
@@ -122,7 +122,15 @@ def main(argv=None):
         exit(0)
 
     if not args.config_file:
-        logger.info(f"config file not specified with `-c` flag; looking for `{DEFAULT_CONFIG_FILE}` in current directory...")
+        for file in DEFAULT_CONFIG_FILES:
+            test_file = os.path.join(".", file)
+            if os.path.isfile(test_file):
+                args.config_file = test_file
+                logger.info(f"config file not specified with `-c` flag... but found and using ./{file}")
+                break
+
+    if not args.config_file:
+        logger.error("config file not specified with `-c` flag, and no default {" + ", ".join(DEFAULT_CONFIG_FILES) + "} found")
 
     # Update state configs with those forced via the command line.
     cli_state_configs = {}
@@ -138,7 +146,7 @@ def main(argv=None):
     # Main run
     try:
         em = Earthmover(
-            config_file=args.config_file or f"./{DEFAULT_CONFIG_FILE}",
+            config_file=args.config_file,
             logger=logger,
             params=args.params,
             force=args.force,

@@ -76,10 +76,14 @@ class FileDestination(Destination):
         self.error_handler.assert_key_exists_and_type_is(self.config, "template", str)
         self.template = self.config['template']
 
-        self.error_handler.assert_key_exists_and_type_is(self.config, "extension", str)
+        #config->extension is optional: if not present, we assume the destination name has an extension
+        extension = ""
+        if "extension" in self.config:
+            extension = f".{self.config['extension']}"
+            
         self.file = os.path.join(
             self.earthmover.state_configs['output_dir'],
-            f"{self.name}.{self.config['extension']}"
+            f"{self.name}{extension}"
         )
 
         #
