@@ -1,5 +1,6 @@
 import os
 import pathlib
+import pkgutil
 import setuptools
 
 # The directory containing this file
@@ -21,7 +22,7 @@ setuptools.setup (
     version = VERSION,
     packages = setuptools.find_namespace_packages(include=['earthmover', 'earthmover.*']),
     include_package_data=True,
-    package_data={'tests': ['*']},
+    package_data={'earthmover': ['tests/*/*']},
     install_requires = all_reqs,
     python_requires = '>=3',
     entry_points = '''
