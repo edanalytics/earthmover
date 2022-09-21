@@ -330,7 +330,8 @@ class Earthmover:
 
 
         ### Save run log only after a successful run! (in case of errors)
-        if not self.skip_hashing:
+        # Note: `runs_file` is only defined in certain circumstances.
+        if not self.skip_hashing and runs_file:
             self.logger.debug("saving details to run log")
 
             # Build selector information

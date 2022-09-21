@@ -10,16 +10,17 @@ sources:
 
 transformations:
   grouped_scores:
-    - operation: group_by
-      source: $sources.scores
-      group_by_columns:
-        - group_id
-      create_columns:
-        num_scores: count()
-        min_score: min(score)
-        max_score: max(score)
-        avg_score: mean(score)
-        item_scores: agg(score,,)
+    operations:
+      - operation: group_by
+        source: $sources.scores
+        group_by_columns:
+          - group_id
+        create_columns:
+          num_scores: count()
+          min_score: min(score)
+          max_score: max(score)
+          avg_score: mean(score)
+          item_scores: agg(score,,)
 
 destinations:
   grouped_score:

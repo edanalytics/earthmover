@@ -49,28 +49,29 @@ sources:
 
 transformations:
   all_students:
-    - operation: union
-      sources:
-        - $sources.students_anytown
-        - $sources.students_someville
-    # add district_id:
-    - operation: join
-      sources:
-        - $transformations.all_students
-        - $sources.schools
-      join_type: inner
-      left_key: school_id
-      right_key: school_id
-      right_keep_columns:
-        - district_id
-    # map race to Ed-Fi values:
-    - operation: map_values
-      source: $transformations.all_students
-      column: race
-      mapping:
-        Black: Black - African American
-        Hispanic: Other
-        Multiple: Other
+    operations:
+      - operation: union
+        sources:
+          - $sources.students_anytown
+          - $sources.students_someville
+      # add district_id:
+      - operation: join
+        sources:
+          - $transformations.all_students
+          - $sources.schools
+        join_type: inner
+        left_key: school_id
+        right_key: school_id
+        right_keep_columns:
+          - district_id
+      # map race to Ed-Fi values:
+      - operation: map_values
+        source: $transformations.all_students
+        column: race
+        mapping:
+          Black: Black - African American
+          Hispanic: Other
+          Multiple: Other
 
 
 destinations:

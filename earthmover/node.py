@@ -31,7 +31,7 @@ class Node:
         self.num_cols = None
 
         self.expectations = None
-        self.debug = self.config.get('debug', False) if isinstance(self.config, dict) else False
+        self.debug = self.config.get('debug', False)
 
 
     @abc.abstractmethod

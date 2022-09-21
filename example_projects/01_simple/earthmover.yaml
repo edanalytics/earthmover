@@ -16,21 +16,22 @@ sources:
 
 transformations:
   attendance:
-    - operation: map_values
-      source: $sources.attendance
-      column: absent
-      mapping:
-        "TRUE": absent
-        "FALSE": present
-    - operation: rename_columns
-      source: $transformations.attendance
-      columns:
-        absent: status
-        section: session
-    - operation: add_columns
-      source: $transformations.attendance
-      columns:
-        school: 12345
+    operations:
+      - operation: map_values
+        source: $sources.attendance
+        column: absent
+        mapping:
+          "TRUE": absent
+          "FALSE": present
+      - operation: rename_columns
+        source: $transformations.attendance
+        columns:
+          absent: status
+          section: session
+      - operation: add_columns
+        source: $transformations.attendance
+        columns:
+          school: 12345
 
 destinations:
   studentSchoolAttendanceEvents:

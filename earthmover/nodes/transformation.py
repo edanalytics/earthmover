@@ -12,10 +12,14 @@ class Transformation(Node):
 
         self.type = 'transformation'
 
-        self.sources = set()
+        # Load in the operation configs and save each under operations.
+        # Verify all specified sources exist in the global config.
         self.operations = []
+        self.sources = set()
 
-        for idx, operation_config in enumerate(self.config, start=1):
+        self.error_handler.assert_key_exists_and_type_is(self.config, 'operations', list)
+        for idx, operation_config in enumerate(self.config.get('operations'), start=1):
+
             operation = Operation(operation_config, earthmover=self.earthmover)
             self.operations.append(operation)
 
@@ -38,7 +42,7 @@ class Transformation(Node):
 
         :return:
         """
-        # super().compile()
+        super().compile()
 
         for operation in self.operations:
             operation.compile()
@@ -49,7 +53,7 @@ class Transformation(Node):
 
         :return:
         """
-        # super().execute()
+        super().execute()
 
         for operation in self.operations:
             self.data = operation.execute()

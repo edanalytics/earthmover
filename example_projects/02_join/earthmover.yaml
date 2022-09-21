@@ -25,55 +25,56 @@ sources:
 
 transformations:
   school_directory:
-    # join two big (25k row) files
-    - operation: join
-      sources:
-        - $sources.school_directory_no_grades
-        - $sources.school_directory_grades_only
-      join_type: inner
-      left_key: cdscode
-      right_key: cdscode
+    operations:
+      # join two big (25k row) files
+      - operation: join
+        sources:
+          - $sources.school_directory_no_grades
+          - $sources.school_directory_grades_only
+        join_type: inner
+        left_key: cdscode
+        right_key: cdscode
     
-    # replace physical_address_state with a state abbreviation via join
-    - operation: join
-      sources:
-        - $transformations.school_directory
-        - $sources.state_abbr
-      join_type: inner
-      left_key: physical_address_state
-      right_key: state
-    - operation: drop_columns
-      source: $transformations.school_directory
-      columns:
-        #- state
-        - physical_address_state
-    - operation: rename_columns
-      source: $transformations.school_directory
-      columns:
-        abbr: physical_address_state
+      # replace physical_address_state with a state abbreviation via join
+      - operation: join
+        sources:
+          - $transformations.school_directory
+          - $sources.state_abbr
+        join_type: inner
+        left_key: physical_address_state
+        right_key: state
+      - operation: drop_columns
+        source: $transformations.school_directory
+        columns:
+          #- state
+          - physical_address_state
+      - operation: rename_columns
+        source: $transformations.school_directory
+        columns:
+          abbr: physical_address_state
 
-    # replace mailing_address_state with a state abbreviation via join
-    - operation: join
-      sources:
-        - $transformations.school_directory
-        - $sources.state_abbr
-      join_type: inner
-      left_key: mailing_address_state
-      right_key: state
-    - operation: drop_columns
-      source: $transformations.school_directory
-      columns:
-        #- state
-        - mailing_address_state
-    - operation: rename_columns
-      source: $transformations.school_directory
-      columns:
-        abbr: mailing_address_state
-    
-    - operation: rename_columns
-      source: $transformations.school_directory
-      columns:
-        cdscode: school_id
+      # replace mailing_address_state with a state abbreviation via join
+      - operation: join
+        sources:
+          - $transformations.school_directory
+          - $sources.state_abbr
+        join_type: inner
+        left_key: mailing_address_state
+        right_key: state
+      - operation: drop_columns
+        source: $transformations.school_directory
+        columns:
+          #- state
+          - mailing_address_state
+      - operation: rename_columns
+        source: $transformations.school_directory
+        columns:
+          abbr: mailing_address_state
+
+      - operation: rename_columns
+        source: $transformations.school_directory
+        columns:
+          cdscode: school_id
 
 destinations:
   schools:
