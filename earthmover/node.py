@@ -31,7 +31,8 @@ class Node:
         self.num_cols = None
 
         self.expectations = None
-        self.debug = self.config.get('debug', False) if isinstance(self.config, dict) else False
+        self.allowed_configs = {'__line__', 'debug', 'expect'}
+        self.debug = self.config.get('debug', False)
 
 
     @abc.abstractmethod
@@ -43,6 +44,14 @@ class Node:
         self.error_handler.ctx.update(
             file=self.earthmover.config_file, line=self.config['__line__'], node=self, operation=None
         )
+
+        # Verify all configs provided by the user are specified for the node.
+        # (This ensures the user doesn't pass in unexpected or misspelled configs.)
+        for _config in self.config:
+            if _config not in self.allowed_configs:
+                self.logger.warning(
+                    f"Config `{_config}` not defined for node `{self.name}`."
+                )
 
         # Always check for expectations
         if 'expect' in self.config:

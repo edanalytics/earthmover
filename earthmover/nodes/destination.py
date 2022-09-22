@@ -18,6 +18,8 @@ class Destination(Node):
         super().__init__(*args, **kwargs)
         self.type = 'destination'
 
+        self.allowed_configs.update(['source'])
+
         self.mode = None  # Documents which class was chosen.
 
         self.error_handler.assert_key_exists_and_type_is(self.config, "source", str)
@@ -58,6 +60,8 @@ class FileDestination(Destination):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.mode = 'file'
+
+        self.allowed_configs.update(['template', 'extension', 'linearize', 'header', 'footer'])
 
         self.file = None
         self.template = None

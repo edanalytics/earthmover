@@ -15,6 +15,8 @@ class AddColumnsOperation(Operation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.allowed_configs.update(['columns'])
+
         self.columns_dict = None
 
 
@@ -74,6 +76,8 @@ class ModifyColumnsOperation(Operation):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.allowed_configs.update(['columns'])
 
         self.columns_dict = None
 
@@ -140,6 +144,8 @@ class DuplicateColumnsOperation(Operation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.allowed_configs.update(['columns'])
+
         self.columns_dict = None
 
 
@@ -204,6 +210,8 @@ class RenameColumnsOperation(Operation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.allowed_configs.update(['columns'])
+
         self.columns_dict = None
 
 
@@ -263,6 +271,8 @@ class DropColumnsOperation(Operation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.allowed_configs.update(['columns'])
+
         self.columns_to_drop = None
 
 
@@ -311,6 +321,8 @@ class KeepColumnsOperation(Operation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.allowed_configs.update(['columns'])
+
         self.header = None
 
 
@@ -357,6 +369,8 @@ class CombineColumnsOperation(Operation):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.allowed_configs.update(['columns', 'new_column', 'separator'])
 
         self.columns_list = None
         self.new_column = None
@@ -415,6 +429,8 @@ class MapValuesOperation(Operation):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.allowed_configs.update(['column', 'columns', 'mapping', 'map_file'])
 
         self.columns_list = None
         self.map_file = None
@@ -520,6 +536,8 @@ class DateFormatOperation(Operation):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.allowed_configs.update(['column', 'columns', 'from_format', 'to_format'])
 
         self.columns_list = None
         self.from_format = None

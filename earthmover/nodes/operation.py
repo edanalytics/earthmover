@@ -61,6 +61,8 @@ class Operation(Node):
 
         self.type = self.config.get('operation')
 
+        self.allowed_configs.update(['operation', 'sources', 'source'])
+
         # `source` and `source_list` are mutually-exclusive attributes.
         self.source = None
         self.source_list = None  # For operations with multiple sources (i.e., dataframe operations)

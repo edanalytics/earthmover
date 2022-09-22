@@ -8,6 +8,8 @@ class DistinctRowsOperation(Operation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.allowed_configs.update(['column', 'columns'])
+
         self.columns_list = []
 
 
@@ -65,6 +67,8 @@ class FilterRowsOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.allowed_configs.update(['query', 'behavior'])
 
         self.query = None
         self.behavior = None

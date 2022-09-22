@@ -14,6 +14,8 @@ class GroupByWithCountOperation(Operation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.allowed_configs.update(['group_by_columns', 'count_column'])
+
         self.group_by_columns = None
         self.count_column = None
 
@@ -84,6 +86,8 @@ class GroupByWithAggOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.allowed_configs.update(['group_by_columns', 'agg_column', 'separator'])
 
         self.group_by_columns = None
         self.agg_column = None
@@ -166,6 +170,8 @@ class GroupByOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.allowed_configs.update(['group_by_columns', 'create_columns'])
 
         self.group_by_columns = None
         self.create_columns_dict = None
