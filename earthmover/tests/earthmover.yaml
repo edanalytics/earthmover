@@ -238,7 +238,7 @@ transformations:
     operations:
       - operation: group_by
         source: $transformations.joined_inventories
-        function: sum
+        # function: sum
         group_by_columns:
           - animal
           - species_name

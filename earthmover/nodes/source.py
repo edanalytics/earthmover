@@ -65,7 +65,7 @@ class FileSource(Source):
         self.mode = 'file'
 
         self.allowed_configs.update([
-            'file', 'type', 'columns',
+            'file', 'type', 'columns', 'header_rows',
             'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath'
         ])
 
