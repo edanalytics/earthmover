@@ -15,6 +15,7 @@ destinations:
     source: $sources.big-cats
     template: ./templates/bigcats.htmlt
     extension: html
+    linearize: False
     header: >-2
       <html>
         <body>
