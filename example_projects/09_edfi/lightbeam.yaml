@@ -1,6 +1,6 @@
 # This file is meant to be used with lightbeam (https://github.com/edanalytics/lightbeam)
 # to send the data generated with earthmover into an Ed-Fi API running in Docker.
-state_dir: ~/.lightbeam/
+# state_dir: ~/.lightbeam/
 data_dir: ./output/
 namespace: ed-fi
 edfi_api:
