@@ -81,7 +81,6 @@ A sample `config` section is shown here; the options are explained below.
 config:
   output_dir: ./
   state_file: ~/.earthmover.csv
-  memory_limit: 500MB
   log_level: INFO
   show_stacktrace: True
   show_graph: True
@@ -92,7 +91,6 @@ config:
 ```
 * (optional) `output_dir` determines where generated JSONL is stored. The default is `./`.
 * (optional) `state_file` determines the file which maintains [tool state](#state). The default is `~/.earthmover.csv` on *nix systems, `C:/Users/USER/.earthmover.csv` on Windows systems.
-* (optional) Specify a `memory_limit` for the tool. The default is `1GB`.
 * (optional) Specify a `log_level` for output. Possible values are
   - `ERROR`: only output errors like missing required sources, invalid references, invalid [YAML configuration](#yaml-configuration), etc.
   - `WARNING`: output errors and warnings like when the run log is getting long
@@ -122,24 +120,27 @@ definitions:
 
 transformations:
   roster:
-    - <<: *student_join_op
-      sources:
-      - $sources.roster
-      - $sources.students
+    operations:
+      - <<: *student_join_op
+        sources:
+        - $sources.roster
+        - $sources.students
   enrollment:
-    - <<: *student_join_op
-      sources:
-      - $sources.enrollment
-      - $sources.students
+    operations:
+      - <<: *student_join_op
+        sources:
+        - $sources.enrollment
+        - $sources.students
   ...
   academic_terms:
-    - operation: duplicate_columns
-      source: $sources.academic_terms
-      columns:
-        start_date: school_year
-    - operation: modify_columns
-      columns:
-        school_year: *date_to_year
+    operations:
+      - operation: duplicate_columns
+        source: $sources.academic_terms
+        columns:
+          start_date: school_year
+      - operation: modify_columns
+        columns:
+          school_year: *date_to_year
 ```
 
 
@@ -215,27 +216,28 @@ A sample `transformations` section is shown here; the options are explained belo
 ```yaml
 transformations:
   courses:
-    - operation: map_values
-      source: $sources.courses
-      column: subject_id
-      mapping:
-        01: 1 (Mathematics)
-        02: 2 (Literature)
-        03: 3 (History)
-        04: 4 (Language)
-        05: 5 (Computer and Information Systems)
-    - operation: join
-      sources:
-        - $transformations.courses
-        - $sources.schools
-      join_type: inner
-      left_key: school_id
-      right_key: school_id
-    - operation: drop_columns
-      source: $transformations.courses
-      columns:
-        - address
-        - phone_number
+    operations:
+      - operation: map_values
+        source: $sources.courses
+        column: subject_id
+        mapping:
+          01: 1 (Mathematics)
+          02: 2 (Literature)
+          03: 3 (History)
+          04: 4 (Language)
+          05: 5 (Computer and Information Systems)
+      - operation: join
+        sources:
+          - $transformations.courses
+          - $sources.schools
+        join_type: inner
+        left_key: school_id
+        right_key: school_id
+      - operation: drop_columns
+        source: $transformations.courses
+        columns:
+          - address
+          - phone_number
 ```
 The above example shows a transformation of the `courses` source, which consists of an ordered list of operations. Each operation has one or more sources, which may be an original `$source`, another `$transformation`, or the prior step of the same `$transformation` (operations can be chained together within a transformation). Transformation operations each require further specification depending on their type; the operations are listed and documented below.
 
@@ -246,11 +248,11 @@ The above example shows a transformation of the `courses` source, which consists
 
 Concatenates two or more sources sources of the same shape.
 ```yaml
-    - operation: union
-      sources:
-        - $sources.courses_list_1
-        - $sources.courses_list_2
-        - $sources.courses_list_3
+      - operation: union
+        sources:
+          - $sources.courses_list_1
+          - $sources.courses_list_2
+          - $sources.courses_list_3
 ```
 </details>
 
@@ -260,35 +262,35 @@ Concatenates two or more sources sources of the same shape.
 
 Joins two sources.
 ```yaml
-    - operation: join
-      sources:
-        - $transformations.courses
-        - $sources.schools
-      join_type: inner | left | right
-      left_key: school_id
-      right_key: school_id
-      # or:
-      left_keys:
-        - school_id
-        - school_year
-      right_keys:
-        - school_id
-        - school_year
-      # optionally specify columns to (only) keep from the left and/or right sources:
-      left_keep_columns:
-        - left_col_1
-        - left_col_2
-      right_keep_columns:
-        - right_col_1
-        - right_col_2
-      # or columns to discard from the left and/or right sources:
-      left_drop_columns:
-        - left_col_1
-        - left_col_2
-      right_drop_columns:
-        - right_col_1
-        - right_col_2
-      # (if neither ..._keep nor ..._drop are specified, all columns are retained)
+      - operation: join
+        sources:
+          - $transformations.courses
+          - $sources.schools
+        join_type: inner | left | right
+        left_key: school_id
+        right_key: school_id
+        # or:
+        left_keys:
+          - school_id
+          - school_year
+        right_keys:
+          - school_id
+          - school_year
+        # optionally specify columns to (only) keep from the left and/or right sources:
+        left_keep_columns:
+          - left_col_1
+          - left_col_2
+        right_keep_columns:
+          - right_col_1
+          - right_col_2
+        # or columns to discard from the left and/or right sources:
+        left_drop_columns:
+          - left_col_1
+          - left_col_2
+        right_drop_columns:
+          - right_col_1
+          - right_col_2
+        # (if neither ..._keep nor ..._drop are specified, all columns are retained)
 ```
 Joining can lead to a wide result; the `..._keep_columns` and `..._drop_columns` options enable narrowing it.
 
@@ -303,13 +305,13 @@ Besides the join column(s), if a column `my_column` with the same name exists in
 
 Adds columns with specified values.
 ```yaml
-    - operation: add_columns
-      source: $transformations.courses
-      columns:
-        - new_column_1: value_1
-        - new_column_2: "{% if True %}Jinja works here{% endif %}"
-        - new_column_3: "Reference values from {{AnotherColumn}} in this new column"
-        - new_column_4: "{% if col1>col2 %}{{col1|float + col2|float}}{% else %}{{col1|float - col2|float}}{% endif %}"
+      - operation: add_columns
+        source: $transformations.courses
+        columns:
+          - new_column_1: value_1
+          - new_column_2: "{% if True %}Jinja works here{% endif %}"
+          - new_column_3: "Reference values from {{AnotherColumn}} in this new column"
+          - new_column_4: "{% if col1>col2 %}{{col1|float + col2|float}}{% else %}{{col1|float - col2|float}}{% endif %}"
 ```
 Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers to another column's value. Any [Jinja filters](https://jinja.palletsprojects.com/en/3.1.x/templates/#builtin-filters) and [math operations](https://jinja.palletsprojects.com/en/3.0.x/templates/#math) should work. Reference the current row number with `{{___row_id___}}`.
 </details>
@@ -320,12 +322,12 @@ Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers
 
 Renames columns.
 ```yaml
-    - operation: rename_columns
-      source: $transformations.courses
-      columns:
-        old_column_1: new_column_1
-        old_column_2: new_column_2
-        old_column_3: new_column_3
+      - operation: rename_columns
+        source: $transformations.courses
+        columns:
+          old_column_1: new_column_1
+          old_column_2: new_column_2
+          old_column_3: new_column_3
 ```
 </details>
 
@@ -335,11 +337,11 @@ Renames columns.
 
 Duplicates columns (and all their values).
 ```yaml
-    - operation: duplicate_columns
-      source: $transformations.courses
-      columns:
-        existing_column1: new_copy_of_column1
-        existing_column2: new_copy_of_column2
+      - operation: duplicate_columns
+        source: $transformations.courses
+        columns:
+          existing_column1: new_copy_of_column1
+          existing_column2: new_copy_of_column2
 ```
 </details>
 
@@ -349,11 +351,11 @@ Duplicates columns (and all their values).
 
 Removes the specified columns.
 ```yaml
-    - operation: drop_columns
-      source: $transformations.courses
-      columns:
-        - column_to_drop_1
-        - column_to_drop_2
+      - operation: drop_columns
+        source: $transformations.courses
+        columns:
+          - column_to_drop_1
+          - column_to_drop_2
 ```
 </details>
 
@@ -363,11 +365,11 @@ Removes the specified columns.
 
 Keeps only the specified columns, discards the rest.
 ```yaml
-    - operation: keep_columns
-      source: $transformations.courses
-      columns:
-        - column_to_keep_1
-        - column_to_keep_2
+      - operation: keep_columns
+        source: $transformations.courses
+        columns:
+          - column_to_keep_1
+          - column_to_keep_2
 ```
 </details>
 
@@ -377,13 +379,13 @@ Keeps only the specified columns, discards the rest.
 
 Combines the values of the specified columns, delimited by a separator, into a new column.
 ```yaml
-    - operation: combine_columns
-      source: $transformations.courses
-      columns:
-        - column_1
-        - column_2
-      new_column: new_column_name
-      separator: "_"
+      - operation: combine_columns
+        source: $transformations.courses
+        columns:
+          - column_1
+          - column_2
+        new_column: new_column_name
+        separator: "_"
 ```
 Default `separator` is none - values are smashed together.
 </details>
@@ -394,12 +396,12 @@ Default `separator` is none - values are smashed together.
 
 Modify the values in the specified columns.
 ```yaml
-    - operation: modify_columns
-      source: $transformations.school_directory
-      columns:
-        state_abbr: "XXX{{value|reverse}}XXX"
-        school_year: "20{{value[-2:]}}"
-        zipcode: "{{ value|int ** 2 }}"
+      - operation: modify_columns
+        source: $transformations.school_directory
+        columns:
+          state_abbr: "XXX{{value|reverse}}XXX"
+          school_year: "20{{value[-2:]}}"
+          zipcode: "{{ value|int ** 2 }}"
 ```
 Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers to another column's value. Any [Jinja filters](https://jinja.palletsprojects.com/en/3.1.x/templates/#builtin-filters) and [math operations](https://jinja.palletsprojects.com/en/3.0.x/templates/#math) should work. Reference the current row number with `{{___row_id___}}`.
 </details>
@@ -410,18 +412,18 @@ Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers
 
 Map the values of a column.
 ```yaml
-    - operation: map_values
-      source: $sources.courses
-      column: column_name
-      # or, to map multiple columns simultaneously
-      columns:
-        - col_1
-        - col_2
-      mapping:
-        old_value_1: new_value_1
-        old_value_2: new_value_2
-      # or a CSV/TSV with two columns (from, to) and header row:
-      map_file: path/to/mapping.csv
+      - operation: map_values
+        source: $sources.courses
+        column: column_name
+        # or, to map multiple columns simultaneously
+        columns:
+          - col_1
+          - col_2
+        mapping:
+          old_value_1: new_value_1
+          old_value_2: new_value_2
+        # or a CSV/TSV with two columns (from, to) and header row:
+        map_file: path/to/mapping.csv
 ```
 </details>
 
@@ -431,16 +433,16 @@ Map the values of a column.
 
 Change the format of a date column.
 ```yaml
-    - operation: date_format
-      source: $transformations.students
-      column: date_of_birth
-      # or
-      columns:
-        - date_column_1
-        - date_column_2
-        - date_column_3
-      from_format: "%b %d %Y %H:%M%p"
-      to_format: "%Y-%m-%d"
+      - operation: date_format
+        source: $transformations.students
+        column: date_of_birth
+        # or
+        columns:
+          - date_column_1
+          - date_column_2
+          - date_column_3
+        from_format: "%b %d %Y %H:%M%p"
+        to_format: "%Y-%m-%d"
 ```
 The `from_format` and `to_format` must follow [Python's strftime() and strptime() formats](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).
 </details>
@@ -453,11 +455,11 @@ The `from_format` and `to_format` must follow [Python's strftime() and strptime(
 
 Removes duplicate rows.
 ```yaml
-    - operation: distinct_rows
-      source: $transformations.courses
-      columns:
-        - distinctness_column_1
-        - distinctness_column_2
+      - operation: distinct_rows
+        source: $transformations.courses
+        columns:
+          - distinctness_column_1
+          - distinctness_column_2
 ```
 Optionally specify the `columns` to use for uniqueness, otherwise all columns are used. If duplicate rows are found, only the first is kept.
 </details>
@@ -468,10 +470,10 @@ Optionally specify the `columns` to use for uniqueness, otherwise all columns ar
 
 Filter (include or exclude) rows matching a query.
 ```yaml
-    - operation: filter_rows
-      source: $transformations.courses
-      query: school_year < 2020
-      behavior: exclude | include
+      - operation: filter_rows
+        source: $transformations.courses
+        query: school_year < 2020
+        behavior: exclude | include
 ```
 The query format is anything supported by [Pandas.DataFrame.query](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.query.html). Specifying `behavior` as `exclude` wraps the Pandas `query()` with `not()`.
 </details>
@@ -484,16 +486,16 @@ The query format is anything supported by [Pandas.DataFrame.query](https://panda
 
 Reduce the number of rows by grouping, and add columns with values calculated over each group.
 ```yaml
-    - operation: group_by
-      source: $transformations.assessment_items
-      group_by_columns:
-        - student_id
-      create_columns:
-        num_scores: count()
-        min_score: min(item_score)
-        max_score: max(item_score)
-        avg_score: mean(item_score)
-        item_scores: agg(item_score,;)
+      - operation: group_by
+        source: $transformations.assessment_items
+        group_by_columns:
+          - student_id
+        create_columns:
+          num_scores: count()
+          min_score: min(item_score)
+          max_score: max(item_score)
+          avg_score: mean(item_score)
+          item_scores: agg(item_score,;)
 ```
 Valid aggregation functions are
 * `count()` or `size()` - the number of rows in each group
@@ -792,7 +794,7 @@ Typically `earthmover` is used when the same (or simlar) data transformations mu
 
 
 # Change log
-[2022-06-??] Version 0.0.1 released
+[2022-09-22] Version 0.0.2 released
 
 
 # Contributing
