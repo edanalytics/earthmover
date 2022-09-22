@@ -260,6 +260,7 @@ transformations:
           count_column: total_count
 
 
+
 destinations:
   animals:
     source: $transformations.animal_species
