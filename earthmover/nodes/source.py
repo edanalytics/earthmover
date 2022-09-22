@@ -209,9 +209,16 @@ class FileSource(Source):
         :param sep:
         :return:
         """
-        # We don't watn to activate the function inside this helper function.
+        # Define any other helpers that will be used below.
+        def __get_skiprows(config: dict):
+            """ Retrieve or set default for header_rows value for CSV reads. """
+            _header_rows = config.get('header_rows', 1)
+            return int(_header_rows) - 1  # If header_rows = 1, skip none.
+
+
+        # We don't want to activate the function inside this helper function.
         read_lambda_mapping = {
-            'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False),
+            'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
             'excel'     : lambda file, config: dd.from_pandas(pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False), chunksize=self.CHUNKSIZE),
             'feather'   : lambda file, _     : dd.from_pandas(pd.read_feather(file), chunksize=self.CHUNKSIZE),
             'fixedwidth': lambda file, _     : dd.read_fwf(file),
@@ -224,7 +231,7 @@ class FileSource(Source):
             'spss'      : lambda file, _     : dd.from_pandas(pd.read_spss(file), chunksize=self.CHUNKSIZE),
             'stata'     : lambda file, _     : dd.from_pandas(pd.read_stata(file), chunksize=self.CHUNKSIZE),
             'xml'       : lambda file, config: dd.from_pandas(pd.read_xml(file, xpath=config.get('xpath', "./*")), chunksize=self.CHUNKSIZE),
-            'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False),
+            'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
         }
         return read_lambda_mapping.get(file_type)
 
