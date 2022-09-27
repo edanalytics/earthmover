@@ -16,6 +16,12 @@ class Operation(Node):
         :param config:
         :param earthmover:
         """
+        # New code for integrating custom node classes
+        for _custom_node_superclass in earthmover.custom_nodes.get('operations', []):
+            custom_node = _custom_node_superclass.select_class(config)
+            if custom_node:
+                return object.__new__(custom_node)
+
         from earthmover.operations import groupby as groupby_operations
         from earthmover.operations import dataframe as dataframe_operations
         from earthmover.operations import column as column_operations

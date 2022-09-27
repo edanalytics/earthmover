@@ -27,6 +27,12 @@ class Source(Node):
         :param config:
         :param earthmover:
         """
+        # New code for integrating custom node classes
+        for _custom_node_superclass in earthmover.custom_nodes.get('sources', []):
+            custom_node = _custom_node_superclass.select_class(config)
+            if custom_node:
+                return object.__new__(custom_node)
+
         if 'connection' in config and 'query' not in config:
             return object.__new__(FtpSource)
 

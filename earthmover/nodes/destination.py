@@ -10,12 +10,18 @@ class Destination(Node):
     """
 
     """
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
+        # New code for integrating custom node classes
+        for _custom_node_superclass in earthmover.custom_nodes.get('destinations', []):
+            custom_node = _custom_node_superclass.select_class(config)
+            if custom_node:
+                return object.__new__(custom_node)
+
         return object.__new__(FileDestination)
 
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, name: str, config: dict, *, earthmover: 'Earthmover'):
+        super().__init__(name, config, earthmover=earthmover)
         self.type = 'destination'
 
         self.allowed_configs.update(['source'])
