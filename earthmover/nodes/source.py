@@ -17,36 +17,27 @@ class Source(Node):
     """
 
     """
-    CHUNKSIZE = 1024 * 1024 * 100  # 100 MB
+    CUSTOM_NODE_KEY = 'sources'
 
-    def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
+    @classmethod
+    def select_class(cls, config: dict) -> 'Source':
         """
         Logic for assigning sources to their respective classes.
 
-        :param name:
         :param config:
-        :param earthmover:
+        :return:
         """
-        # New code for integrating custom node classes
-        for _custom_node_superclass in earthmover.custom_nodes.get('sources', []):
-            custom_node = _custom_node_superclass.select_class(config)
-            if custom_node:
-                return object.__new__(custom_node)
-
         if 'connection' in config and 'query' not in config:
-            return object.__new__(FtpSource)
+            return FtpSource
 
         elif 'connection' in config and 'query' in config:
-            return object.__new__(SqlSource)
+            return SqlSource
 
         elif 'file' in config:
-            return object.__new__(FileSource)
+            return FileSource
 
         else:
-            earthmover.error_handler.throw(
-                "sources must specify either a `file` and/or `connection` string and `query`"
-            )
-            raise
+            return None
 
 
     def __init__(self, *args, **kwargs):

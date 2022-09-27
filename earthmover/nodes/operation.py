@@ -11,17 +11,15 @@ class Operation(Node):
     """
 
     """
-    def __new__(cls, config: dict, *, earthmover: 'Earthmover'):
-        """
-        :param config:
-        :param earthmover:
-        """
-        # New code for integrating custom node classes
-        for _custom_node_superclass in earthmover.custom_nodes.get('operations', []):
-            custom_node = _custom_node_superclass.select_class(config)
-            if custom_node:
-                return object.__new__(custom_node)
+    CUSTOM_NODE_KEY = 'operations'
 
+    @classmethod
+    def select_class(cls, config: dict) -> 'Operation':
+        """
+
+        :param config:
+        :return:
+        """
         from earthmover.operations import groupby as groupby_operations
         from earthmover.operations import dataframe as dataframe_operations
         from earthmover.operations import column as column_operations
@@ -45,22 +43,15 @@ class Operation(Node):
             'filter_rows': row_operations.FilterRowsOperation,
 
             'group_by_with_count': groupby_operations.GroupByWithCountOperation,
-            'group_by_with_ag': groupby_operations.GroupByWithAggOperation,
+            'group_by_with_agg': groupby_operations.GroupByWithAggOperation,
             'group_by': groupby_operations.GroupByOperation,
         }
 
         operation = config.get('operation')
-        operation_class = operation_mapping.get(operation)
-
-        if operation_class is None:
-            earthmover.error_handler.throw(
-                f"invalid transformation operation `{operation}`"
-            )
-            raise
-
-        return object.__new__(operation_class)
+        return operation_mapping.get(operation)
 
 
+    # TODO: Arguments for Operation do not match arguments for Node.
     def __init__(self, config: dict, *, earthmover: 'Earthmover'):
         _name = config.get('operation')
         super().__init__(_name, config, earthmover=earthmover)

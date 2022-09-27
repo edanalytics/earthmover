@@ -83,29 +83,26 @@ class Earthmover:
 
         #TODO: This is dangerous! DO NOT MERGE THIS.
         # Prepare custom nodes if specified.
-        if _custom_nodes := self.user_configs.get('custom_nodes'):
-            print("Collecting custom nodes!")
-            self.custom_nodes = {}
+        self.custom_nodes = {}
 
+        if _custom_nodes := self.user_configs.get('custom_nodes'):
             for idx, (node_type, node_list) in enumerate(_custom_nodes.items()):
                 if node_type == '__line__':
                     continue
 
-                print(f"Let's build some {node_type}!")
                 self.custom_nodes[node_type] = []
                 for _class_import_pieces in node_list:
                     exec_class = self._import_custom_class(_class_import_pieces, incrementer=idx)
                     self.custom_nodes[node_type].append(exec_class)
-                    print(f"Whoopsy, here's a {exec_class}...")
-        else:
-            self.custom_nodes = {}
 
+                    self.logger.debug(
+                        f"Custom class {'.'.join(*node_list)} has been imported into the namespace"
+                    )
 
 
     def load_config_file(self) -> dict:
         """
 
-        :param: params
         :return:
         """
         _env_backup = os.environ.copy()
@@ -125,7 +122,8 @@ class Earthmover:
         return configs
 
 
-    def _import_custom_class(self, statement_pieces, incrementer=1):
+    @staticmethod
+    def _import_custom_class(statement_pieces, incrementer=1):
         """
         #TODO: This is dangerous! DO NOT MERGE THIS.
         We need to use some Python mumbo-jumbo to get the class into the namespace.
@@ -134,7 +132,6 @@ class Earthmover:
         "from {location} import {class_name} as {class_name}1"
         """
         #
-        print(statement_pieces)
         location, class_name = statement_pieces
         class_alias = f"{class_name}{incrementer}"
 

@@ -1,14 +1,29 @@
 from earthmover.node import Node
 from earthmover.nodes.operation import Operation
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from earthmover.earthmover import Earthmover
 
 class Transformation(Node):
     """
 
     """
+    CUSTOM_NODE_KEY = 'transformations'
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def select_class(cls, config: dict) -> 'Node':
+        """
+        Logic for assigning transformations to their respective classes.
+
+        :param config:
+        :return:
+        """
+        # Only one Transformation has been defined in Earthmover thus far.
+        return cls
+
+
+    def __init__(self, name: str, config: dict, *, earthmover: 'Earthmover'):
+        super().__init__(name, config, earthmover=earthmover)
 
         self.type = 'transformation'
 
