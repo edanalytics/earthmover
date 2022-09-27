@@ -96,7 +96,7 @@ class Earthmover:
                     self.custom_nodes[node_type].append(exec_class)
 
                     self.logger.debug(
-                        f"Custom class {'.'.join(*node_list)} has been imported into the namespace"
+                        f"Custom class {'.'.join(_class_import_pieces)} has been imported into the namespace"
                     )
 
 
