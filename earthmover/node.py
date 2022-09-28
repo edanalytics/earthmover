@@ -22,7 +22,7 @@ class Node:
 
     @classmethod
     @abc.abstractmethod
-    def select_class(cls, *args, **kwargs) -> 'Node':
+    def select_class(cls, config: dict) -> 'Node':
         raise NotImplementedError(
             "Method `select_class` must be defined within child classes, not Node parent class."
         )

@@ -11,6 +11,7 @@ class Transformation(Node):
     """
     CUSTOM_NODE_KEY = 'transformations'
 
+    @classmethod
     def select_class(cls, config: dict) -> 'Node':
         """
         Logic for assigning transformations to their respective classes.
@@ -37,7 +38,7 @@ class Transformation(Node):
         self.error_handler.assert_key_exists_and_type_is(self.config, 'operations', list)
         for idx, operation_config in enumerate(self.config.get('operations'), start=1):
 
-            operation = Operation(operation_config, earthmover=self.earthmover)
+            operation = Operation(name=None, config=operation_config, earthmover=self.earthmover)
             self.operations.append(operation)
 
             # Sources are defined in a 'source_list' or 'source' class attribute, but never both.

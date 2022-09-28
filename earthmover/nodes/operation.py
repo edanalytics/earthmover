@@ -52,8 +52,8 @@ class Operation(Node):
 
 
     # TODO: Arguments for Operation do not match arguments for Node.
-    def __init__(self, config: dict, *, earthmover: 'Earthmover'):
-        _name = config.get('operation')
+    def __init__(self, name: str, config: dict, *, earthmover: 'Earthmover'):
+        _name = config.get('operation')  # Name is not used; it is inferred from configs.
         super().__init__(_name, config, earthmover=earthmover)
 
         self.type = self.config.get('operation')
