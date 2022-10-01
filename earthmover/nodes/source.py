@@ -144,6 +144,8 @@ class FileSource(Source):
 
         try:
             self.data = self.read_lambda(self.file, self.config)
+            self.force_dask()
+
             self.verify()  # Verify the column list provided matches the number of columns in the dataframe.
 
             if self.columns_list:
@@ -223,18 +225,18 @@ class FileSource(Source):
         # We don't want to activate the function inside this helper function.
         read_lambda_mapping = {
             'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
-            'excel'     : lambda file, config: dd.from_pandas(pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False), chunksize=self.CHUNKSIZE),
-            'feather'   : lambda file, _     : dd.from_pandas(pd.read_feather(file), chunksize=self.CHUNKSIZE),
+            'excel'     : lambda file, config: (pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False)),
+            'feather'   : lambda file, _     : (pd.read_feather(file)),
             'fixedwidth': lambda file, _     : dd.read_fwf(file),
-            'html'      : lambda file, config: dd.from_pandas(pd.read_html(file, match=config.get('match', ".+"), keep_default_na=False)[0], chunksize=self.CHUNKSIZE),
+            'html'      : lambda file, config: (pd.read_html(file, match=config.get('match', ".+"), keep_default_na=False)[0]),
             'orc'       : lambda file, _     : dd.read_orc(file),
             'json'      : lambda file, config: dd.read_json(file, typ=config.get('object_type', "frame"), orient=config.get('orientation', "columns")),
             'jsonl'     : lambda file, config: dd.read_json(file, lines=True),
             'parquet'   : lambda file, _     : dd.read_parquet(file),
-            'sas'       : lambda file, _     : dd.from_pandas(pd.read_sas(file), chunksize=self.CHUNKSIZE),
-            'spss'      : lambda file, _     : dd.from_pandas(pd.read_spss(file), chunksize=self.CHUNKSIZE),
-            'stata'     : lambda file, _     : dd.from_pandas(pd.read_stata(file), chunksize=self.CHUNKSIZE),
-            'xml'       : lambda file, config: dd.from_pandas(pd.read_xml(file, xpath=config.get('xpath', "./*")), chunksize=self.CHUNKSIZE),
+            'sas'       : lambda file, _     : (pd.read_sas(file)),
+            'spss'      : lambda file, _     : (pd.read_spss(file)),
+            'stata'     : lambda file, _     : (pd.read_stata(file)),
+            'xml'       : lambda file, config: (pd.read_xml(file, xpath=config.get('xpath', "./*"))),
             'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
         }
         return read_lambda_mapping.get(file_type)
@@ -297,7 +299,9 @@ class FtpSource(Source):
             flo = io.BytesIO()
             self.ftp.retrbinary('RETR ' + self.file, flo.write)
             flo.seek(0)
-            self.data = dd.from_pandas(pd.read_csv(flo), chunksize=self.CHUNKSIZE)
+
+            self.data = pd.read_csv(flo)
+            self.force_dask()
 
         except Exception as err:
             self.error_handler.throw(
@@ -358,7 +362,8 @@ class SqlSource(Source):
         super().execute()
 
         try:
-            self.data = dd.from_pandas(pd.read_sql(sql=self.query, con=self.connection), chunksize=self.CHUNKSIZE)
+            self.data = pd.read_sql(sql=self.query, con=self.connection)
+            self.force_dask()
 
             self.logger.debug(
                 f"source `{self.name}` loaded (via SQL)"

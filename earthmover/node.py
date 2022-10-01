@@ -166,3 +166,14 @@ class Node:
                     self.logger.info(
                         f"Assertion passed! {self.name}: {expectation}"
                     )
+
+
+    def force_dask(self):
+        """
+
+        """
+        if isinstance(self.data, pd.DataFrame):
+            self.data = dask.dataframe.from_pandas(
+                self.data,
+                chunksize=self.CHUNKSIZE
+            )
