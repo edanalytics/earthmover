@@ -1,5 +1,5 @@
 <!-- Logo/image -->
-![earthmover](images/earthmover.png)
+![earthmover](https://raw.githubusercontent.com/edanalytics/earthmover/main/images/earthmover.png)
 
 `earthmover` transforms collections of tabular source data (flat files, FTP files, database tables/queries) into text-based (JSONL, XML) data via YAML configuration.
 <!-- GIF or screenshot? -->
@@ -30,7 +30,7 @@ Guides and Resources -->
 
 # Installation
 ```
-pip install git+https://github.com/edanalytics/earthmover.git#egg=earthmover
+pip install earthmover
 ```
 
 
@@ -641,7 +641,7 @@ earthmover run -c path/to/config.yaml --skip-hashing
 # Tests
 This tool ships with a test suite covering all transformation operations. It can be run with `earthmover -t`, which simply runs the tool on the `config.yaml` and toy data in the `earthmover/tests/` folder. (The DAG is pictured below.) Rendered `earthmover/tests/output/` are then compared against the `earthmover/tests/expected/` output; the test passes only if all files match exactly.
 
-![tests DAG](earthmover/tests/tests-dag.png)
+![tests DAG](https://raw.githubusercontent.com/edanalytics/earthmover/main/earthmover/tests/tests-dag.png)
 
 Run tests with
 ```bash
@@ -655,11 +655,11 @@ Some details of the design of this tool are discussed below.
 ## DAG
 The mapping of sources through transformations to destinations is modeled as a directed acyclic graph ([DAG](https://en.wikipedia.org/wiki/Directed_acyclic_graph)). Each [component](https://en.wikipedia.org/wiki/Component_(graph_theory)) of the DAG is run separately.
 
-![dataflow graph components](images/dataflow-graph-components.gif)
+![dataflow graph components](https://raw.githubusercontent.com/edanalytics/earthmover/main/images/dataflow-graph-components.gif)
 
 Each component is materialized in [topological order](https://en.wikipedia.org/wiki/Topological_sorting). This minimizes memory usage, as only the data from the current and previous layer must be retained in memory.
 
-![dataflow graph layers](images/dataflow-graph-layers.gif)
+![dataflow graph layers](https://raw.githubusercontent.com/edanalytics/earthmover/main/images/dataflow-graph-layers.gif)
 
 ## Dataframes
 All data processing is done using [Pandas Dataframes](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) and [Dask](https://www.dask.org/), with values stored as strings (or [Categoricals](https://pandas.pydata.org/docs/user_guide/categorical.html), for memory efficiency in columns with few unique values). This choice of datatypes prevents issues arising from Pandas' datatype inference (like inferring numbers as dates), but does require casting string-representations of numeric values using Jinja when doing comparisons or computations.
