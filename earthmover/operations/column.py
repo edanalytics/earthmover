@@ -445,11 +445,14 @@ class MapValuesOperation(Operation):
         super().compile()
 
         #
-        if _column := self.config.get('column'):
+        _column = self.config.get('column')
+        _columns = self.config.get('columns')
+
+        if _column:
             self.error_handler.assert_key_type_is(self.config, 'column', str)
             self.columns_list = [_column]
 
-        elif _columns := self.config.get('columns'):
+        elif _columns:
             self.error_handler.assert_key_type_is(self.config, 'columns', list)
             self.columns_list = _columns
 
@@ -460,11 +463,14 @@ class MapValuesOperation(Operation):
             raise
 
         #
-        if _mapping := self.config.get('mapping'):
+        _mapping = self.config.get('mapping')
+        _map_file = self.config.get('map_file')
+
+        if _mapping:
             self.error_handler.assert_key_type_is(self.config, "mapping", dict)
             self.mapping = _mapping
 
-        elif _map_file := self.config.get('map_file'):
+        elif _map_file:
             self.error_handler.assert_key_type_is(self.config, "map_file", str)
             self.map_file = _map_file
             self.mapping = self._read_map_file(_map_file)
@@ -558,11 +564,14 @@ class DateFormatOperation(Operation):
         self.to_format = self.config['to_format']
 
         #
-        if _column := self.config.get('column'):
+        _column = self.config.get('column')
+        _columns = self.config.get('columns')
+
+        if _column:
             self.error_handler.assert_key_type_is(self.config, 'column', str)
             self.columns_list = [_column]
 
-        elif _columns := self.config.get('columns'):
+        elif _columns:
             self.error_handler.assert_key_type_is(self.config, 'columns', list)
             self.columns_list = _columns
 

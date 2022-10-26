@@ -48,7 +48,8 @@ class Graph(nx.DiGraph):
         :param ref:
         :return:
         """
-        if _node := self.nodes.get(ref):
+        _node = self.nodes.get(ref)
+        if _node:
             return _node['data']
         else:
             return None

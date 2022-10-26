@@ -26,9 +26,12 @@ class Transformation(Node):
             self.operations.append(operation)
 
             # Sources are defined in a 'source_list' or 'source' class attribute, but never both.
-            if _source_list := operation.__dict__.get('source_list'):
+            _source_list = operation.__dict__.get('source_list')
+            _source = operation.__dict__.get('source')
+
+            if _source_list:
                 self.sources.update(_source_list)
-            elif _source := operation.__dict__.get('source'):
+            elif _source:
                 self.sources.add(_source)
 
         # Sources are saved as an attribute to build network edges in `Earthmover.graph`.
