@@ -33,7 +33,7 @@ setuptools.setup (
     long_description_content_type = "text/markdown",
     license = 'Apache 2.0',
     url = 'https://github.com/edanalytics/earthmover',
-    download_url = 'https://github.com/edanalytics/earthmover/archive/0.0.3.tar.gz',
+    download_url = 'https://github.com/edanalytics/earthmover/archive/refs/tags/v0.0.3.tar.gz',
     dependency_links = all_reqs,
     author_email = 'treitz@edanalytics.org, jkaiser@edanalytics.org',
     classifiers = [
