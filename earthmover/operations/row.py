@@ -114,7 +114,7 @@ class FilterRowsOperation(Operation):
             _query = self.query
 
         try:
-            self.data = self.data.query(_query, meta=pd.DataFrame(columns=self.data.columns, dtype='object'))
+            self.data = self.data.query(_query, meta=pd.DataFrame(columns=self.data.columns.tolist(), dtype='object'))
 
         except Exception as _:
             self.error_handler.throw(
