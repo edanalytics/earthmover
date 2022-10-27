@@ -112,7 +112,7 @@ class FilterRowsOperation(Operation):
             _query = self.query
 
         try:
-            self.data = self.data.query(_query)
+            self.data = self.data.query(_query, engine='python')  #`numexpr` is used by default if installed.
 
         except Exception as _:
             self.error_handler.throw(
