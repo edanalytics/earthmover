@@ -1,1 +1,2 @@
 recursive-include earthmover/tests *.jsonl *.jsont *.yaml *.csv
+include VERSION.txt requirements.txt
