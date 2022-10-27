@@ -1,5 +1,3 @@
-import pandas as pd
-
 from earthmover.nodes.operation import Operation
 
 
