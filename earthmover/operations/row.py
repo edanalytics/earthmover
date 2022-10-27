@@ -1,3 +1,5 @@
+import pandas as pd
+
 from earthmover.nodes.operation import Operation
 
 
@@ -112,7 +114,7 @@ class FilterRowsOperation(Operation):
             _query = self.query
 
         try:
-            self.data = self.data.query(_query)
+            self.data = self.data.query(_query, meta=pd.Series(dtype='bool', name='__target__'))
 
         except Exception as _:
             self.error_handler.throw(
