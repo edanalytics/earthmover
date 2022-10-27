@@ -246,7 +246,8 @@ class GroupByOperation(Operation):
                         f"aggregation function `{_agg_type}`({_col}) refers to a column {_col} which does not exist"
                     )
 
-            if not (agg_lambda := self._get_agg_lambda(_agg_type, _col, _sep)):
+            agg_lambda = self._get_agg_lambda(_agg_type, _col, _sep)
+            if not agg_lambda:
                 self.error_handler.throw(
                     f"invalid aggregation function `{_agg_type}` in `group_by` operation"
                 )

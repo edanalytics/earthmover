@@ -21,11 +21,14 @@ class DistinctRowsOperation(Operation):
         super().compile()
 
         #
-        if _column := self.config.get('column'):
+        _column = self.config.get('column')
+        _columns = self.config.get('columns')
+
+        if _column:
             self.error_handler.assert_key_type_is(self.config, 'column', str)
             self.columns_list = [_column]
 
-        elif _columns := self.config.get('columns'):
+        elif _columns:
             self.error_handler.assert_key_type_is(self.config, 'columns', list)
             self.columns_list = _columns
 

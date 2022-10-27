@@ -45,11 +45,14 @@ class JoinOperation(Operation):
             self.error_handler.throw("must define `left_key` or `left_keys`")
             raise
 
-        if _key := self.config.get('left_key'):
+        _key = self.config.get('left_key')
+        _keys = self.config.get('left_keys')
+
+        if _key:
             self.error_handler.assert_key_type_is(self.config, 'left_key', str)
             self.left_keys = [_key]
 
-        elif _keys := self.config.get('left_keys'):
+        elif _keys:
             self.error_handler.assert_key_type_is(self.config, 'left_keys', list)
             self.left_keys = _keys
         else:
@@ -64,11 +67,14 @@ class JoinOperation(Operation):
             self.error_handler.throw("must define `right_key` or `right_keys`")
             raise
 
-        if _key := self.config.get('right_key'):
+        _key = self.config.get('right_key')
+        _keys = self.config.get('right_keys')
+
+        if _key:
             self.error_handler.assert_key_type_is(self.config, 'right_key', str)
             self.right_keys = [_key]
 
-        elif _keys := self.config.get('right_keys'):
+        elif _keys:
             self.error_handler.assert_key_type_is(self.config, 'right_keys', list)
             self.right_keys = _keys
         else:
@@ -100,19 +106,25 @@ class JoinOperation(Operation):
 
 
         # Check left columns
-        if _keep_cols := self.config.get('left_keep_columns'):
+        _keep_cols = self.config.get('left_keep_columns')
+        _drop_cols = self.config.get('left_drop_columns')
+
+        if _keep_cols:
             self.error_handler.assert_key_type_is(self.config, 'left_keep_columns', list)
             self.left_keep_cols = _keep_cols
-        elif _drop_cols := self.config.get('left_drop_columns'):
+        elif _drop_cols:
             self.error_handler.assert_key_type_is(self.config, 'left_drop_columns', list)
             self.left_drop_cols = _drop_cols
 
 
         # Check right columns
-        if _keep_cols := self.config.get('right_keep_columns'):
+        _keep_cols = self.config.get('right_keep_columns')
+        _drop_cols = self.config.get('right_drop_columns')
+
+        if _keep_cols:
             self.error_handler.assert_key_type_is(self.config, 'right_keep_columns', list)
             self.right_keep_cols = _keep_cols
-        elif _drop_cols := self.config.get('right_drop_columns'):
+        elif _drop_cols:
             self.error_handler.assert_key_type_is(self.config, 'right_drop_columns', list)
             self.right_drop_cols = _drop_cols
 
