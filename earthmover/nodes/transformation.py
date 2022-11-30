@@ -1,11 +1,27 @@
 from earthmover.node import Node
 from earthmover.nodes.operation import Operation
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from earthmover.earthmover import Earthmover
+
 
 class Transformation(Node):
     """
 
     """
+    CUSTOM_NODE_KEY = 'transformations'
+
+    @classmethod
+    def select_class(cls, config: dict) -> 'Node':
+        """
+        Logic for assigning transformations to their respective classes.
+        :param config:
+        :return:
+        """
+        # Only one Transformation has been defined in Earthmover thus far.
+        return cls
+
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -22,7 +38,7 @@ class Transformation(Node):
         self.error_handler.assert_key_exists_and_type_is(self.config, 'operations', list)
         for idx, operation_config in enumerate(self.config.get('operations'), start=1):
 
-            operation = Operation(operation_config, earthmover=self.earthmover)
+            operation = Operation(name=None, config=operation_config, earthmover=self.earthmover)
             self.operations.append(operation)
 
             # Sources are defined in a 'source_list' or 'source' class attribute, but never both.

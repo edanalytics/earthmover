@@ -10,8 +10,17 @@ class Destination(Node):
     """
 
     """
-    def __new__(cls, *args, **kwargs):
-        return object.__new__(FileDestination)
+    CUSTOM_NODE_KEY = 'destinations'
+
+    @classmethod
+    def select_class(cls, config: dict) -> 'Destination':
+        """
+        Logic for assigning destinations to their respective classes.
+        :param config:
+        :return:
+        """
+        # Only one Destination has been defined in Earthmover thus far.
+        return FileDestination
 
 
     def __init__(self, *args, **kwargs):

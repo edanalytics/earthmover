@@ -11,20 +11,21 @@ class Operation(Node):
     """
 
     """
-    def __new__(cls, config: dict, *, earthmover: 'Earthmover'):
+    CUSTOM_NODE_KEY = 'operations'
+
+    @classmethod
+    def select_class(cls, config: dict) -> 'Operation':
         """
         :param config:
-        :param earthmover:
+        :return:
         """
         from earthmover.operations import groupby as groupby_operations
         from earthmover.operations import dataframe as dataframe_operations
         from earthmover.operations import column as column_operations
         from earthmover.operations import row as row_operations
-
         operation_mapping = {
             'join': dataframe_operations.JoinOperation,
             'union': dataframe_operations.UnionOperation,
-
             'add_columns': column_operations.AddColumnsOperation,
             'modify_columns': column_operations.ModifyColumnsOperation,
             'duplicate_columns': column_operations.DuplicateColumnsOperation,
@@ -34,29 +35,21 @@ class Operation(Node):
             'combine_columns': column_operations.CombineColumnsOperation,
             'map_values': column_operations.MapValuesOperation,
             'date_format': column_operations.DateFormatOperation,
-
             'distinct_rows': row_operations.DistinctRowsOperation,
             'filter_rows': row_operations.FilterRowsOperation,
 
             'group_by_with_count': groupby_operations.GroupByWithCountOperation,
-            'group_by_with_ag': groupby_operations.GroupByWithAggOperation,
+            'group_by_with_agg': groupby_operations.GroupByWithAggOperation,
             'group_by': groupby_operations.GroupByOperation,
         }
 
         operation = config.get('operation')
-        operation_class = operation_mapping.get(operation)
-
-        if operation_class is None:
-            earthmover.error_handler.throw(
-                f"invalid transformation operation `{operation}`"
-            )
-            raise
-
-        return object.__new__(operation_class)
+        return operation_mapping.get(operation)
 
 
-    def __init__(self, config: dict, *, earthmover: 'Earthmover'):
-        _name = config.get('operation')
+    # TODO: Arguments for Operation do not match arguments for Node.
+    def __init__(self, name: str, config: dict, *, earthmover: 'Earthmover'):
+        _name = config.get('operation')  # Name is not used; it is inferred from configs.
         super().__init__(_name, config, earthmover=earthmover)
 
         self.type = self.config.get('operation')

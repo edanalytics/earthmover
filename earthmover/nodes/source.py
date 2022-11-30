@@ -5,6 +5,8 @@ import os
 import pandas as pd
 import re
 
+from typing import Optional
+
 from earthmover.node import Node
 from earthmover import util
 
@@ -19,28 +21,23 @@ class Source(Node):
     """
     CHUNKSIZE = 1024 * 1024 * 100  # 100 MB
 
-    def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
+    CUSTOM_NODE_KEY = 'sources'
+
+    @classmethod
+    def select_class(cls, config: dict) -> Optional['Source']:
         """
         Logic for assigning sources to their respective classes.
-
-        :param name:
         :param config:
-        :param earthmover:
+        :return:
         """
         if 'connection' in config and 'query' not in config:
-            return object.__new__(FtpSource)
-
+            return FtpSource
         elif 'connection' in config and 'query' in config:
-            return object.__new__(SqlSource)
-
+            return SqlSource
         elif 'file' in config:
-            return object.__new__(FileSource)
-
+            return FileSource
         else:
-            earthmover.error_handler.throw(
-                "sources must specify either a `file` and/or `connection` string and `query`"
-            )
-            raise
+            return None
 
 
     def __init__(self, *args, **kwargs):

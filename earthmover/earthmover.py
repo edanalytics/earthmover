@@ -81,6 +81,10 @@ class Earthmover:
         # Initialize the NetworkX DiGraph
         self.graph = Graph(error_handler=self.error_handler)
 
+        # Prepare custom nodes if specified.
+        # TODO: Investigate best approaches for integrating custom node classes into Earthmover.
+        self.custom_nodes = {}
+
 
     def load_config_file(self) -> dict:
         """

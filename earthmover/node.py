@@ -16,6 +16,39 @@ class Node:
     """
 
     """
+    CUSTOM_NODE_KEY: str
+
+    @classmethod
+    @abc.abstractmethod
+    def select_class(cls, config: dict) -> 'Node':
+        raise NotImplementedError(
+            "Method `select_class` must be defined within child classes, not Node parent class."
+        )
+
+    def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
+        """
+        :param name:
+        :param config:
+        :param earthmover:
+        """
+        # First check for custom nodes, if provided in the YAML file.
+        custom_node_superclasses = earthmover.custom_nodes.get(cls.CUSTOM_NODE_KEY, [])
+
+        for _node_superclass in custom_node_superclasses:
+            custom_node_class = _node_superclass.select_class(config)
+            if custom_node_class:
+                return object.__new__(custom_node_class)
+
+        # Otherwise, assume the node is a default Node.
+        else:
+            node_class = cls.select_class(config)
+            if node_class:
+                return object.__new__(node_class)
+            else:
+                earthmover.error_handler.throw(
+                    f"Node type has not been defined!"
+                )
+
     def __init__(self, name: str, config: dict, *, earthmover: 'Earthmover'):
         self.name = name
         self.config = config
