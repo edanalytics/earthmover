@@ -135,11 +135,14 @@ class Node:
                     )
 
 
-    def force_dask(self):
+    def ensure_dask_dataframe(self):
         """
         Converts a Pandas DataFrame to a Dask DataFrame.
         """
         if isinstance(self.data, pd.DataFrame):
+            self.logger.debug(
+                f"Casting data in {self.type} node `{self.name}` to a Dask dataframe."
+            )
             self.data = dask.dataframe.from_pandas(
                 self.data,
                 chunksize=self.CHUNKSIZE

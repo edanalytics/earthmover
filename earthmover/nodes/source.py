@@ -145,7 +145,7 @@ class FileSource(Source):
 
         try:
             self.data = self.read_lambda(self.file, self.config)
-            self.force_dask()
+            self.ensure_dask_dataframe()
 
             self.verify()  # Verify the column list provided matches the number of columns in the dataframe.
 
@@ -302,7 +302,7 @@ class FtpSource(Source):
             flo.seek(0)
 
             self.data = pd.read_csv(flo)
-            self.force_dask()
+            self.ensure_dask_dataframe()
 
         except Exception as err:
             self.error_handler.throw(
@@ -364,7 +364,7 @@ class SqlSource(Source):
 
         try:
             self.data = pd.read_sql(sql=self.query, con=self.connection)
-            self.force_dask()
+            self.ensure_dask_dataframe()
 
             self.logger.debug(
                 f"source `{self.name}` loaded (via SQL)"
