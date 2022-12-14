@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import re
 
-from typing import Dict, Optional
+from typing import Dict, Iterable, Optional
 
 from earthmover.error_handler import ErrorHandler
 from earthmover.node import Node
@@ -38,6 +38,14 @@ class Graph(nx.DiGraph):
 
     def get_node_data(self) -> Dict[str, Node]:
         return {node[0]: node[1]["data"] for node in self.nodes(data=True)}
+
+
+    def get_terminal_nodes(self) -> Iterable[Node]:
+        """
+        Helper function to remove terminal source and transformation nodes during Earthmover.build_graph().
+        :return:
+        """
+        return [node for node, degree in self.out_degree() if degree == 0]
 
 
     def ref(self, ref) -> Optional[Node]:

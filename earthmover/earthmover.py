@@ -198,26 +198,20 @@ class Earthmover:
             self.graph.remove_node(node)
 
         ### Delete all nodes not connected to a destination.
-        def __get_last_nodes(_graph):
-            return {
-                node for node, degree in _graph.out_degree() if degree == 0
-            }
+        while True:  # Iterate until no nodes are removed.
+            terminal_nodes = self.graph.get_terminal_nodes()
 
-        # Use a while-loop to make the operation recursive.
-        while True:
-            final_nodes = __get_last_nodes(self.graph)
-
-            for node_name in final_nodes:
+            for node_name in terminal_nodes:
                 node = self.graph.ref(node_name)
 
                 if node.type != 'destination':
                     self.graph.remove_node(node_name)
-                    self.logger.info(
-                        f"node {node.name} of type {node.type} will not be generated because it is not connected to a destination"
+                    self.logger.warning(
+                        f"{node.type} node `{node.name}` will not be generated because it is not connected to a destination"
                     )
 
-            _new_final_nodes = __get_last_nodes(self.graph)
-            if set(_new_final_nodes) == set(final_nodes):
+            # Iterate until no nodes are removed.
+            if set(terminal_nodes) == set(self.graph.get_terminal_nodes()):
                 break
 
 
