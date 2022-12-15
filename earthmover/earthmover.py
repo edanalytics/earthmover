@@ -197,6 +197,23 @@ class Earthmover:
         for node in nodes_to_remove:
             self.graph.remove_node(node)
 
+        ### Delete all nodes not connected to a destination.
+        while True:  # Iterate until no nodes are removed.
+            terminal_nodes = self.graph.get_terminal_nodes()
+
+            for node_name in terminal_nodes:
+                node = self.graph.ref(node_name)
+
+                if node.type != 'destination':
+                    self.graph.remove_node(node_name)
+                    self.logger.warning(
+                        f"{node.type} node `{node.name}` will not be generated because it is not connected to a destination"
+                    )
+
+            # Iterate until no nodes are removed.
+            if set(terminal_nodes) == set(self.graph.get_terminal_nodes()):
+                break
+
 
     def compile(self, subgraph = None):
         """
