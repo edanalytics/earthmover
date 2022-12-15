@@ -16,6 +16,8 @@ class Node:
     """
 
     """
+    CHUNKSIZE = 1024 * 1024 * 100  # 100 MB
+
     def __init__(self, name: str, config: dict, *, earthmover: 'Earthmover'):
         self.name = name
         self.config = config
@@ -131,3 +133,17 @@ class Node:
                     self.logger.info(
                         f"Assertion passed! {self.name}: {expectation}"
                     )
+
+
+    def ensure_dask_dataframe(self):
+        """
+        Converts a Pandas DataFrame to a Dask DataFrame.
+        """
+        if isinstance(self.data, pd.DataFrame):
+            self.logger.debug(
+                f"Casting data in {self.type} node `{self.name}` to a Dask dataframe."
+            )
+            self.data = dask.dataframe.from_pandas(
+                self.data,
+                chunksize=self.CHUNKSIZE
+            )
