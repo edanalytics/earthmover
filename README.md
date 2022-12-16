@@ -605,7 +605,7 @@ earthmover run -c path/to/config.yaml -s people,people_*
 This processes all DAG paths (from sources to destinations) through any matched nodes.
 
 ## Optional Sources
-Specifying `required: False` on a `source` will make `earthmover` skip creating any `destinations` that [depend](#dag) on the `source` if the `source`'s `connection` and/or `file` are missing. This, combined with the use of [environment variable references](#environment-variable-references) and/or [command-line parameters](#command-line-parameters) to specify a `source`'s `connection` and/or `file`, can allows a single `earthmover.yaml` to be used to create a subset of possible `destinations`.
+If you specify the `columns` list and `optional: True` on a file `source` but leave the `file` blank, `earthmover` will create an empty dataframe with the specified columns and pass it through the rest of the [DAG](#dag). This, combined with the use of [environment variable references](#environment-variable-references) and/or [command-line parameters](#command-line-parameters) to specify a `source`'s `file`, provides flexibility to include data when it's available but still run when it is missing.
 
 ## Environment variable references
 In your [YAML configuration](#yaml-configuration), you may reference environment variables with `${ENV_VAR}`. This can be useful for making references to source file locations dynamic, such as
@@ -794,7 +794,13 @@ Typically `earthmover` is used when the same (or simlar) data transformations mu
 
 
 # Change log
-[2022-09-22] Version 0.0.2 released
+* *2022-12-16*: **v0.0.5** released
+  - trim nodes not connected to a destination from DAG
+  - ensure all source datatypes return a Dask dataframe
+  - update [optional source functionality](#optional-sources) to require `columns` list, and pass an empty dataframe through the DAG
+* *2022-10-27*: **v0.0.4** released (support running in Google Colab)
+* *2022-10-27*: **v0.0.3** released (support for Python 3.7)
+* *2022-09-22*: (initial) **v0.0.2** released
 
 
 # Contributing
