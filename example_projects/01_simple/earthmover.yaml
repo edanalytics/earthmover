@@ -12,7 +12,12 @@ sources:
   testing_source:
     file: 
     header_rows: 1
-    required: False # this prevents an error due to `file` being blank... testing_destination just won't be created
+    optional: True # this prevents an error due to `file` being blank... testing_destination just won't be created
+    columns: # this is optional UNLESS header_rows=0 OR required=False
+      - day
+      - section
+      - student_id
+      - absent
 
 transformations:
   attendance:
