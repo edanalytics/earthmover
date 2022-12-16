@@ -793,7 +793,7 @@ Typically `earthmover` is used when the same (or simlar) data transformations mu
 
 
 
-# Change log
+# Changelog
 
 ### v0.0.5
 (Released *2022-12-16*)
