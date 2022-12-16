@@ -19,4 +19,4 @@ connection:
   backoff_factor: 1.5
   verify_ssl: False
 log_level: DEBUG
-show_stacktrace: True
+# show_stacktrace: True
