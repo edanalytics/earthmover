@@ -169,34 +169,6 @@ class Earthmover:
             )
             raise
 
-        ### Delete all trees emanating from a missing/blank source
-        node_data = self.graph.get_node_data()
-        nodes_to_remove = []
-
-        for component in nx.weakly_connected_components(self.graph):
-            skip_nodes = []
-
-            for node in component:
-                if node_data[node].type == "source" and node_data[node].skip:
-                    skip_nodes.append(node.replace("$sources.", ""))
-
-            #
-            if skip_nodes:
-                _missing_sources = ", ".join(skip_nodes)
-
-                for skip_node in skip_nodes:
-                    for node in nx.dfs_tree(self.graph, f"$sources.{skip_node}"):
-                        if node_data[node].type == "destination":
-                            _dest_node = node.replace("$destinations.", "")
-                            self.logger.info(
-                                f"destination {_dest_node} will not be generated because it depends on missing source(s) [{_missing_sources}]"
-                            )
-
-                        nodes_to_remove.append(node)
-
-        for node in nodes_to_remove:
-            self.graph.remove_node(node)
-
         ### Delete all nodes not connected to a destination.
         while True:  # Iterate until no nodes are removed.
             terminal_nodes = self.graph.get_terminal_nodes()
@@ -231,7 +203,7 @@ class Earthmover:
                 node.compile()
 
                 # Add the active nodes to the class attribute lists for the hashing file.
-                if node.type == 'source' and not node.skip:
+                if node.type == 'source':
                     self.sources.append(node)
 
                 elif node.type == 'transformation':

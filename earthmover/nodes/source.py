@@ -45,13 +45,15 @@ class Source(Node):
         super().__init__(*args, **kwargs)
         self.type = 'source'
 
-        self.allowed_configs.update(['required'])
+        self.allowed_configs.update(['optional'])
 
         self.mode = None  # Documents which class was chosen.
         self.is_remote = False  # False only for local files.
 
-        # A source can be turned off if `required=False` is specified in its configs.
-        self.skip = not self.config.get('required', True)
+        # A source can be blank if `optional=True` is specified in its configs.
+        # (In this case, `columns` must be specified, and are used to construct an empty
+        # dataframe which is passed through to downstream transformations and destinations.)
+        self.optional = self.config.get('optional', False)
 
 
 class FileSource(Source):
@@ -80,14 +82,24 @@ class FileSource(Source):
         """
         super().compile()
 
-        self.error_handler.assert_key_type_is(self.config, "file", str)
-        self.file = self.config['file']
-
-        # Determine the file type (used to specify the read-lambda).
-        self.file_type = self.config.get('type', self._get_filetype(self.file))
-        if not self.file_type:
+        if 'file' in self.config and self.config['file']:
+            self.error_handler.assert_key_type_is(self.config, "file", str)
+            self.file = self.config['file']
+        
+            # Determine the file type (used to specify the read-lambda).
+            self.file_type = self.config.get('type', self._get_filetype(self.file))
+            if not self.file_type:
+                self.error_handler.throw(
+                    f"file `{self.file}` is of unrecognized file format - specify the `type` manually or see documentation for supported file types"
+                )
+                raise
+        else:
+            self.file = ''
+            self.file_type = ''
+        
+        if not self.file and self.optional and ('columns' not in self.config or not isinstance(self.config['columns'], list)):
             self.error_handler.throw(
-                f"file `{self.file}` is of unrecognized file format - specify the `type` manually or see documentation for supported file types"
+                f"source `{self.name}` is optional and missing, but does not specify `columns` (which are required in this case)"
             )
             raise
 
@@ -111,7 +123,7 @@ class FileSource(Source):
         if "://" in self.file:
             self.is_remote = True
 
-        else:
+        elif self.file and not self.optional:
             try:
                 self.size = os.path.getsize(self.file)
             except FileNotFoundError:
@@ -144,7 +156,10 @@ class FileSource(Source):
         super().execute()
 
         try:
-            self.data = self.read_lambda(self.file, self.config)
+            if not self.file and self.optional:
+                self.data = pd.DataFrame(columns = self.columns_list)
+            else:
+                self.data = self.read_lambda(self.file, self.config)
             self.ensure_dask_dataframe()
 
             self.verify()  # Verify the column list provided matches the number of columns in the dataframe.
