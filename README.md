@@ -794,13 +794,25 @@ Typically `earthmover` is used when the same (or simlar) data transformations mu
 
 
 # Change log
-* *2022-12-16*: **v0.0.5** released
-  - trim nodes not connected to a destination from DAG
-  - ensure all source datatypes return a Dask dataframe
-  - update [optional source functionality](#optional-sources) to require `columns` list, and pass an empty dataframe through the DAG
-* *2022-10-27*: **v0.0.4** released (support running in Google Colab)
-* *2022-10-27*: **v0.0.3** released (support for Python 3.7)
-* *2022-09-22*: (initial) **v0.0.2** released
+
+### v0.0.5
+(Released *2022-12-16*)
+* trim nodes not connected to a destination from DAG
+* ensure all source datatypes return a Dask dataframe
+* update [optional source functionality](#optional-sources) to require `columns` list, and pass an empty dataframe through the DAG
+
+### v0.0.4
+(Released *2022-10-27*)
+* support running in Google Colab
+
+### v0.0.3
+(Released *2022-10-27*)
+* support for Python 3.7
+
+### v0.0.2
+(Released *2022-09-22*)
+* initial release
+
 
 
 # Contributing
