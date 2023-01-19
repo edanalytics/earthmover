@@ -5,8 +5,8 @@ from yaml import SafeLoader
 
 
 class YamlMapping(dict):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.__line__ = None
 
 
