@@ -56,9 +56,7 @@ class Node:
                 )
 
         # Always check for expectations
-        if 'expect' in self.config:
-            self.error_handler.assert_key_type_is(self.config, 'expect', list)
-            self.expectations = self.config['expect']
+        self.expectations = self.error_handler.assert_get_key(self.config, 'expect', dtype=list, required=False)
 
         pass
 
