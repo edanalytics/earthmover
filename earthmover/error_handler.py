@@ -79,7 +79,8 @@ class ErrorHandler:
 
     def assert_get_key(self, obj: dict, key: str,
         dtype: Optional[type] = None,
-        required: bool = False
+        required: bool = True,
+        default: Optional[object] = None
     ) -> Optional[object]:
         """
 
@@ -87,16 +88,20 @@ class ErrorHandler:
         :param key:
         :param dtype:
         :param required:
+        :param default:
         :return:
         """
         value = obj.get(key)
 
-        if value is None and required:
-            raise Exception(
-                f"{self.ctx} must define `{key}`"
-            )
+        if value is None:
+            if required:
+                raise Exception(
+                    f"{self.ctx} must define `{key}`"
+                )
+            else:
+                return default
 
-        if value is not None and dtype and not isinstance(value, dtype):
+        if dtype and not isinstance(value, dtype):
             raise Exception(
                 f"{self.ctx} `{key}` is defined, but wrong type (should be {dtype}, is {type(value)})"
             )
@@ -107,4 +112,3 @@ class ErrorHandler:
         raise Exception(
             f"{self.ctx} {message})"
         )
-
