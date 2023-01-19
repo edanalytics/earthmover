@@ -64,22 +64,16 @@ class Operation(Node):
         self.allowed_configs.update(['operation', 'sources', 'source'])
 
         # `source` and `source_list` are mutually-exclusive attributes.
-        self.source = None
-        self.source_list = None  # For operations with multiple sources (i.e., dataframe operations)
+        # `source_list` is for operations with multiple sources (i.e., dataframe operations)
+        self.source = self.error_handler.assert_get_key(self.config, 'source', dtype=str, required=False)
+        self.source_list = self.error_handler.assert_get_key(self.config, 'sources', dtype=list, required=False)
         self.source_data_list = None  # Retrieved data for operations with multiple sources
 
-        if 'sources' in self.config:
-            self.error_handler.assert_key_type_is(self.config, 'sources', list)
-            self.source_list = self.config['sources']
-
-        elif 'source' in self.config:
-            self.error_handler.assert_key_type_is(self.config, 'source', str)
-            self.source = self.config['source']
-
-        else:
+        if bool(self.source) == bool(self.source_list):  # Fail if both or neither are populated.
             self.error_handler.throw(
                 "A `source` or a list of `sources` must be defined for any operation!"
             )
+            raise
 
 
     @abc.abstractmethod
