@@ -116,8 +116,6 @@ class Earthmover:
         # sources:
         self.error_handler.assert_key_exists_and_type_is(self.user_configs, 'sources', dict)
         for name, config in self.user_configs['sources'].items():
-            if name == "__line__":
-                continue  # skip YAML line annotations
 
             node = Source(name, config, earthmover=self)
             self.graph.add_node(f"$sources.{name}", data=node)
@@ -127,8 +125,6 @@ class Earthmover:
             self.error_handler.assert_key_type_is(self.user_configs, 'transformations', dict)
 
             for name, config in self.user_configs['transformations'].items():
-                if name == "__line__":
-                    continue  # skip YAML line annotations
 
                 node = Transformation(name, config, earthmover=self)
                 self.graph.add_node(f"$transformations.{name}", data=node)
@@ -146,8 +142,6 @@ class Earthmover:
         # destinations:
         self.error_handler.assert_key_exists_and_type_is(self.user_configs, 'destinations', dict)
         for name, config in self.user_configs['destinations'].items():
-            if name == "__line__":
-                continue  # skip YAML line annotations
 
             node = Destination(name, config, earthmover=self)
             self.graph.add_node(f"$destinations.{name}", data=node)
