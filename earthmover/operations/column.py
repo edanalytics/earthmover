@@ -26,9 +26,7 @@ class AddColumnsOperation(Operation):
         :return:
         """
         super().compile()
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'columns', dict)
-        self.columns_dict = self.config['columns']
+        self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
 
     def execute(self):
@@ -88,9 +86,7 @@ class ModifyColumnsOperation(Operation):
         :return:
         """
         super().compile()
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'columns', dict)
-        self.columns_dict = self.config['columns']
+        self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
 
     def execute(self):
@@ -155,9 +151,7 @@ class DuplicateColumnsOperation(Operation):
         :return:
         """
         super().compile()
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, "columns", dict)
-        self.columns_dict = self.config['columns']
+        self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
     
     def verify(self):
@@ -221,9 +215,7 @@ class RenameColumnsOperation(Operation):
         :return:
         """
         super().compile()
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, "columns", dict)
-        self.columns_dict = self.config['columns']
+        self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
 
     def verify(self):
@@ -282,9 +274,7 @@ class DropColumnsOperation(Operation):
         :return:
         """
         super().compile()
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, "columns", list)
-        self.columns_to_drop = self.config['columns']
+        self.columns_to_drop = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
 
 
     def verify(self):
@@ -333,8 +323,7 @@ class KeepColumnsOperation(Operation):
         """
         super().compile()
 
-        self.error_handler.assert_key_exists_and_type_is(self.config, "columns", list)
-        self.header = self.config['columns']
+        self.header = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
 
 
     def verify(self):
@@ -384,11 +373,8 @@ class CombineColumnsOperation(Operation):
         """
         super().compile()
 
-        self.error_handler.assert_key_exists_and_type_is(self.config, "columns", list)
-        self.columns_list = self.config['columns']
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, "new_column", str)
-        self.new_column = self.config['new_column']
+        self.columns_list = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
+        self.new_column   = self.error_handler.assert_get_key(self.config, 'new_column', dtype=str)
 
         self.separator = self.config.get('separator', "")
 
@@ -444,37 +430,26 @@ class MapValuesOperation(Operation):
         """
         super().compile()
 
-        #
-        _column = self.config.get('column')
-        _columns = self.config.get('columns')
+        # Only 'column' or 'columns' can be populated
+        _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
+        _columns = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
 
-        if _column:
-            self.error_handler.assert_key_type_is(self.config, 'column', str)
-            self.columns_list = [_column]
-
-        elif _columns:
-            self.error_handler.assert_key_type_is(self.config, 'columns', list)
-            self.columns_list = _columns
-
-        else:
+        if bool(_column) == bool(_columns):  # Fail if both or neither are populated.
             self.error_handler.throw(
                 "a `map_values` operation must specify either one `column` or several `columns` to convert"
             )
             raise
 
+        self.columns_list = _columns or [_column]  # `[None]` evaluates to True
+
         #
-        _mapping = self.config.get('mapping')
-        _map_file = self.config.get('map_file')
+        _mapping  = self.error_handler.assert_get_key(self.config, 'mapping', dtype=dict, required=False)
+        _map_file = self.error_handler.assert_get_key(self.config, 'map_file', dtype=str, required=False)
 
         if _mapping:
-            self.error_handler.assert_key_type_is(self.config, "mapping", dict)
             self.mapping = _mapping
-
         elif _map_file:
-            self.error_handler.assert_key_type_is(self.config, "map_file", str)
-            self.map_file = _map_file
             self.mapping = self._read_map_file(_map_file)
-            
         else:
             self.error_handler.throw(
                 "must define either `mapping` (list of old_value: new_value) or a `map_file` (two-column CSV or TSV)"
@@ -557,29 +532,20 @@ class DateFormatOperation(Operation):
         """
         super().compile()
 
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'from_format', str)
-        self.from_format = self.config['from_format']
+        self.from_format = self.error_handler.assert_get_key(self.config, 'from_format', dtype=str)
+        self.to_format   = self.error_handler.assert_get_key(self.config, 'to_format', dtype=str)
 
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'to_format', str)
-        self.to_format = self.config['to_format']
+        # Only 'column' or 'columns' can be populated
+        _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
+        _columns = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
 
-        #
-        _column = self.config.get('column')
-        _columns = self.config.get('columns')
-
-        if _column:
-            self.error_handler.assert_key_type_is(self.config, 'column', str)
-            self.columns_list = [_column]
-
-        elif _columns:
-            self.error_handler.assert_key_type_is(self.config, 'columns', list)
-            self.columns_list = _columns
-
-        else:
+        if bool(_column) == bool(_columns):  # Fail if both or neither are populated.
             self.error_handler.throw(
                 "a `date_format` operation must specify either one `column` or several `columns` to convert"
             )
             raise
+
+        self.columns_list = _columns or [_column]  # `[None]` evaluates to True
 
 
     def verify(self):
