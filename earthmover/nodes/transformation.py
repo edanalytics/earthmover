@@ -19,8 +19,8 @@ class Transformation(Node):
         self.operations = []
         self.sources = set()
 
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'operations', list)
-        for idx, operation_config in enumerate(self.config.get('operations'), start=1):
+        _operations = self.error_handler.assert_get_key(self.config, 'operations', dtype=list)
+        for idx, operation_config in enumerate(_operations, start=1):
 
             operation = Operation(operation_config, earthmover=self.earthmover)
             self.operations.append(operation)
