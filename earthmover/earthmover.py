@@ -8,7 +8,6 @@ import yaml
 import pandas as pd
 
 from typing import Optional
-from yaml import SafeLoader
 
 from earthmover.error_handler import ErrorHandler
 from earthmover.graph import Graph
@@ -16,6 +15,7 @@ from earthmover.runs_file import RunsFile
 from earthmover.nodes.destination import Destination
 from earthmover.nodes.source import Source
 from earthmover.nodes.transformation import Transformation
+from earthmover.yaml_parser import SafeLineEnvVarLoader
 from earthmover import util
 
 
@@ -377,24 +377,3 @@ class Earthmover:
             if not _expected_df.equals(_outputted_df):
                 self.logger.critical(f"Test output `{_outputted_file}` does not match expected output.")
                 exit(1)
-
-
-
-# This allows us to determine the YAML file line number for any element loaded from YAML
-# (very useful for debugging and giving meaningful error messages)
-# (derived from https://stackoverflow.com/a/53647080)
-# Also added env var interpolation based on
-# https://stackoverflow.com/questions/52412297/how-to-replace-environment-variable-value-in-yaml-file-to-be-parsed-using-python#answer-55301129
-class SafeLineEnvVarLoader(SafeLoader):
-
-    def construct_mapping(self, node, deep=False):
-        mapping = super().construct_mapping(node, deep=deep)
-
-        # expand env vars:
-        for k, v in mapping.items():
-            if isinstance(v, str):
-                mapping[k] = os.path.expandvars(v)
-
-        # Add 1 so line numbering starts at 1
-        mapping['__line__'] = node.start_mark.line + 1
-        return mapping
