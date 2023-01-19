@@ -1,12 +1,12 @@
 import os
 
+from dataclasses import dataclass
 from yaml import SafeLoader
 
 
+@dataclass
 class YamlMapping(dict):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.__line__ = None
+    __line__: int = None
 
 
 class SafeLineEnvVarLoader(SafeLoader):
