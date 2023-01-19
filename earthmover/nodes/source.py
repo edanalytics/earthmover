@@ -81,22 +81,26 @@ class FileSource(Source):
         :return:
         """
         super().compile()
+        self.file = self.error_handler.assert_get_key(self.config, 'file', dtype=str, required=False)
 
-        if 'file' in self.config and self.config['file']:
-            self.error_handler.assert_key_type_is(self.config, "file", str)
-            self.file = self.config['file']
-        
-            # Determine the file type (used to specify the read-lambda).
-            self.file_type = self.config.get('type', self._get_filetype(self.file))
+        #
+        if not self.file:
+            self.file = ''
+            self.file_type = ''
+        #
+        else:
+            self.file_type = self.error_handler.assert_get_key(
+                self.config, 'type', dtype=str, required=False,
+                default=self._get_filetype(self.file)
+            )
+
             if not self.file_type:
                 self.error_handler.throw(
                     f"file `{self.file}` is of unrecognized file format - specify the `type` manually or see documentation for supported file types"
                 )
                 raise
-        else:
-            self.file = ''
-            self.file_type = ''
-        
+
+        #
         if not self.file and self.optional and ('columns' not in self.config or not isinstance(self.config['columns'], list)):
             self.error_handler.throw(
                 f"source `{self.name}` is optional and missing, but does not specify `columns` (which are required in this case)"
@@ -115,9 +119,7 @@ class FileSource(Source):
             raise
 
         #
-        if 'columns' in self.config:
-            self.error_handler.assert_key_type_is(self.config, 'columns', list)
-            self.columns_list = self.config.get('columns')
+        self.columns_list = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
 
         #
         if "://" in self.file:
@@ -282,11 +284,14 @@ class FtpSource(Source):
         :return:
         """
         super().compile()
+        self.connection = self.error_handler.assert_get_key(self.config, 'connection', dtype=str)
 
-        self.error_handler.assert_key_type_is(self.config, "connection", str)
-        self.connection = self.config['connection']
+        # There's probably a network builtin to simplify this.
+        user, passwd, host, port, self.file = re.match(
+            r"ftp://(.*?):?(.*?)@?([^:/]*):?(.*?)/(.*)",
+            self.connection
+        ).groups()
 
-        user, passwd, host, port, self.file = re.match(r"ftp://(.*?):?(.*?)@?([^:/]*):?(.*?)/(.*)", self.connection).groups()
         try:
             self.ftp = ftplib.FTP(host)
 
@@ -352,13 +357,10 @@ class SqlSource(Source):
         :return:
         """
         super().compile()
+        self.connection = self.error_handler.assert_get_key(self.config, 'connection', dtype=str)
+        self.query = self.error_handler.assert_get_key(self.config, 'query', dtype=str)
 
-        self.error_handler.assert_key_type_is(self.config, "connection", str)
-        self.connection = self.config['connection']
-
-        self.error_handler.assert_key_type_is(self.config, "query", str)
-        self.query = self.config['query']
-
+        # JK: I turned this off in the Dask refactor. Should it be turned back on?
         # # replace columns from outer query with count(*), to measure the size of the datasource (and determine is_chunked):
         # count_query = re.sub(
         #     r"(^select\s+)(.*?)(\s+from.*$)",
