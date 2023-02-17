@@ -221,8 +221,6 @@ class GroupByOperation(Operation):
         result.columns = self.group_by_columns + [self.GROUP_SIZE_COL]
 
         for new_col_name, func in self.create_columns_dict.items():
-            if new_col_name == "__line__":
-                continue
 
             _pieces = re.findall(
                 "([A-Za-z0-9_]*)\(([A-Za-z0-9_]*)?,?(.*)?\)",
