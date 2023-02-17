@@ -114,34 +114,36 @@ class Earthmover:
 
         ### Build all nodes into a graph
         # sources:
-        self.error_handler.assert_key_exists_and_type_is(self.user_configs, 'sources', dict)
-        for name, config in self.user_configs['sources'].items():
+        _sources = self.error_handler.assert_get_key(self.user_configs, 'sources', dtype=dict)
+        for name, config in _sources.items():
 
             node = Source(name, config, earthmover=self)
             self.graph.add_node(f"$sources.{name}", data=node)
 
         # transformations:
-        if 'transformations' in self.user_configs:
-            self.error_handler.assert_key_type_is(self.user_configs, 'transformations', dict)
+        _transformations = self.error_handler.assert_get_key(
+            self.user_configs, 'transformations',
+            dtype=dict, required=False, default={}
+        )
 
-            for name, config in self.user_configs['transformations'].items():
+        for name, config in self.user_configs['transformations'].items():
 
-                node = Transformation(name, config, earthmover=self)
-                self.graph.add_node(f"$transformations.{name}", data=node)
+            node = Transformation(name, config, earthmover=self)
+            self.graph.add_node(f"$transformations.{name}", data=node)
 
-                for source in node.sources:
-                    if not self.graph.ref(source):
-                        self.error_handler.throw(
-                            f"invalid source {source}"
-                        )
-                        raise
+            for source in node.sources:
+                if not self.graph.ref(source):
+                    self.error_handler.throw(
+                        f"invalid source {source}"
+                    )
+                    raise
 
-                    if source != f"$transformations.{name}":
-                        self.graph.add_edge(source, f"$transformations.{name}")
+                if source != f"$transformations.{name}":
+                    self.graph.add_edge(source, f"$transformations.{name}")
 
         # destinations:
-        self.error_handler.assert_key_exists_and_type_is(self.user_configs, 'destinations', dict)
-        for name, config in self.user_configs['destinations'].items():
+        _destinations = self.error_handler.assert_get_key(self.user_configs, 'destinations', dtype=dict)
+        for name, config in _destinations.items():
 
             node = Destination(name, config, earthmover=self)
             self.graph.add_node(f"$destinations.{name}", data=node)
