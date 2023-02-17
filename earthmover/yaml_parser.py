@@ -30,9 +30,11 @@ class SafeLineEnvVarLoader(SafeLoader):
         mapping = super().construct_mapping(node, deep=deep)
 
         #
-        for k, v in mapping.items():
+        for k, v in mapping.copy().items():
+            del mapping[k]
             if isinstance(v, str):
-                mapping[k] = os.path.expandvars(v)
+                mapping[os.path.expandvars(k)] = os.path.expandvars(v)
+            else: mapping[os.path.expandvars(k)] = v
 
         return mapping
 
