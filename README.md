@@ -795,6 +795,16 @@ Typically `earthmover` is used when the same (or simlar) data transformations mu
 
 # Changelog
 
+### v0.0.6
+<details>
+<summary>Released 2023-02-17</summary>
+
+* feature: pass `__row_data__` dict into Jinja templates for easier dynamic column referencing
+* bugfix: parameter / env var interpolation into YAML keys, not just values
+* refactor error handling key assertion methods
+* refactor YAML loader line number context handling
+</details>
+
 ### v0.0.5
 <details>
 <summary>Released 2022-12-16</summary>
