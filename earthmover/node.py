@@ -5,6 +5,7 @@ import pandas as pd
 
 from typing import List
 
+from earthmover.yaml_parser import YamlMapping
 from earthmover import util
 
 from typing import TYPE_CHECKING
@@ -18,7 +19,7 @@ class Node:
     """
     CHUNKSIZE = 1024 * 1024 * 100  # 100 MB
 
-    def __init__(self, name: str, config: dict, *, earthmover: 'Earthmover'):
+    def __init__(self, name: str, config: YamlMapping, *, earthmover: 'Earthmover'):
         self.name = name
         self.config = config
         self.type = None
@@ -33,7 +34,7 @@ class Node:
         self.num_cols = None
 
         self.expectations = None
-        self.allowed_configs = {'__line__', 'debug', 'expect'}
+        self.allowed_configs = {'debug', 'expect'}
         self.debug = self.config.get('debug', False)
 
 
@@ -44,7 +45,7 @@ class Node:
         :return:
         """
         self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config['__line__'], node=self, operation=None
+            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
         )
 
         # Verify all configs provided by the user are specified for the node.
@@ -68,7 +69,7 @@ class Node:
         :return:
         """
         self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config["__line__"], node=self, operation=None
+            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
         )
         pass
 

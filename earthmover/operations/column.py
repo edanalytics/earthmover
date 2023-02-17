@@ -38,9 +38,6 @@ class AddColumnsOperation(Operation):
 
         for col, val in self.columns_dict.items():
 
-            if col == "__line__":
-                continue
-
             # Apply the value as a static string if not obviously Jinja.
             if not util.contains_jinja(val):
                 self.data[col] = val
@@ -97,9 +94,6 @@ class ModifyColumnsOperation(Operation):
         super().execute()
 
         for col, val in self.columns_dict.items():
-
-            if col == "__line__":
-                continue
 
             # Apply the value as a static string if not obviously Jinja.
             if not util.contains_jinja(val):
@@ -162,8 +156,6 @@ class DuplicateColumnsOperation(Operation):
         _columns = set(self.data.columns)
 
         for old_col, new_col in self.columns_dict.items():
-            if old_col == "__line__":
-                continue
 
             if new_col in _columns:
                 self.logger.warning(
@@ -187,9 +179,6 @@ class DuplicateColumnsOperation(Operation):
         super().execute()
 
         for old_col, new_col in self.columns_dict.items():
-
-            if old_col=="__line__":
-                continue
 
             self.data[new_col] = self.data[old_col]
 
@@ -226,8 +215,6 @@ class RenameColumnsOperation(Operation):
         _columns = set(self.data.columns)
 
         for old_col, new_col in self.columns_dict.items():
-            if old_col == "__line__":
-                continue
 
             if new_col in _columns:
                 self.logger.warning(
