@@ -22,8 +22,8 @@ class Destination(Node):
 
         self.mode = None  # Documents which class was chosen.
 
-        self.error_handler.assert_key_exists_and_type_is(self.config, "source", str)
-        self.source = self.config['source']
+        # Should this be moved to compile?
+        self.source = self.error_handler.assert_get_key(self.config, 'source', dtype=str)
 
 
     @abc.abstractmethod
@@ -76,9 +76,7 @@ class FileDestination(Destination):
         :return:
         """
         super().compile()
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, "template", str)
-        self.template = self.config['template']
+        self.template = self.error_handler.assert_get_key(self.config, 'template', dtype=str)
 
         #config->extension is optional: if not present, we assume the destination name has an extension
         extension = ""

@@ -1,3 +1,5 @@
+from typing import Optional
+
 class ErrorContext:
     """
 
@@ -75,22 +77,38 @@ class ErrorHandler:
     def __init__(self, file=None, line=None, node=None, operation=None):
         self.ctx = ErrorContext(file=file, line=line, node=node, operation=operation)
 
-    def assert_key_exists(self, obj, key):
-        if key not in obj.keys():
+    def assert_get_key(self, obj: dict, key: str,
+        dtype: Optional[type] = None,
+        required: bool = True,
+        default: Optional[object] = None
+    ) -> Optional[object]:
+        """
+
+        :param obj:
+        :param key:
+        :param dtype:
+        :param required:
+        :param default:
+        :return:
+        """
+        value = obj.get(key)
+
+        if value is None:
+            if required:
+                raise Exception(
+                    f"{self.ctx} must define `{key}`"
+                )
+            else:
+                return default
+
+        if dtype and not isinstance(value, dtype):
             raise Exception(
-                self.ctx + f"must define `{key}`"
+                f"{self.ctx} `{key}` is defined, but wrong type (should be {dtype}, is {type(value)})"
             )
 
-    def assert_key_type_is(self, obj, key, desired_type):
-        if not isinstance(obj[key], desired_type):
-            _key_type = type(obj[key])
-            raise Exception(
-                self.ctx + f"`{key}` is defined, but wrong type (should be {desired_type}, is {_key_type})"
-            )
+        return value
 
-    def assert_key_exists_and_type_is(self, obj, key, desired_type):
-        self.assert_key_exists(obj, key)
-        self.assert_key_type_is(obj, key, desired_type)
-
-    def throw(self, message):
-        raise Exception(self.ctx + message)
+    def throw(self, message: str):
+        raise Exception(
+            f"{self.ctx} {message})"
+        )

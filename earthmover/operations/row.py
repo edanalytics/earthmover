@@ -10,7 +10,7 @@ class DistinctRowsOperation(Operation):
 
         self.allowed_configs.update(['column', 'columns'])
 
-        self.columns_list = []
+        self.columns_list = None
 
 
     def compile(self):
@@ -20,17 +20,16 @@ class DistinctRowsOperation(Operation):
         """
         super().compile()
 
-        #
-        _column = self.config.get('column')
-        _columns = self.config.get('columns')
+        # Only 'column' or 'columns' can be populated
+        _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
+        _columns = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
 
         if _column:
-            self.error_handler.assert_key_type_is(self.config, 'column', str)
             self.columns_list = [_column]
-
         elif _columns:
-            self.error_handler.assert_key_type_is(self.config, 'columns', list)
             self.columns_list = _columns
+        else:
+            self.columns_list = []
 
 
     def verify(self):
@@ -84,12 +83,8 @@ class FilterRowsOperation(Operation):
         """
         super().compile()
 
-        self.error_handler.assert_key_exists_and_type_is(self.config, "query", str)
-        self.query = self.config['query']
-
-        #
-        self.error_handler.assert_key_exists_and_type_is(self.config, "behavior", str)
-        self.behavior = self.config['behavior']
+        self.query    = self.error_handler.assert_get_key(self.config, 'query', dtype=str)
+        self.behavior = self.error_handler.assert_get_key(self.config, 'behavior', dtype=str)
 
         if self.behavior not in self.BEHAVIORS:
             self.error_handler.throw(

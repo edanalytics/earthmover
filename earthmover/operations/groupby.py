@@ -26,12 +26,8 @@ class GroupByWithCountOperation(Operation):
         :return:
         """
         super().compile()
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'group_by_columns', list)
-        self.group_by_columns = self.config['group_by_columns']
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'count_column', str)
-        self.count_column = self.config['count_column']
+        self.group_by_columns = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
+        self.count_column     = self.error_handler.assert_get_key(self.config, 'count_column', dtype=str)
 
 
     def verify(self):
@@ -100,18 +96,13 @@ class GroupByWithAggOperation(Operation):
         :return:
         """
         super().compile()
+        self.group_by_columns = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
+        self.agg_column       = self.error_handler.assert_get_key(self.config, 'agg_column', dtype=str)
 
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'group_by_columns', list)
-        self.group_by_columns = self.config['group_by_columns']
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'agg_column', str)
-        self.agg_column = self.config['agg_column']
-
-        if 'separator' in self.config:
-            self.error_handler.assert_key_exists_and_type_is(self.config, 'separator', str)
-            self.separator = self.config['separator']
-        else:
-            self.separator = self.DEFAULT_AGG_SEP
+        self.separator = self.error_handler.assert_get_key(
+            self.config, 'separator', dtype=str,
+            required=False, default=self.DEFAULT_AGG_SEP
+        )
 
     def verify(self):
         """
@@ -183,12 +174,8 @@ class GroupByOperation(Operation):
         :return:
         """
         super().compile()
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, 'group_by_columns', list)
-        self.group_by_columns = self.config['group_by_columns']
-
-        self.error_handler.assert_key_exists_and_type_is(self.config, "create_columns", dict)
-        self.create_columns_dict = self.config['create_columns']
+        self.group_by_columns    = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
+        self.create_columns_dict = self.error_handler.assert_get_key(self.config, 'create_columns', dtype=dict)
 
 
     def verify(self):

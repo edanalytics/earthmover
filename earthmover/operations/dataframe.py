@@ -41,48 +41,24 @@ class JoinOperation(Operation):
         super().compile()
 
         # Check left keys
-        if 'left_key' not in self.config and 'left_keys' not in self.config:
+        _key  = self.error_handler.assert_get_key(self.config, 'left_key', dtype=str, required=False)
+        _keys = self.error_handler.assert_get_key(self.config, 'left_keys', dtype=list, required=False)
+
+        if bool(_key) == bool(_keys):  # Fail if both or neither are populated.
             self.error_handler.throw("must define `left_key` or `left_keys`")
             raise
 
-        _key = self.config.get('left_key')
-        _keys = self.config.get('left_keys')
-
-        if _key:
-            self.error_handler.assert_key_type_is(self.config, 'left_key', str)
-            self.left_keys = [_key]
-
-        elif _keys:
-            self.error_handler.assert_key_type_is(self.config, 'left_keys', list)
-            self.left_keys = _keys
-        else:
-            self.error_handler.throw(
-                "`left_key(s)` incorrectly specified (should be string or list of strings)"
-            )
-            raise
-
+        self.left_keys = _keys or [_key]  # `[None]` evaluates to True
 
         # Check right keys
-        if 'right_key' not in self.config and 'right_keys' not in self.config:
+        _key  = self.error_handler.assert_get_key(self.config, 'right_key', dtype=str, required=False)
+        _keys = self.error_handler.assert_get_key(self.config, 'right_keys', dtype=list, required=False)
+
+        if bool(_key) == bool(_keys):  # Fail if both or neither are populated.
             self.error_handler.throw("must define `right_key` or `right_keys`")
             raise
 
-        _key = self.config.get('right_key')
-        _keys = self.config.get('right_keys')
-
-        if _key:
-            self.error_handler.assert_key_type_is(self.config, 'right_key', str)
-            self.right_keys = [_key]
-
-        elif _keys:
-            self.error_handler.assert_key_type_is(self.config, 'right_keys', list)
-            self.right_keys = _keys
-        else:
-            self.error_handler.throw(
-                "`right_key(s)` incorrectly specified (should be string or list of strings)"
-            )
-            raise
-
+        self.right_keys = _keys or [_key]  # `[None]` evaluates to True
 
         # Check join type
         self.join_type = self.config.get('join_type')
@@ -96,7 +72,6 @@ class JoinOperation(Operation):
             )
             raise
 
-
         # Verify the correct number of datasets has been provided.
         if len(self.source_list) != 2:
             self.error_handler.throw(
@@ -104,29 +79,12 @@ class JoinOperation(Operation):
             )
             raise
 
-
-        # Check left columns
-        _keep_cols = self.config.get('left_keep_columns')
-        _drop_cols = self.config.get('left_drop_columns')
-
-        if _keep_cols:
-            self.error_handler.assert_key_type_is(self.config, 'left_keep_columns', list)
-            self.left_keep_cols = _keep_cols
-        elif _drop_cols:
-            self.error_handler.assert_key_type_is(self.config, 'left_drop_columns', list)
-            self.left_drop_cols = _drop_cols
-
-
-        # Check right columns
-        _keep_cols = self.config.get('right_keep_columns')
-        _drop_cols = self.config.get('right_drop_columns')
-
-        if _keep_cols:
-            self.error_handler.assert_key_type_is(self.config, 'right_keep_columns', list)
-            self.right_keep_cols = _keep_cols
-        elif _drop_cols:
-            self.error_handler.assert_key_type_is(self.config, 'right_drop_columns', list)
-            self.right_drop_cols = _drop_cols
+        # Collect columns
+        #   - There is a "if keep - elif drop" block in verify, so doesn't matter if both are populated.
+        self.left_keep_cols  = self.error_handler.assert_get_key(self.config, 'left_keep_columns', dtype=list, required=False)
+        self.left_drop_cols  = self.error_handler.assert_get_key(self.config, 'left_drop_columns', dtype=list, required=False)
+        self.right_keep_cols = self.error_handler.assert_get_key(self.config, 'right_keep_columns', dtype=list, required=False)
+        self.right_drop_cols = self.error_handler.assert_get_key(self.config, 'right_drop_columns', dtype=list, required=False)
 
 
     def verify(self):
