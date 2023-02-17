@@ -138,7 +138,8 @@ class FileDestination(Destination):
                 fp.write(self.header + "\n")
 
             for row_data in self.data.itertuples(index=False):
-                _data_tuple = row_data._asdict().items()
+                _data_tuple = dict(row_data._asdict().items())
+                _data_tuple["__row_data__"] = row_data._asdict()
 
                 try:
                     json_string = self.jinja_template.render(_data_tuple)
