@@ -126,7 +126,7 @@ class Earthmover:
             dtype=dict, required=False, default={}
         )
 
-        for name, config in self.user_configs['transformations'].items():
+        for name, config in _transformations.items():
 
             node = Transformation(name, config, earthmover=self)
             self.graph.add_node(f"$transformations.{name}", data=node)
