@@ -500,7 +500,9 @@ Reduce the number of rows by grouping, and add columns with values calculated ov
 Valid aggregation functions are
 * `count()` or `size()` - the number of rows in each group
 * `min(column)` - the minumum (numeric) value in `column` for each group
+* `str_min(column)` - the minumum (string) value in `column` for each group
 * `max(column)` - the maximum (numeric) value in `column` for each group
+* `str_max(column)` - the maximum (string) value in `column` for each group
 * `sum(column)` - the sum of (numeric) values in `column` for each group
 * `mean(column)` or `avg(column)` - the mean of (numeric) values in `column` for each group
 * `std(column)` - the standard deviation of (numeric) values in `column` for each group
@@ -508,6 +510,16 @@ Valid aggregation functions are
 * `agg(column,separator)` - the values of `column` in each group are concatenated, delimited by `separator` (default `separator` is none)
 
 Numeric aggregation functions will fail with errors if used on non-numeric column values.
+
+Note the difference between `min()`/`max()` and `str_min()`/`str_max()`: given a list like `10, 11, 98, 99, 100, 101`, return values are
+
+| ----------- | ------ |
+|    function | return |
+|     `min()` |     10 |
+| `str_min()` |     10 |
+|     `max()` |    101 |
+| `str_max()` |     99 |
+
 </details>
 
 <!--
