@@ -513,8 +513,8 @@ Numeric aggregation functions will fail with errors if used on non-numeric colum
 
 Note the difference between `min()`/`max()` and `str_min()`/`str_max()`: given a list like `10, 11, 98, 99, 100, 101`, return values are
 
-| ----------- | ------ |
 |    function | return |
+| ----------- | ------ |
 |     `min()` |     10 |
 | `str_min()` |     10 |
 |     `max()` |    101 |
