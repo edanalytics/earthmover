@@ -120,6 +120,7 @@ class Node:
                     util.render_jinja_template, axis=1,
                     meta=pd.Series(dtype='str', name=expectation_result_col),
                     template=template,
+                    template_str="{{" + expectation + "}}",
                     error_handler = self.error_handler
                 )
 

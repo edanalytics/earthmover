@@ -151,7 +151,7 @@ class Earthmover:
                 raise
             
             try:
-                self.config_yaml = self.config_template.render().replace(": >\n", ": ''")
+                self.config_yaml = self.config_template.render()
             except Exception as err:
                 lineno = util.jinja2_template_error_lineno()
                 if lineno: lineno = ", near line " + str(lineno - self.macros_lines - 1)
