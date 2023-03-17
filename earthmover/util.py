@@ -1,6 +1,7 @@
 import jinja2
 
 from typing import Optional
+from sys import exc_info
 
 from earthmover.error_handler import ErrorHandler
 
@@ -63,7 +64,7 @@ def contains_jinja(string: str) -> bool:
         return False
 
 
-def render_jinja_template(row, template: jinja2.Template, *, error_handler: ErrorHandler) -> str:
+def render_jinja_template(row, template: jinja2.Template, template_str: str, *, error_handler: ErrorHandler) -> str:
     """
 
     :param row:
@@ -75,7 +76,23 @@ def render_jinja_template(row, template: jinja2.Template, *, error_handler: Erro
         return template.render(row)
 
     except Exception as err:
+        error_handler.ctx.remove('line')
+        variables = "`, `".join(x for x in dict(row).keys())
+        if len(dict(row).keys()) > 0: variables = "\n(available variables are `" + variables + "`"
         error_handler.throw(
-            f"Error rendering Jinja template: ({err})"
+            f"Error rendering Jinja template: ({err}):\n===> {template_str}{variables}" 
         )
         raise
+
+
+def jinja2_template_error_lineno():
+    type, value, tb = exc_info()
+    if not issubclass(type, jinja2.TemplateError):
+        return None
+    if hasattr(value, 'lineno'):
+        # in case of TemplateSyntaxError
+        return value.lineno
+    while tb:
+        if tb.tb_frame.f_code.co_filename == '<template>':
+            return tb.tb_lineno
+        tb = tb.tb_next

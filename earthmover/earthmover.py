@@ -5,6 +5,7 @@ import networkx as nx
 import os
 import time
 import yaml
+import jinja2
 import pandas as pd
 
 from typing import Optional
@@ -40,8 +41,13 @@ class Earthmover:
         self.do_generate = True
         self.force = force
         self.skip_hashing = skip_hashing
+        self.macros = ""
+        self.macros_lines = 0
 
         self.config_file = config_file
+        self.config_template_string = ""
+        self.config_template = None
+        self.config_yaml = ""
         self.error_handler = ErrorHandler(file=self.config_file)
 
         # Parse the user-provided config file and retrieve state-configs.
@@ -88,23 +94,93 @@ class Earthmover:
         :param: params
         :return:
         """
-        _env_backup = os.environ.copy()
-
-        # Load & parse config YAML (using modified environment vars)
-        os.environ.update(self.params)
-
+        
+        # pass 1: grab config.macros (if any) so Jinja in the YAML can be
+        #   rendered with macros
         with open(self.config_file, "r") as stream:
+            # cannot just yaml.load() here, since Jinja in the YAML may make it invalid...
+            # instead, pull out just the `config` section, which must not contain Jinja
+            # (except for `macros`) - then we yaml.load() just the config section to grab
+            # any `macros``
+            lines = stream.readlines()
+            start = -1
+            end = -1
+            macros = ""
+            for i in range(0,len(lines)):
+                if lines[i].strip()=="config:":
+                    start = i
+                    continue
+                if start>=0 and (lines[i].strip()=="" or (lines[i][0:2]!="  " and lines[i][0]!="\t")):
+                    end = i
+                    break
+            if start >=0 and end >= 0:
+                configs_pass1 = yaml.safe_load("".join(lines[start:end]))
+                self.macros = configs_pass1.get("config",{}).get("macros", "")
+            self.macros_lines = self.macros.count("\n")
+
+        # pass 2:
+        #   (a) load template YAML
+        #   (b) replace envvars
+        #   (c) render Jinja in YAML template
+        #   (d) load YAML to config Dict
+        with open(self.config_file, "r") as stream:
+            
+            # (a)
+            self.config_template_string = stream.read()
+
+            # (b)
+            _env_backup = os.environ.copy() # backup envvars
+            os.environ.update(self.params) # override with CLI params
+            for k, v in configs_pass1.get("config",{}).get("parameter_defaults", {}).items():
+                if not isinstance(v, str): self.error_handler.throw(f"YAML config.parameter_defaults.{k} must be a string")
+                os.environ.setdefault(k, v) # set defaults, if any
+            self.config_template_string = os.path.expandvars(self.config_template_string)
+            os.environ = _env_backup # restore envvars
+            
+            # (c)
             try:
-                configs = yaml.load(stream, Loader=SafeLineEnvVarLoader)
+                self.config_template = jinja2.Environment(
+                        loader=jinja2.FileSystemLoader(os.path.dirname('./'))
+                    ).from_string(self.macros + self.config_template_string)
+            except Exception as err:
+                lineno = util.jinja2_template_error_lineno()
+                if lineno: lineno = ", near line " + str(lineno - self.macros_lines - 1)
+                self.error_handler.throw(
+                    f"Jinja syntax error in YAML configuration template{lineno} ({err})"
+                )
+                raise
+            
+            try:
+                self.config_yaml = self.config_template.render().replace(": >\n", ": ''")
+            except Exception as err:
+                lineno = util.jinja2_template_error_lineno()
+                if lineno: lineno = ", near line " + str(lineno - self.macros_lines - 1)
+                self.error_handler.throw(
+                    f"Jinja error in YAML configuration template{lineno} ({err})"
+                )
+                raise
+
+            # (d)
+            try:
+                configs_pass2 = yaml.load(self.config_yaml, Loader=SafeLineEnvVarLoader)
+                configs_pass2.get("config",{}).update({"macros":macros})
             except yaml.YAMLError as err:
-                raise Exception(self.error_handler.ctx + f"YAML could not be parsed: {err}")
+                linear_err = " ".join([line.replace("^", "").strip() for line in str(err).split("\n")])
+                self.error_handler.throw(
+                    f"YAML could not be parsed: {linear_err}"
+                )
+                raise
 
-        # Return environment to original backup
-        os.environ = _env_backup
+        self.error_handler.update_context(self.config_template, self.macros_lines)
+        
+        with open("./earthmover_yaml.yml", "w") as f:
+            f.write(self.config_yaml)
+        with open("./earthmover_template.yml", "w") as f:
+            f.write(self.config_template_string)
 
-        return configs
+        return configs_pass2
 
-
+    
     def build_graph(self):
         """
 

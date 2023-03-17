@@ -9,9 +9,16 @@ class ErrorContext:
         self.line = None
         self.node = None
         self.operation = None
+        self.config_template = ""
+        self.macros_lines = 0
 
         self.update(file=file, line=line, node=node, operation=operation)
+    
+    def update_config_template(self, config_template):
+        self.config_template = config_template
 
+    def update_macros_lines(self, macros_lines):
+        self.macros_lines = macros_lines
 
     def update(self, file=None, line=None, node=None, operation=None):
         self.file = file
@@ -42,7 +49,7 @@ class ErrorContext:
             if arg == 'operation':
                 self.operation = None
 
-
+    
     def __repr__(self) -> str:
         """
         Example error messages:
@@ -74,8 +81,16 @@ class ErrorContext:
 
 
 class ErrorHandler:
+    
+    config_template = None
+    macros_lines = 0
+
     def __init__(self, file=None, line=None, node=None, operation=None):
         self.ctx = ErrorContext(file=file, line=line, node=node, operation=operation)
+
+    def update_context(self, config_template, macros_lines):
+        self.ctx.update_config_template(config_template)
+        self.ctx.update_macros_lines(macros_lines)
 
     def assert_get_key(self, obj: dict, key: str,
         dtype: Optional[type] = None,
