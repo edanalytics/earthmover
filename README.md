@@ -624,7 +624,7 @@ The following example
 1. unions the sources together
 1. if an environment variable or parameter `DO_FILTERING=True` is passed, filters out certain rows
 
-```yaml
+```jinja
 config:
   show_graph: True
   parameter_defaults:
