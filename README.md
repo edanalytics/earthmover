@@ -38,7 +38,7 @@ pip install earthmover
 Running the tool requires
 1. [source data](#source-data), such as CSV or TSV files or a relational database table
 1. Jinja [templates](#templates) defining the desired output format (JSON, XML, etc.)
-1. a [YAML configuration](#yaml-configuration) file specifying the source data, doing any necessary transformations (joins, value mappings, etc.), and destinations (Ed-Fi API resources) to write to
+1. a [YAML configuration](#yaml-configuration) file specifying the source data, doing any necessary transformations (joins, value mappings, etc.), and destinations (output files) to write to
 
 Item 1 is usually your own data. Items 2 & 3 together may be shared as a reusable "bundle" (zip file); see [available bundles](#bundles) for more information and a list of published bundles.
 
@@ -56,16 +56,18 @@ There are few limitations on the source data besides its format (CSV or TSV). Ge
 ## Templates
 After transforming the source data, this tool converts it to a text-based file like JSON(L) or XML based on a template using the Jinja templating language.
 
-Briefly, Jinja interpolates variables in double curly braces `{{...}}` to actual values, as well as providing other convenience functionality, such as string manipulation functions, logic blocks like if-tests, looping functionality, and much more. See the examples in the `examples/sample_templates/` folder, or check out [the official Jinja documentation](https://jinja.palletsprojects.com/en/3.1.x/).
+Briefly, Jinja interpolates variables in double curly braces `{{...}}` to actual values, as well as providing other convenience functionality, such as string manipulation functions, logic blocks like if-tests, looping functionality, and much more. See the examples in `example_projects/`, or check out [the official Jinja documentation](https://jinja.palletsprojects.com/en/3.1.x/).
 
-Note that templates may [include](https://jinja.palletsprojects.com/en/3.1.x/templates/#include) other templates, specified relative to the path from which `earthmover` is run - see `examples/sample_configs/06_subtemplates_earthmover.yaml` and `examples/sample_templates/mood.jsont` for an example.
+Note that templates may [include](https://jinja.palletsprojects.com/en/3.1.x/templates/#include) other templates, specified relative to the path from which `earthmover` is run - see `example_projects/06_subtemplates/earthmover.yaml` and `example_projects/06_subtemplates/mood.jsont` for an example.
 
 
 ## YAML configuration
 All the instructions for this tool &mdash; where to find the source data, what transformations to apply to it, and how and where to save the output &mdash; are specified in a single YAML configuration file. Example YAML configuration files and projects can be found in `example_projects/`.
 
+The YAML configuration may also contain [Jinja](https://jinja.palletsprojects.com/en/3.1.x/) and [environment variable references](#environment-variable-references).
+
 The general structure of the YAML involves four main sections:
-1. [`config`](#config), which specifies options like the memory limit and logging level
+1. [`config`](#config), which specifies options like the logging level and parameter defaults
 1. [`definitions`](#definitions) is an *optional* way to specify reusable values and blocks
 1. [`sources`](#sources), where each source file is listed with details like the number of header rows
 1. [`transformations`](#transformations), where source data can be transformed in various ways
@@ -88,6 +90,9 @@ config:
     {% macro example_macro(value) -%}
         prefixed-int-{{value|int}}
     {%- endmacro %}
+  parameter_defaults:
+    SOURCE_DIR: ./sources/
+
 ```
 * (optional) `output_dir` determines where generated JSONL is stored. The default is `./`.
 * (optional) `state_file` determines the file which maintains [tool state](#state). The default is `~/.earthmover.csv` on *nix systems, `C:/Users/USER/.earthmover.csv` on Windows systems.
@@ -99,6 +104,7 @@ config:
 * (optional) Specify whether to show a stacktrace for runtime errors. The default is `False`.
 * (optional) Specify whether or not `show_graph` (default is `False`), which requires [PyGraphViz](https://pygraphviz.github.io/) to be installed and creates `graph.png` and `graph.svg` which are visual depictions of the dependency graph.
 * (optional) Specify Jinja `macros` which will be available within any Jinja template content throughout the project. (This can slow performance.)
+* (optional) Specify `parameter_defaults` which will be used if the user fails to specify a particular [parameter](#command-line-parameters) or [environment variable](#environment-variable-references).
 
 
 ### **`definitions`**
@@ -115,7 +121,7 @@ definitions:
       left_key: student_id
       right_key: student_id
   ...
-  date_to_year_jinja: &date_to_year "{{ val[-4:] }}"
+  date_to_year_jinja: &date_to_year "{%raw%}{{ val[-4:] }}{%endraw%}"
 ...
 
 transformations:
@@ -309,11 +315,11 @@ Adds columns with specified values.
         source: $transformations.courses
         columns:
           - new_column_1: value_1
-          - new_column_2: "{% if True %}Jinja works here{% endif %}"
-          - new_column_3: "Reference values from {{AnotherColumn}} in this new column"
-          - new_column_4: "{% if col1>col2 %}{{col1|float + col2|float}}{% else %}{{col1|float - col2|float}}{% endif %}"
+          - new_column_2: "{%raw%}{% if True %}Jinja works here{% endif %}{%endraw%}"
+          - new_column_3: "{%raw%}Reference values from {{AnotherColumn}} in this new column{%endraw%}"
+          - new_column_4: "{%raw%}{% if col1>col2 %}{{col1|float + col2|float}}{% else %}{{col1|float - col2|float}}{% endif %}{%endraw%}"
 ```
-Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers to another column's value. Any [Jinja filters](https://jinja.palletsprojects.com/en/3.1.x/templates/#builtin-filters) and [math operations](https://jinja.palletsprojects.com/en/3.0.x/templates/#math) should work. Reference the current row number with `{{__row_number__}}` or a dictionary containing the row data with `{{__row_data__['column_name']}}`.
+Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers to another column's value. Any [Jinja filters](https://jinja.palletsprojects.com/en/3.1.x/templates/#builtin-filters) and [math operations](https://jinja.palletsprojects.com/en/3.0.x/templates/#math) should work. Reference the current row number with `{{__row_number__}}` or a dictionary containing the row data with `{{__row_data__['column_name']}}`. *You must wrap Jinja expressions* in `{%raw%}...{%endraw%}` to avoid them being parsed at YAML load time.
 </details>
 
 
@@ -399,11 +405,11 @@ Modify the values in the specified columns.
       - operation: modify_columns
         source: $transformations.school_directory
         columns:
-          state_abbr: "XXX{{value|reverse}}XXX"
-          school_year: "20{{value[-2:]}}"
-          zipcode: "{{ value|int ** 2 }}"
+          state_abbr: "{%raw%}XXX{{value|reverse}}XXX{%endraw%}"
+          school_year: "{%raw%}20{{value[-2:]}}{%endraw%}"
+          zipcode: "{%raw%}{{ value|int ** 2 }}{%endraw%}"
 ```
-Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers to another column's value. Any [Jinja filters](https://jinja.palletsprojects.com/en/3.1.x/templates/#builtin-filters) and [math operations](https://jinja.palletsprojects.com/en/3.0.x/templates/#math) should work. Reference the current row number with `{{__row_number__}}` or a dictionary containing the row data with `{{__row_data__['column_name']}}`.
+Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers to another column's value. Any [Jinja filters](https://jinja.palletsprojects.com/en/3.1.x/templates/#builtin-filters) and [math operations](https://jinja.palletsprojects.com/en/3.0.x/templates/#math) should work. Reference the current row number with `{{__row_number__}}` or a dictionary containing the row data with `{{__row_data__['column_name']}}`. *You must wrap Jinja expressions* in `{%raw%}...{%endraw%}` to avoid them being parsed at YAML load time.
 </details>
 
 
@@ -609,6 +615,57 @@ earthmover --version
 # Features
 This tool includes several special features:
 
+## Jinja in YAML configuration
+You may use Jinja in the YAML configuration, which will be parsed at load time. For example:
+```yaml
+config:
+  show_graph: True
+  parameter_defaults:
+    DO_FILTERING: "False"
+
+sources:
+{% for i in range(1,10) %}
+  source{{i}}:
+    file: ./sources/source{{i}}.csv
+    header_rows: 1
+{% endfor %}
+
+transformations:
+{% for i in range(1,10) %}
+  source{{i}}:
+    operations:
+      - operation: add_columns
+        source: $sources.source{{i}}
+        columns:
+          - source_file: {{i}}
+{% endfor %}
+  stacked:
+    operations:
+      - operation: union
+        sources:
+{% for i in range(1,10) %}
+          - $transformations.source{{i}}
+{% endfor %}
+{% if "${DO_FILTERING}"=="True" %}
+      - operations: filter_rows
+        source: $transformations.stacked
+        query: school_year < 2020
+        behavior: exclude
+{% endif %}
+
+destinations:
+  final:
+    source: $transformations.stacked
+    template: ./json_templates/final.jsont
+    extension: jsonl
+    linearize: True
+```
+This example
+1. loads 9 source files
+1. adds a column indicating the source file each row came from
+1. unions the sources together
+1. if an environment variable or parameter `DO_FILTERING=True` is passed, filters out certain rows
+
 ## Selectors
 Run only portions of the [DAG](#dag) by using a selector:
 ```bash
@@ -680,7 +737,7 @@ All data processing is done using [Pandas Dataframes](https://pandas.pydata.org/
 # Performance & Limitations
 Tool performance depends on a variety of factors including source file size and/or database performance, the system's storage performance (HDD vs. SSD), memory, and transformation complexity. But some effort has been made to engineer this tool for high throughput and to work in memory- and compute-constrained environments.
 
-Smaller source data (which all fits into memory) processes very quickly. Larger chunked sources are necessarily slower. We have tested with sources files of 3.3GB, 100M rows (synthetic attendance data): creating 100M lines of JSONL (50GB) takes around 45 minutes on a modern laptop.
+Smaller source data (which all fits into memory) processes very quickly. Larger chunked sources are necessarily slower. We have tested with sources files of 3.3GB, 100M rows (synthetic attendance data): creating 100M lines of JSONL (30GB) takes around 50 minutes on a modern laptop.
 
 The [state feature](#state) adds some overhead, as hashes of input data and JSON payloads must be computed and stored, but this can be disabled if desired.
 
@@ -788,7 +845,7 @@ Remember that [code is poetry](https://medium.com/@launchyard/code-is-poetry-3d1
 ## Debugging practices
 When developing your transformations, it can be helpful to
 * specify `config` &raquo; `log_level: DEBUG` and `transformation` &raquo; `operation` &raquo; `debug: True` to verify the columns and shape of your data after each `operation`
-* turn on `config` &raquo; `show_stacktrace: True` to get more detailed and helpful error messages
+* turn on `config` &raquo; `show_stacktrace: True` to get more detailed error messages
 * avoid name-sharing for a `source`, a `transformation`, and/or a `destination` - this is allowed but can make debugging confusing
 * [install pygraphviz](https://pygraphviz.github.io/documentation/stable/install.html) and turn on `config` &raquo; `show_graph: True`, then visually inspect your transformations in `graph.png` for structural errors
 * use a linter/validator to validate the formatting of your generated data
@@ -796,7 +853,7 @@ When developing your transformations, it can be helpful to
 You can remove these settings once your `earthmover` project is ready for operationalization.
 
 ## Operationalization practices
-Typically `earthmover` is used when the same (or simlar) data transformations must be done repeatedly. (A one-time data transformation task can probably be done more easily with [SQLite](https://www.sqlite.org/index.html) or a similar tool.) When deploying/operationalizing `earthmover`, whether with a simple scheduler like [cron](https://en.wikipedia.org/wiki/Cron) or an orchestration tool like [Airflow](https://airflow.apache.org/) or [Dagster](https://dagster.io/), consider
+Typically `earthmover` is used when the same (or simlar) data transformations must be done repeatedly. (A one-time data transformation task may be more easily done with [SQLite](https://www.sqlite.org/index.html) or a similar tool.) When deploying/operationalizing `earthmover`, whether with a simple scheduler like [cron](https://en.wikipedia.org/wiki/Cron) or an orchestration tool like [Airflow](https://airflow.apache.org/) or [Dagster](https://dagster.io/), consider
 * specifying conditions you `expect` your [sources](#sources) to meet, so `earthmover` will fail on source data errors
 * specifying `config` &raquo; `log_level: INFO` and monitoring logs for phrases like
   > `distinct_rows` operation removed NN duplicate rows
