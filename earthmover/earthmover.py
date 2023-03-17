@@ -170,13 +170,12 @@ class Earthmover:
                     f"YAML could not be parsed: {linear_err}"
                 )
                 raise
-
-        self.error_handler.update_context(self.config_template, self.macros_lines)
         
-        with open("./earthmover_yaml.yml", "w") as f:
-            f.write(self.config_yaml)
-        with open("./earthmover_template.yml", "w") as f:
-            f.write(self.config_template_string)
+        # Uncomment the following to view original template yaml and parsed yaml:
+        # with open("./earthmover_yaml.yml", "w") as f:
+        #     f.write(self.config_yaml)
+        # with open("./earthmover_template.yml", "w") as f:
+        #     f.write(self.config_template_string)
 
         return configs_pass2
 

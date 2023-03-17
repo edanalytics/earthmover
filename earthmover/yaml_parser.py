@@ -1,5 +1,4 @@
 import os
-import jinja2
 
 from dataclasses import dataclass
 from yaml import SafeLoader
@@ -20,7 +19,6 @@ class SafeLineEnvVarLoader(SafeLoader):
     Add environment variable interpolation
         - See https://stackoverflow.com/questions/52412297
     """
-
     def construct_mapping(self, node, deep=False):
         """
         Add environment variable interpolation to Constructor.construct_mapping()
@@ -32,7 +30,6 @@ class SafeLineEnvVarLoader(SafeLoader):
         mapping = super().construct_mapping(node, deep=deep)
         
         return mapping
-    
 
     def construct_yaml_map(self, node):
         """
