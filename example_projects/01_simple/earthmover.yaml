@@ -13,7 +13,7 @@ sources:
     file: 
     header_rows: 1
     optional: True # this prevents an error due to `file` being blank... testing_destination just won't be created
-    columns: # this is optional UNLESS header_rows=0 OR required=False
+    columns: # this is optional UNLESS header_rows=0 OR optional=True
       - day
       - section
       - student_id
