@@ -9,10 +9,9 @@ class ErrorContext:
         self.line = None
         self.node = None
         self.operation = None
-        self.config_template = ""
-        self.macros_lines = 0
 
         self.update(file=file, line=line, node=node, operation=operation)
+
 
     def update(self, file=None, line=None, node=None, operation=None):
         self.file = file
@@ -75,10 +74,6 @@ class ErrorContext:
 
 
 class ErrorHandler:
-    
-    config_template = None
-    macros_lines = 0
-
     def __init__(self, file=None, line=None, node=None, operation=None):
         self.ctx = ErrorContext(file=file, line=line, node=node, operation=operation)
 
