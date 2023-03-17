@@ -616,7 +616,14 @@ earthmover --version
 This tool includes several special features:
 
 ## Jinja in YAML configuration
-You may use Jinja in the YAML configuration, which will be parsed at load time. For example:
+You may use Jinja in the YAML configuration, which will be parsed at load time. Only the `config` section may not contain Jinja, except for `macros` which are made available both at parse-time for Jinja in the YAML configuration and at run-time for Jinja in `add_columns` or `modify_columns` transformation operations.
+
+The following example
+1. loads 9 source files
+1. adds a column indicating the source file each row came from
+1. unions the sources together
+1. if an environment variable or parameter `DO_FILTERING=True` is passed, filters out certain rows
+
 ```yaml
 config:
   show_graph: True
@@ -660,11 +667,7 @@ destinations:
     extension: jsonl
     linearize: True
 ```
-This example
-1. loads 9 source files
-1. adds a column indicating the source file each row came from
-1. unions the sources together
-1. if an environment variable or parameter `DO_FILTERING=True` is passed, filters out certain rows
+
 
 ## Selectors
 Run only portions of the [DAG](#dag) by using a selector:
