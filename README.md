@@ -64,7 +64,7 @@ Note that templates may [include](https://jinja.palletsprojects.com/en/3.1.x/tem
 ## YAML configuration
 All the instructions for this tool &mdash; where to find the source data, what transformations to apply to it, and how and where to save the output &mdash; are specified in a single YAML configuration file. Example YAML configuration files and projects can be found in `example_projects/`.
 
-The YAML configuration may also contain [Jinja](https://jinja.palletsprojects.com/en/3.1.x/) and [environment variable references](#environment-variable-references).
+The YAML configuration may also [contain Jinja](#jinja-in-yaml-configuration) and [environment variable references](#environment-variable-references).
 
 The general structure of the YAML involves four main sections:
 1. [`config`](#config), which specifies options like the logging level and parameter defaults
