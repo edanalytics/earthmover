@@ -44,7 +44,7 @@ transformations:
       - operation: add_columns
         source: $sources.actions
         columns:
-          new_column2: "{%raw%}{% for i in range(0,doesnt_exist) %}{{incident_id[0:2]}}{%endfor%}{%endraw%}"
+          new_column2: "{%raw%}{{incident_id[0:2]}}{%endraw%}"
 
 destinations:
   disciplineIncidents:
