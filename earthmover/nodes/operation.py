@@ -11,7 +11,7 @@ class Operation(Node):
     """
 
     """
-    def __new__(cls, node_name: str, config: dict, *, earthmover: 'Earthmover'):
+    def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
         """
         :param config:
         :param earthmover:
@@ -55,12 +55,11 @@ class Operation(Node):
         return object.__new__(operation_class)
 
 
-    def __init__(self, node_name: str, config: dict, *, earthmover: 'Earthmover'):
-        _name = config.get('operation')
-        super().__init__(node_name + ".operations:" + _name, config, earthmover=earthmover)
+    def __init__(self, name: str, config: dict, *, earthmover: 'Earthmover'):
+        full_name = f"{name}.operations:{self.config.get('operation')}"
+        super().__init__(full_name, config, earthmover=earthmover)
 
         self.type = "transformation" # self.config.get('operation')
-        self.name = node_name + ".operations:" + self.config.get('operation')
 
         self.allowed_configs.update(['operation', 'sources', 'source'])
 
