@@ -69,6 +69,7 @@ def render_jinja_template(row, template: jinja2.Template, template_str: str, *, 
 
     :param row:
     :param template:
+    :param template_str:
     :param error_handler:
     :return:
     """
@@ -77,10 +78,15 @@ def render_jinja_template(row, template: jinja2.Template, template_str: str, *, 
 
     except Exception as err:
         error_handler.ctx.remove('line')
-        variables = "`, `".join(x for x in dict(row).keys())
-        if len(dict(row).keys()) > 0: variables = "\n(available variables are `" + variables + "`"
+
+        if dict(row):
+            _joined_keys = "`, `".join(dict(row).keys())
+            variables = f"\n(available variables are `{_joined_keys}`)"
+        else:
+            variables = f"\n(no available variables)"
+
         error_handler.throw(
-            f"Error rendering Jinja template: ({err}):\n===> {template_str}{variables}" 
+            f"Error rendering Jinja template: ({err}):\n===> {template_str}{variables}"
         )
         raise
 
