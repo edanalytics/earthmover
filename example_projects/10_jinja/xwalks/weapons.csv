@@ -1,0 +1,3 @@
+weapon,descriptor
+Knife,uri://someschooldistrict.org/WeaponDescriptor#Knife
+Gun,uri://someschooldistrict.org/WeaponDescriptor#Gun

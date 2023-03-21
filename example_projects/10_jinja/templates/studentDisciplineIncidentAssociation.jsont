@@ -1,0 +1,11 @@
+{
+    "disciplineIncidentReference": {
+      "incidentIdentifier": "{{incident_id}}",
+      "schoolId": {{school_id}}
+    },
+    "studentReference": {
+      "studentUniqueId": "{{student_id}}"
+    },
+    "studentParticipationCodeDescriptor": "uri://ed-fi.org/StudentParticipationCodeDescriptor#Perpetrator",
+    "behaviors": []
+}

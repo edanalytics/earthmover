@@ -1,0 +1,7 @@
+incident_id,school_id,staff_id,student_id,date,time,location,behavior,weapon
+1500,325,4463,92847,2022-04-13,12:34:00,Cafeteria,Assault,Knife
+1501,327,4512,97612,2022-04-13,12:56:00,Hallway,Code of Conduct Violation,
+1502,324,4514,92614,2022-04-13,13:51:00,Classroom,Drug Violation,
+1503,324,4514,95721,2022-04-13,13:51:00,Classroom,Drug Violation,
+1504,325,4315,92741,2022-04-13,14:41:00,Classroom,Harassment,
+1505,326,4417,93741,2022-04-13,15:13:00,Hallway,Tobacco Violation,

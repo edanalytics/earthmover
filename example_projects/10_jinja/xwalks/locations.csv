@@ -1,0 +1,4 @@
+location,descriptor
+Cafeteria,uri://someschooldistrict.org/IncidentLocationDescriptor#Cafeteria
+Classroom,uri://someschooldistrict.org/IncidentLocationDescriptor#Classroom
+Hallway,uri://someschooldistrict.org/IncidentLocationDescriptor#Hallway

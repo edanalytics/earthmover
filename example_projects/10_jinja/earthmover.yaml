@@ -1,0 +1,66 @@
+config:
+  output_dir: ./outputs/
+  log_level: DEBUG
+  show_graph: True
+  # show_stacktrace: True
+  macros: >
+    {% macro test() %}
+      testing!
+    {% endmacro %}
+  parameter_defaults:
+    DO_LINEARIZE: "True"
+
+sources:
+  incidents:
+    file: ./inputs/incidents.csv
+    header_rows: 1
+  actions:
+    file: ./inputs/actions.csv
+    header_rows: 1
+
+transformations:
+  {% for i in range(0,5) %}
+  actions{{i}}:
+    operations:
+      - operation: map_values
+        source: $sources.actions
+        column: discipline
+        map_file: ./xwalks/disciplines.csv
+  {% endfor%}
+  incidents:
+    operations:
+      - operation: map_values
+        source: $sources.incidents
+        column: location
+        map_file: ./xwalks/locations.csv
+      - operation: map_values
+        source: $transformations.incidents
+        column: behavior
+        map_file: ./xwalks/behaviors.csv
+      - operation: map_values
+        source: $transformations.incidents
+        column: weapon
+        map_file: ./xwalks/weapons.csv
+      - operation: add_columns
+        source: $sources.actions
+        columns:
+          new_column2: "{%raw%}{% for i in range(0,doesnt_exist) %}{{incident_id[0:2]}}{%endfor%}{%endraw%}"
+
+destinations:
+  disciplineIncidents:
+    source: $transformations.incidents
+    template: ./templates/disciplineIncident.jsont
+    extension: jsonl
+    linearize: ${DO_LINEARIZE}
+  studentDisciplineIncidentAssociations:
+    source: $transformations.incidents
+    template: ./templates/studentDisciplineIncidentAssociation.jsont
+    extension: jsonl
+    linearize: True
+  {% for i in range(0,5) %}
+  disciplineActions/{{i}}:
+    source: $transformations.actions{{i}}
+    template: ./templates/disciplineAction.jsont
+    extension: jsonl
+    linearize: True
+  {% endfor%}

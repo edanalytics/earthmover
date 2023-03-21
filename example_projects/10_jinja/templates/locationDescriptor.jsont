@@ -1,0 +1,8 @@
+{% if not counter %}{% set counter = 0 %}{% endif %}{% set counter = counter + 1 %}
+{
+    "behaviorDescriptorId": {{counter}},
+    "codeValue": "{{behavior}}",
+    "description": "{{behavior}}",
+    "namespace": "uri://someschooldistrict.org/BehaviorDescriptor",
+    "shortDescription": "{{behavior}}",
+}

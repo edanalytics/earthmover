@@ -1,0 +1,7 @@
+{
+    "weaponDescriptorId": {{id}},
+    "codeValue": "{{weapon}}",
+    "description": "{{weapon}}",
+    "namespace": "uri://someschooldistrict.org/WeaponDescriptor",
+    "shortDescription": "{{weapon}}",
+}

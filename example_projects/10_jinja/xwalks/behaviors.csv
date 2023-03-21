@@ -1,0 +1,6 @@
+behavior,descriptor
+Assault,uri://someschooldistrict.org/BehaviorDescriptor#Assault
+Code of Conduct Violation,uri://someschooldistrict.org/BehaviorDescriptor#Code of Conduct Violation
+Drug Violation,uri://someschooldistrict.org/BehaviorDescriptor#Drug Violation
+Harassment,uri://someschooldistrict.org/BehaviorDescriptor#Harassment
+Tobacco Violation,uri://someschooldistrict.org/BehaviorDescriptor#Tobacco Violation
