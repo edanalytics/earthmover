@@ -56,7 +56,7 @@ class Operation(Node):
 
 
     def __init__(self, name: str, config: dict, *, earthmover: 'Earthmover'):
-        full_name = f"{name}.operations:{self.config.get('operation')}"
+        full_name = f"{name}.operations:{config.get('operation')}"
         super().__init__(full_name, config, earthmover=earthmover)
 
         self.type = "transformation" # self.config.get('operation')

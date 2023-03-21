@@ -115,6 +115,7 @@ class Earthmover:
                 # Find the end of the config block (i.e., the next top-level field)
                 if start is not None and not line.startswith(tuple(string.whitespace)):
                     end = idx
+                    break
 
             # Read the configs block and extract the (optional) macros field.
             if start is not None and end is not None:
