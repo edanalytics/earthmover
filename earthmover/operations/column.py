@@ -51,7 +51,7 @@ class AddColumnsOperation(Operation):
                 except Exception as err:
                     self.error_handler.ctx.remove('line')
                     self.error_handler.throw(
-                        f"syntax error in Jinja template for column `{col}` of `add_columns` operation ({err}):\n===> " + val
+                        f"syntax error in Jinja template for column `{col}` of `add_columns` operation ({err}):\n===> {val}"
                     )
                     raise
 
@@ -110,7 +110,7 @@ class ModifyColumnsOperation(Operation):
                 except Exception as err:
                     self.error_handler.ctx.remove('line')
                     self.error_handler.throw(
-                        f"syntax error in Jinja template for column `{col}` of `modify_columns` operation ({err}):\n===> " + val
+                        f"syntax error in Jinja template for column `{col}` of `modify_columns` operation ({err}):\n===> {val}"
                     )
                     raise
 
