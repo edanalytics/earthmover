@@ -92,12 +92,22 @@ def render_jinja_template(row, template: jinja2.Template, template_str: str, *, 
 
 
 def jinja2_template_error_lineno():
+    """
+    TODO: Populate this docstring and empty comments with further clarity.
+    :return:
+    """
     type, value, tb = exc_info()
+
+    #
     if not issubclass(type, jinja2.TemplateError):
         return None
+
+    #
     if hasattr(value, 'lineno'):
         # in case of TemplateSyntaxError
         return value.lineno
+
+    #
     while tb:
         if tb.tb_frame.f_code.co_filename == '<template>':
             return tb.tb_lineno
