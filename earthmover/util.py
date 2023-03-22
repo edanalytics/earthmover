@@ -1,6 +1,7 @@
 import jinja2
 
 from typing import Optional
+from sys import exc_info
 
 from earthmover.error_handler import ErrorHandler
 
@@ -63,11 +64,12 @@ def contains_jinja(string: str) -> bool:
         return False
 
 
-def render_jinja_template(row, template: jinja2.Template, *, error_handler: ErrorHandler) -> str:
+def render_jinja_template(row, template: jinja2.Template, template_str: str, *, error_handler: ErrorHandler) -> str:
     """
 
     :param row:
     :param template:
+    :param template_str:
     :param error_handler:
     :return:
     """
@@ -75,7 +77,39 @@ def render_jinja_template(row, template: jinja2.Template, *, error_handler: Erro
         return template.render(row)
 
     except Exception as err:
+        error_handler.ctx.remove('line')
+
+        if dict(row):
+            _joined_keys = "`, `".join(dict(row).keys())
+            variables = f"\n(available variables are `{_joined_keys}`)"
+        else:
+            variables = f"\n(no available variables)"
+
         error_handler.throw(
-            f"Error rendering Jinja template: ({err})"
+            f"Error rendering Jinja template: ({err}):\n===> {template_str}{variables}"
         )
         raise
+
+
+def jinja2_template_error_lineno():
+    """
+    function based on https://stackoverflow.com/questions/26967433/how-to-get-line-number-causing-an-exception-other-than-templatesyntaxerror-in
+    :return: int lineno
+    """
+    type, value, tb = exc_info()
+
+    # skip non-Jinja errors
+    if not issubclass(type, jinja2.TemplateError):
+        return None
+
+    # one particular Exception type has a lineno built in - grab it!
+    if hasattr(value, 'lineno'):
+        # in case of TemplateSyntaxError
+        return value.lineno
+
+    # "tb" is "trace-back"; this walks through the traceback line-by-line looking
+    # for the relevant line, then extracts the line number
+    while tb:
+        if tb.tb_frame.f_code.co_filename == '<template>':
+            return tb.tb_lineno
+        tb = tb.tb_next

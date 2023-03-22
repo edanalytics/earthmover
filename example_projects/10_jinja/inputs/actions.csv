@@ -1,0 +1,7 @@
+action_id,incident_id,school_id,staff_id,student_id,date,length,discipline
+2100,1500,325,4463,92847,2022-04-14,5,In School Suspension
+2101,1501,327,4512,97612,2022-04-14,1,Parent Meeting
+2102,1502,324,4514,92614,2022-04-13,1,Removal from Classroom
+2103,1503,324,4514,95721,2022-04-13,1,Removal from Classroom
+2104,1504,325,4315,92741,2022-04-13,1,Apology Letter
+2015,1505,326,4417,93741,2022-04-13,1,Reflection

@@ -3,6 +3,8 @@ config:
   log_level: INFO
   show_stacktrace: False
   show_graph: False
+  parameter_defaults:
+    BASE_DIR: "."
 
 
 sources:
@@ -36,7 +38,7 @@ transformations:
       - operation: modify_columns
         source: $transformations.mammal_species
         columns:
-          id: 1_{{value}}
+          id: {%raw%}1_{{value}}{%endraw%}
   bird_species:
     operations:
       - operation: add_columns
@@ -46,7 +48,7 @@ transformations:
       - operation: modify_columns
         source: $transformations.bird_species
         columns:
-          id: 2_{{value}}
+          id: {%raw%}2_{{value}}{%endraw%}
   fish_species:
     operations:
       - operation: distinct_rows
@@ -59,7 +61,7 @@ transformations:
       - operation: modify_columns
         source: $transformations.fish_species
         columns:
-          id: 3_{{value}}
+          id: {%raw%}3_{{value}}{%endraw%}
   reptile_species:
     operations:
       - operation: add_columns
@@ -69,7 +71,7 @@ transformations:
       - operation: modify_columns
         source: $transformations.reptile_species
         columns:
-          id: 4_{{value}}
+          id: {%raw%}4_{{value}}{%endraw%}
   animal_species:
     operations:
       - operation: union
@@ -148,7 +150,7 @@ transformations:
       - operation: modify_columns
         source: $transformations.species_count_by_zoo
         columns:
-          count: "{% if value!=value %}0.0{% else %}{{value}}{% endif %}"
+          count: "{%raw%}{% if value!=value %}0.0{% else %}{{value}}{% endif %}{%endraw%}"
       - operation: add_columns
         source: $transformations.species_count_by_zoo
         columns:
@@ -187,7 +189,7 @@ transformations:
       - operation: modify_columns
         source: $transformations.zoo_count_by_year_founded
         columns:
-          date_founded: "{{value[0:4]}}"
+          date_founded: "{%raw%}{{value[0:4]}}{%endraw%}"
       - operation: rename_columns
         source: $transformations.zoo_count_by_year_founded
         columns:

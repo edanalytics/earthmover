@@ -1,0 +1,25 @@
+{
+    "schoolReference": {
+      "schoolId": {{school_id}}
+    },
+    "staffReference": {
+      "staffUniqueId": "{{staff_id}} | {{new_column2}}"
+    },
+    "incidentIdentifier": "{{incident_id}}",
+    "incidentDate": "{{date}}",
+    "incidentLocationDescriptor": "{{location}}",
+    "incidentTime": "{{time}}",
+    "reportedToLawEnforcement": false,
+    "behaviors": [
+      {
+        "behaviorDescriptor": "{{behavior}}"
+      }
+    ],
+    "weapons": [
+      {% if weapon %}
+      {
+        "weaponDescriptor": "{{weapon}}"
+      }
+      {% endif %}
+    ]
+}

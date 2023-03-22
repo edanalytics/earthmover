@@ -49,8 +49,9 @@ class AddColumnsOperation(Operation):
                     ).from_string(self.earthmover.state_configs['macros'] + val)
 
                 except Exception as err:
+                    self.error_handler.ctx.remove('line')
                     self.error_handler.throw(
-                        f"syntax error in Jinja template for column `{col}` of `add_columns` operation ({err})"
+                        f"syntax error in Jinja template for column `{col}` of `add_columns` operation ({err}):\n===> {val}"
                     )
                     raise
 
@@ -58,6 +59,7 @@ class AddColumnsOperation(Operation):
                     util.render_jinja_template, axis=1,
                     meta=pd.Series(dtype='str', name=col),
                     template=template,
+                    template_str=val,
                     error_handler=self.error_handler
                 )
 
@@ -106,8 +108,9 @@ class ModifyColumnsOperation(Operation):
                     ).from_string(self.earthmover.state_configs['macros'] + val)
 
                 except Exception as err:
+                    self.error_handler.ctx.remove('line')
                     self.error_handler.throw(
-                        f"syntax error in Jinja template for column `{col}` of `add_columns` operation ({err})"
+                        f"syntax error in Jinja template for column `{col}` of `modify_columns` operation ({err}):\n===> {val}"
                     )
                     raise
 
@@ -118,6 +121,7 @@ class ModifyColumnsOperation(Operation):
                     util.render_jinja_template, axis=1,
                     meta=pd.Series(dtype='str', name=col),
                     template=template,
+                    template_str=val,
                     error_handler=self.error_handler
                 )
 

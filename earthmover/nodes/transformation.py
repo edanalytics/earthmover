@@ -22,7 +22,7 @@ class Transformation(Node):
         _operations = self.error_handler.assert_get_key(self.config, 'operations', dtype=list)
         for idx, operation_config in enumerate(_operations, start=1):
 
-            operation = Operation(operation_config, earthmover=self.earthmover)
+            operation = Operation(self.name, operation_config, earthmover=self.earthmover)
             self.operations.append(operation)
 
             # Sources are defined in a 'source_list' or 'source' class attribute, but never both.

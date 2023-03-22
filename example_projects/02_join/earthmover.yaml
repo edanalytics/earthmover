@@ -1,6 +1,5 @@
 config:
   output_dir: ./output/
-  memory_limit: 4GB
   # log_level: DEBUG
   # show_stacktrace: True
   # show_graph: True

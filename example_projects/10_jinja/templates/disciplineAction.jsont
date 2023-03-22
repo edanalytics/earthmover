@@ -1,0 +1,27 @@
+{
+    "responsibilitySchoolReference": {
+      "schoolId": {{school_id}}
+    },
+    "studentReference": {
+      "studentUniqueId": "{{student_id}} | {{new_column}}"
+    },
+    "disciplineActionIdentifier": "{{action_id}}",
+    "disciplineDate": "{{date}}",
+    "actualDisciplineActionLength": {{length}},
+    "disciplineActionLength": {{length}},
+    "disciplineActionLengthDifferenceReasonDescriptor": "uri://ed-fi.org/DisciplineActionLengthDifferenceReasonDescriptor#No Difference",
+    "disciplines": [
+      {
+        "disciplineDescriptor": "{{discipline}}"
+      }
+    ],
+    "staffs": [],
+    "studentDisciplineIncidentAssociations": [
+      {
+        "studentDisciplineIncidentAssociationReference": {
+          "incidentIdentifier": "{{incident_id}}",
+          "schoolId": {{school_id}}
+        }
+      }
+    ]
+}
