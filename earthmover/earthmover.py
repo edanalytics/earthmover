@@ -113,7 +113,7 @@ class Earthmover:
                     continue
 
                 # Find the end of the config block (i.e., the next top-level field)
-                if start is not None and not line.startswith(tuple(string.whitespace)+tuple("#")):
+                if start is not None and not line.startswith(tuple(string.whitespace+"#")):
                     end = idx
                     break
 
