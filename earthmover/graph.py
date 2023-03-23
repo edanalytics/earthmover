@@ -1,8 +1,6 @@
 import math
-import matplotlib.patches as mpatches
-import matplotlib.pyplot as plt
-import networkx as nx
 import re
+import networkx as nx
 
 from typing import Dict, Iterable, Optional
 
@@ -111,7 +109,16 @@ class Graph(nx.DiGraph):
         :param image_height:
         :return:
         """
-        _ = plt.figure(figsize=(image_width, image_height))
+        try:
+            import matplotlib.patches as mpatches
+            import matplotlib.pyplot as plt
+            _ = plt.figure(figsize=(image_width, image_height))
+        except ImportError:
+            self.error_handler.ctx.remove('node', 'line', 'file')
+            self.error_handler.throw(
+                "drawing the graph requires the matplotlib library... please install it with `pip install matplotlib` or similar"
+            )
+            raise  # Never called; avoids linting errors
 
         # Pre-build lists of source, transformation, and destination nodes
         sources = []
@@ -143,6 +150,7 @@ class Graph(nx.DiGraph):
         try:
             node_positions = nx.drawing.nx_agraph.graphviz_layout(self, prog='dot', args='-Grankdir=LR')
         except ImportError:
+            self.error_handler.ctx.remove('node', 'line', 'file')
             self.error_handler.throw(
                 "drawing the graph requires the PyGraphViz library... please install it with `sudo apt-get install graphviz graphviz-dev && pip install pygraphviz` or similar"
             )
