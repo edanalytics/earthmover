@@ -724,6 +724,16 @@ earthmover -t
 # Design
 Some details of the design of this tool are discussed below.
 
+## YAML parsing
+`earthmover` [allows Jinja templating expressions in its YAML configuration files](#jinja-in-yaml-configuration). (This is similar to how [Ansible Playbooks](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks.html) work.) `earthmover` parses the YAML in several steps:
+1. Extract only the []`config` section](#config) (if any), in order to make available any `macros` when parsing the rest of the Jinja and YAML. The `config` section *only* **may not contain any Jinja** (besides `macros`).
+1. Load entire YAML as a string and hydrate all [environment variable](#environment-variable-references) or [parameter](#command-line-parameters) references
+1. Parse the hydrated Jinja + YAML string with any `macros` to plain YAML.
+1. Load the plain YAML string as a nested dictionary and begin building and processing the [DAG](#dag).
+
+Note that due to step (3) above, *runtime* Jinja expressions (such as column definitions for `add_columns` or `modify_columns` operations) should be wrapped with `{%raw%}...{%endraw%}` to avoid being parsed when the YAML is being loaded.
+
+
 ## DAG
 The mapping of sources through transformations to destinations is modeled as a directed acyclic graph ([DAG](https://en.wikipedia.org/wiki/Directed_acyclic_graph)). Each [component](https://en.wikipedia.org/wiki/Component_(graph_theory)) of the DAG is run separately.
 
