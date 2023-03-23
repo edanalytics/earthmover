@@ -1,3 +1,18 @@
+### v0.1.0
+<details>
+<summary>Released 2023-03-23</summary>
+
+* feature: added parse-time Jinja templating to YAML configuration
+
+> **Important**
+> The above is a potentially breaking change - if your config YAML contains `add_columns` or `modify_columns` operations *with Jinja expressions*, these will now be parsed at YAML load time. To preserve the Jinja for runtime parsing, wrap the expressions with `{%raw%}...{%endraw%}`.
+
+* feature: removed dependency on matplotlib, which is only required if your YAML specified `config.show_graph: True`... now if you try to `show_graph` without matplotlib installed, you'll get an error prompting you to install matplotlib
+
+</details>
+
+<hr />
+
 ### v0.0.7
 <details>
 <summary>Released 2023-02-23</summary>
