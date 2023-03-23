@@ -2,7 +2,7 @@ config:
   output_dir: ./output/
   # memory_limit: 2GB
   # show_stacktrace: True
-  show_graph: True
+  # show_graph: True
   # log_level: DEBUG
 
 sources:
