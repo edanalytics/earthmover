@@ -53,8 +53,10 @@ class ErrorContext:
         """
         if self.line:
             log = f"near line {self.line} of "
-        else:
+        elif self.file:
             log = "at "
+        else:
+            log = ""
 
         if self.file:
             log += f"`{self.file}` "
@@ -65,7 +67,10 @@ class ErrorContext:
         if self.operation:
             log += f"operation `{self.operation.type}` "
 
-        return "(" + log.strip() + ") "
+        if len(log.strip())>0:
+            return "(" + log.strip() + ") "
+        else:
+            return ""
 
 
     def __add__(self, other):
