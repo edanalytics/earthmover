@@ -687,6 +687,7 @@ sources:
     file: ${BASE_DIR}/people.csv
     ...
 ```
+**Note:** because `os.path.expandvars()` [does not expand variables within single quotes](https://hg.python.org/cpython/file/v2.7.3/Lib/ntpath.py#l330) in Python under Windows, *Windows users should avoid placing environment variable references (or [CLI parameter](#command-line-parameters) references) inside single quote strings* in their YAML.
 
 ## Command-line parameters
 Similarly, you can specify parameters via the command line with
