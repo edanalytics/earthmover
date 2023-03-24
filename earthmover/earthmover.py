@@ -150,7 +150,11 @@ class Earthmover:
                     )
                     raise
 
-            self.config_template_string = os.path.expandvars(self.config_template_string)
+            # It's necessary to expandvars() on each line separately (rather than on the
+            # whole file in one go) to avoid problems on Windows with YAML files that contain
+            # anchors (&example)... an unfortunate Windows Python bug.
+            self.config_template_string = "\n".join([os.path.expandvars(x)
+                                                        for x in self.config_template_string.split("\n")])
             os.environ = _env_backup # restore envvars
             
             # (c)
