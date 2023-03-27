@@ -9,7 +9,7 @@ HERE = pathlib.Path(__file__).parent
 README = (HERE / "README.md").read_text()
 
 # The current version
-VERSION = (HERE / "VERSION.txt").read_text()
+VERSION = (HERE / "earthmover/VERSION.txt").read_text()
 
 # automatically captured required modules for install_requires in requirements.txt
 with open(os.path.join(HERE, 'requirements.txt'), encoding='utf-8') as fp:

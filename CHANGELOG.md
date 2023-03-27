@@ -1,3 +1,11 @@
+### v0.1.1
+<details>
+<summary>Released 2023-03-27</summary>
+
+* bugfix: a single quote in the config YAML could prevent environment variable expansion from working since `os.path.expandvars()` [does not expand variables within single quotes](https://hg.python.org/cpython/file/v2.7.3/Lib/ntpath.py#l330) in Python under Windows
+
+</details>
+
 ### v0.1.0
 <details>
 <summary>Released 2023-03-23</summary>
