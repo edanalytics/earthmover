@@ -120,7 +120,7 @@ class Earthmover:
 
             # Read the configs block and extract the (optional) macros field.
             if start is not None and end is not None:
-                configs_pass1 = yaml.load("".join(lines[start:end]), Loader=SafeLineEnvVarLoader)
+                configs_pass1 = yaml.safe_load("".join(lines[start:end]))
                 self.macros = configs_pass1.get("config", {}).get("macros", "")
             else:
                 configs_pass1 = {}
