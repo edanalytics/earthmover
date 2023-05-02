@@ -1,9 +1,9 @@
 config:
   output_dir: ./output/
   # memory_limit: 2GB
-  # show_stacktrace: True
+  show_stacktrace: True
   # show_graph: True
-  # log_level: DEBUG
+  log_level: DEBUG
 
 sources:
   attendance:

@@ -127,8 +127,7 @@ class Earthmover:
 
             # Figure out lines range of macro definitions, to skip (re)reading/parsing them later
             self.macros_lines = self.macros.count("\n")
-            macros_start_line = [i for i, x in enumerate(lines) if x.strip().startswith('macros:')][0]
-            macros_end_line = macros_start_line + self.macros_lines + 1
+            macros_definitions = [i for i, x in enumerate(lines) if x.strip().startswith('macros:')]
 
 
         # pass 2:
@@ -138,7 +137,10 @@ class Earthmover:
         #   (d) load YAML to config Dict
 
         # (a)
-        self.config_template_string = "".join(lines[:macros_start_line] + lines[macros_end_line+1:]) # stream.read()
+        if len(macros_definitions)>0:
+            self.config_template_string = "".join(lines[:macros_definitions[0]] + lines[macros_definitions[0] + self.macros_lines + 1:])
+        else:
+            self.config_template_string = "".join(lines)
 
         # (b)
         _env_backup = os.environ.copy() # backup envvars
