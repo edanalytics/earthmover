@@ -157,8 +157,8 @@ class Earthmover:
         os.environ = _env_backup # restore envvars
 
         # Uncomment the following to view original template yaml and parsed yaml:
-        with open("./earthmover_template.yml", "w") as f:
-            f.write(self.config_template_string)
+        # with open("./earthmover_template.yml", "w") as f:
+        #     f.write(self.config_template_string)
         
         # (c)
         try:
@@ -168,8 +168,8 @@ class Earthmover:
 
             self.config_yaml = self.config_template.render()
             # Uncomment the following to view original template yaml and parsed yaml:
-            with open("./earthmover_yaml.yml", "w") as f:
-                f.write(self.config_yaml)
+            # with open("./earthmover_yaml.yml", "w") as f:
+            #     f.write(self.config_yaml)
     
         except Exception as err:
             lineno = util.jinja2_template_error_lineno()
