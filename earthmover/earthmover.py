@@ -9,6 +9,7 @@ import yaml
 import jinja2
 import pandas as pd
 
+from string import Template
 from typing import Optional
 
 from earthmover.error_handler import ErrorHandler
@@ -124,72 +125,71 @@ class Earthmover:
             else:
                 configs_pass1 = {}
 
+            # Figure out lines range of macro definitions, to skip (re)reading/parsing them later
             self.macros_lines = self.macros.count("\n")
+            macros_start_line = [i for i, x in enumerate(lines) if x.strip().startswith('macros:')][0]
+            macros_end_line = macros_start_line + self.macros_lines + 1
 
 
         # pass 2:
-        #   (a) load template YAML
+        #   (a) load template YAML minus macros (which were already loaded in pass 1)
         #   (b) replace envvars
         #   (c) render Jinja in YAML template
         #   (d) load YAML to config Dict
-        with open(self.config_file, "r") as stream:
-            
-            # (a)
-            self.config_template_string = stream.read()
 
-            # (b)
-            _env_backup = os.environ.copy() # backup envvars
-            os.environ.update(self.params) # override with CLI params
+        # (a)
+        self.config_template_string = "".join(lines[:macros_start_line] + lines[macros_end_line+1:]) # stream.read()
 
-            for k, v in configs_pass1.get("config", {}).get("parameter_defaults", {}).items():
-                if isinstance(v, str):
-                    os.environ.setdefault(k, v)  # set defaults, if any
-                else:
-                    self.error_handler.throw(
-                        f"YAML config.parameter_defaults.{k} must be a string"
-                    )
-                    raise
+        # (b)
+        _env_backup = os.environ.copy() # backup envvars
+        os.environ.update(self.params) # override with CLI params
 
-            # It's necessary to expandvars() on each line separately (rather than on the
-            # whole file in one go) to avoid problems on Windows with YAML files that contain
-            # anchors (&example)... an unfortunate Windows Python bug.
-            self.config_template_string = "\n".join([os.path.expandvars(x)
-                                                        for x in self.config_template_string.split("\n")])
-            os.environ = _env_backup # restore envvars
-            
-            # (c)
-            try:
-                self.config_template = jinja2.Environment(
-                    loader=jinja2.FileSystemLoader(os.path.dirname('./'))
-                ).from_string(self.macros + self.config_template_string)
-
-                self.config_yaml = self.config_template.render()
-
-            except Exception as err:
-                lineno = util.jinja2_template_error_lineno()
-                if lineno:
-                    lineno = ", near line " + str(lineno - self.macros_lines - 1)
+        for k, v in configs_pass1.get("config", {}).get("parameter_defaults", {}).items():
+            if isinstance(v, str):
+                os.environ.setdefault(k, v)  # set defaults, if any
+            else:
                 self.error_handler.throw(
-                    f"Jinja syntax error in YAML configuration template{lineno} ({err})"
+                    f"YAML config.parameter_defaults.{k} must be a string"
                 )
                 raise
 
-            # (d)
-            try:
-                configs_pass2 = yaml.load(self.config_yaml, Loader=SafeLineEnvVarLoader)
-                configs_pass2.get("config", {}).update({"macros": self.macros})
-            except yaml.YAMLError as err:
-                linear_err = " ".join([line.replace("^", "").strip() for line in str(err).split("\n")])
-                self.error_handler.throw(
-                    f"YAML could not be parsed: {linear_err}"
-                )
-                raise
-        
+        self.config_template_string = Template(self.config_template_string).safe_substitute(os.environ)
+        os.environ = _env_backup # restore envvars
+
         # Uncomment the following to view original template yaml and parsed yaml:
-        # with open("./earthmover_yaml.yml", "w") as f:
-        #     f.write(self.config_yaml)
         # with open("./earthmover_template.yml", "w") as f:
         #     f.write(self.config_template_string)
+        
+        # (c)
+        try:
+            self.config_template = jinja2.Environment(
+                loader=jinja2.FileSystemLoader(os.path.dirname('./'))
+            ).from_string(self.macros + self.config_template_string)
+
+            self.config_yaml = self.config_template.render()
+            # Uncomment the following to view original template yaml and parsed yaml:
+            # with open("./earthmover_yaml.yml", "w") as f:
+            #     f.write(self.config_yaml)
+    
+        except Exception as err:
+            lineno = util.jinja2_template_error_lineno()
+            if lineno:
+                lineno = ", near line " + str(lineno - self.macros_lines - 1)
+            self.error_handler.throw(
+                f"Jinja syntax error in YAML configuration template{lineno} ({err})"
+            )
+            raise
+
+        # (d)
+        try:
+            configs_pass2 = yaml.load(self.config_yaml, Loader=SafeLineEnvVarLoader)
+            configs_pass2.get("config", {}).update({"macros": self.macros})
+        except yaml.YAMLError as err:
+            linear_err = " ".join([line.replace("^", "").strip() for line in str(err).split("\n")])
+            self.error_handler.throw(
+                f"YAML could not be parsed: {linear_err}"
+            )
+            raise
 
         return configs_pass2
 
