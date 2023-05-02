@@ -1,3 +1,12 @@
+### v0.1.2
+<details>
+<summary>Released 2023-05-02</summary>
+
+* bugfix: fix continued issues with environment variable expansion under Windows by changing from `os.path.expandvars()` to native Python `String.Template` implementation
+* bugfix: change how earthmover loads `config.macros` from YAML to prevent issues with multi-line macros definitions
+
+</details>
+
 ### v0.1.1
 <details>
 <summary>Released 2023-03-27</summary>
