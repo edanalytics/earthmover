@@ -2,9 +2,9 @@ import abc
 import os
 import jinja2
 import re
+import hashlib
 
 from earthmover.node import Node
-
 
 class Destination(Node):
     """
@@ -121,6 +121,8 @@ class FileDestination(Destination):
             )
             raise
 
+        self.jinja_template.globals['md5'] = self.jinja_md5
+
 
     def execute(self):
         """
@@ -157,3 +159,6 @@ class FileDestination(Destination):
 
         self.logger.debug(f"output `{self.file}` written")
         self.size = os.path.getsize(self.file)
+
+    def jinja_md5(self, str):
+        return hashlib.md5(str.encode('utf-8')).hexdigest()

@@ -138,7 +138,7 @@ class Earthmover:
 
         # (a)
         if len(macros_definitions)>0:
-            self.config_template_string = "".join(lines[:macros_definitions[0]] + lines[macros_definitions[0] + self.macros_lines + 1:])
+            self.config_template_string = "".join(lines[:macros_definitions[0]] + lines[macros_definitions[0] + self.macros_lines + 2:])
         else:
             self.config_template_string = "".join(lines)
 
