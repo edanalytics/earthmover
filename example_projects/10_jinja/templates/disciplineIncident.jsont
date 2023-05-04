@@ -12,7 +12,7 @@
     "reportedToLawEnforcement": false,
     "behaviors": [
       {
-        "behaviorDescriptor": "{{ behavior }}"
+        "behaviorDescriptor": "{{behavior}}"
       }
     ],
     "weapons": [
