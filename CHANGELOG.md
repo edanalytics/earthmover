@@ -1,3 +1,12 @@
+### v0.1.3
+<details>
+<summary>Released 2023-05-05</summary>
+
+* feature: implement ability to call ` {{ md5(column) }}` in Jinja throughout eathmover, with a framework for other Python functions to be added in the future
+* bugfix: fix multi-line macros issue
+
+</details>
+
 ### v0.1.2
 <details>
 <summary>Released 2023-05-02</summary>
