@@ -1,4 +1,5 @@
 import jinja2
+import hashlib
 
 from typing import Optional
 from sys import exc_info
@@ -113,3 +114,6 @@ def jinja2_template_error_lineno():
         if tb.tb_frame.f_code.co_filename == '<template>':
             return tb.tb_lineno
         tb = tb.tb_next
+    
+def jinja_md5(str):
+    return hashlib.md5(str.encode('utf-8')).hexdigest()

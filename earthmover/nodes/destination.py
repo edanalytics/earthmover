@@ -4,7 +4,7 @@ import jinja2
 import re
 
 from earthmover.node import Node
-
+from earthmover import util
 
 class Destination(Node):
     """
@@ -120,6 +120,8 @@ class FileDestination(Destination):
                 f"syntax error in Jinja template in `template` file {self.template} ({err})"
             )
             raise
+
+        self.jinja_template.globals['md5'] = util.jinja_md5
 
 
     def execute(self):

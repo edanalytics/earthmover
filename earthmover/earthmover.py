@@ -121,7 +121,7 @@ class Earthmover:
             # Read the configs block and extract the (optional) macros field.
             if start is not None and end is not None:
                 configs_pass1 = yaml.safe_load("".join(lines[start:end]))
-                self.macros = configs_pass1.get("config", {}).get("macros", "")
+                self.macros = configs_pass1.get("config", {}).get("macros", "").strip()
             else:
                 configs_pass1 = {}
 
@@ -138,7 +138,7 @@ class Earthmover:
 
         # (a)
         if len(macros_definitions)>0:
-            self.config_template_string = "".join(lines[:macros_definitions[0]] + lines[macros_definitions[0] + self.macros_lines + 1:])
+            self.config_template_string = "".join(lines[:macros_definitions[0]] + lines[macros_definitions[0] + self.macros_lines + 2:])
         else:
             self.config_template_string = "".join(lines)
 
@@ -167,6 +167,7 @@ class Earthmover:
             self.config_template = jinja2.Environment(
                 loader=jinja2.FileSystemLoader(os.path.dirname('./'))
             ).from_string(self.macros + self.config_template_string)
+            self.config_template.globals['md5'] = util.jinja_md5
 
             self.config_yaml = self.config_template.render()
             # Uncomment the following to view original template yaml and parsed yaml:
