@@ -36,7 +36,7 @@ transformations:
       - operation: add_columns
         source: $transformations.attendance
         columns:
-          school: 12345
+          school: '{% raw %}{{ md5( range(1, 51) | random | string )}}{% endraw %}'
 
 destinations:
   studentSchoolAttendanceEvents:

@@ -167,6 +167,7 @@ class Earthmover:
             self.config_template = jinja2.Environment(
                 loader=jinja2.FileSystemLoader(os.path.dirname('./'))
             ).from_string(self.macros + self.config_template_string)
+            self.config_template.globals['md5'] = util.jinja_md5
 
             self.config_yaml = self.config_template.render()
             # Uncomment the following to view original template yaml and parsed yaml:
