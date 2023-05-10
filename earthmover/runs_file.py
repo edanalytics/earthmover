@@ -58,7 +58,7 @@ class RunsFile:
         if selector:
             row_dict['selector'] = selector
 
-        with open(self.file, 'a') as fp:
+        with open(self.file, 'a', encoding='utf-8') as fp:
             writer = csv.DictWriter(fp, fieldnames=self.HEADER)
             writer.writerow(row_dict)
 
@@ -205,7 +205,7 @@ class RunsFile:
 
         :return:
         """
-        with open(self.file, 'x') as fp:
+        with open(self.file, 'x', encoding='utf-8') as fp:
             writer = csv.writer(fp)
             writer.writerow(self.HEADER)
 
@@ -215,7 +215,7 @@ class RunsFile:
 
         :return:
         """
-        with open(self.file, 'r') as fp:
+        with open(self.file, 'r', encoding='utf-8') as fp:
             runs = list(csv.DictReader(fp, delimiter=','))
 
         # Raise a warning for the user to manually reset or select a new log-runs file.

@@ -101,7 +101,7 @@ def main(argv=None):
     if args.version:
         em_dir = os.path.dirname(os.path.abspath(__file__))
         version_file = os.path.join(em_dir, 'VERSION.txt')
-        with open(version_file, 'r') as f:
+        with open(version_file, 'r', encoding='utf-8') as f:
             VERSION = f.read().strip()
             print(f"earthmover, version {VERSION}")
         exit(0)
@@ -154,7 +154,7 @@ def main(argv=None):
             cli_state_configs=cli_state_configs
         )
     except Exception as err:
-        logger.exception(err, exc_info=False)
+        logger.exception(err, exc_info=True)
         raise  # Avoids linting error
 
     if args.command == 'compile':

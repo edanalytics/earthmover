@@ -56,8 +56,8 @@ earthmover
 rm -f output/*
 echo "  ... done!"
 
-echo "  running 10_simple..."
-cd ../10_simple/
+echo "  running 10_jinja..."
+cd ../10_jinja/
 earthmover
 rm -rf outputs/*
 echo "  ... done!"

@@ -90,7 +90,7 @@ class FileDestination(Destination):
 
         #
         try:
-            with open(self.template, 'r') as fp:
+            with open(self.template, 'r', encoding='utf-8') as fp:
                 template_string = fp.read()
 
         except Exception as err:
@@ -134,7 +134,7 @@ class FileDestination(Destination):
         self.data = self.data.fillna('')
 
         os.makedirs(os.path.dirname(self.file), exist_ok=True)
-        with open(self.file, 'w') as fp:
+        with open(self.file, 'w', encoding='utf-8') as fp:
 
             if self.header:
                 fp.write(self.header + "\n")

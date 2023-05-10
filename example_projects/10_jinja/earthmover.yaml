@@ -4,9 +4,9 @@ config:
   # show_graph: True
   # show_stacktrace: True
   macros: >
-    {% macro test() %}
+    {% macro test() -%}
       testing!
-    {% endmacro %}
+    {%- endmacro %}
   parameter_defaults:
     DO_LINEARIZE: "True"
 
@@ -20,6 +20,7 @@ sources:
 
 transformations:
   {% for i in range(0,5) %}
+  # {{ test() }}
   actions{{i}}:
     operations:
       - operation: map_values

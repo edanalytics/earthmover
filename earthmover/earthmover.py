@@ -68,6 +68,8 @@ class Earthmover:
             'log_level': _state_configs['log_level'].upper(),
             'show_stacktrace': _state_configs['show_stacktrace'],
         }
+        if 'state_file' in _state_configs.keys():
+            self.state_configs.update({'state_file': _state_configs['state_file']})
 
         # Set up the logger
         self.logger = logger
@@ -98,7 +100,7 @@ class Earthmover:
         """
 
         # pass 1: grab config.macros (if any) so Jinja in the YAML can be rendered with macros
-        with open(self.config_file, "r") as stream:
+        with open(self.config_file, "r", encoding='utf-8') as stream:
             # cannot just yaml.load() here, since Jinja in the YAML may make it invalid...
             # instead, pull out just the `config` section, which must not contain Jinja (except for `macros`)
             # then we yaml.load() just the config section to grab any `macros`
@@ -121,14 +123,14 @@ class Earthmover:
             # Read the configs block and extract the (optional) macros field.
             if start is not None and end is not None:
                 configs_pass1 = yaml.safe_load("".join(lines[start:end]))
-                self.macros = configs_pass1.get("config", {}).get("macros", "").strip()
+                self.macros = configs_pass1.get("config", {}).get("macros", "")
             else:
                 configs_pass1 = {}
 
             # Figure out lines range of macro definitions, to skip (re)reading/parsing them later
             self.macros_lines = self.macros.count("\n")
-            macros_definitions = [i for i, x in enumerate(lines) if x.strip().startswith('macros:')]
-
+            self.macros = self.macros.strip()
+            
 
         # pass 2:
         #   (a) load template YAML minus macros (which were already loaded in pass 1)
@@ -137,10 +139,7 @@ class Earthmover:
         #   (d) load YAML to config Dict
 
         # (a)
-        if len(macros_definitions)>0:
-            self.config_template_string = "".join(lines[:macros_definitions[0]] + lines[macros_definitions[0] + self.macros_lines + 2:])
-        else:
-            self.config_template_string = "".join(lines)
+        self.config_template_string = "".join(lines)
 
         # (b)
         _env_backup = os.environ.copy() # backup envvars
@@ -166,7 +165,7 @@ class Earthmover:
         try:
             self.config_template = jinja2.Environment(
                 loader=jinja2.FileSystemLoader(os.path.dirname('./'))
-            ).from_string(self.macros + self.config_template_string)
+            ).from_string(self.macros + "\n\n" + self.config_template_string)
             self.config_template.globals['md5'] = util.jinja_md5
 
             self.config_yaml = self.config_template.render()
@@ -340,7 +339,7 @@ class Earthmover:
 
 
         ### Hashing requires an entire class mixin and multiple additional steps.
-        if not self.skip_hashing and 'state_file' in self.state_configs:
+        if not self.skip_hashing and self.state_configs.get('state_file', False):
             _runs_path = os.path.expanduser(self.state_configs['state_file'])
             
             self.logger.info(f"computing input hashes for run log at {_runs_path}")
@@ -379,7 +378,7 @@ class Earthmover:
                         )
                         self.do_generate = False
 
-        elif 'state_file' not in self.state_configs:
+        elif not self.state_configs.get('state_file', False):
             self.logger.info("skipping hashing and run-logging (no `state_file` defined in config)")
             runs_file = None  # This instantiation will never be used, but this avoids linter alerts.
          
@@ -452,12 +451,12 @@ class Earthmover:
             # load expected and outputted content as dataframes, and sort them
             # because dask may shuffle output order
             _expected_file  = os.path.join(tests_dir, 'expected', filename)
-            with open(_expected_file, "r") as f:
+            with open(_expected_file, "r", encoding='utf-8') as f:
                 _expected_df = pd.DataFrame([l.strip() for l in f.readlines()])
                 _expected_df = _expected_df.sort_values(by=_expected_df.columns.tolist()).reset_index(drop=True)
 
             _outputted_file = os.path.join(tests_dir, 'outputs', filename)
-            with open(_outputted_file, "r") as f:
+            with open(_outputted_file, "r", encoding='utf-8') as f:
                 _outputted_df = pd.DataFrame([l.strip() for l in f.readlines()])
                 _outputted_df = _outputted_df.sort_values(by=_outputted_df.columns.tolist()).reset_index(drop=True)
             
