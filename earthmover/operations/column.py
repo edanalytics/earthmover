@@ -492,7 +492,7 @@ class MapValuesOperation(Operation):
 
 
         try:
-            with open(file, 'r') as fp:
+            with open(file, 'r', encoding='utf-8') as fp:
                 _translations_list = list(csv.reader(fp, delimiter=sep))
                 return dict(_translations_list[1:])
         
