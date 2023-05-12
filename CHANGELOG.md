@@ -1,3 +1,30 @@
+### v0.1.4
+<details>
+<summary>Released 2023-05-12</summary>
+
+* bugfix: `config.state`_file was being ignored when specified
+* bugfix: further issues with multi-line `config.macros` - the resolution here (hopefully the last one!) is to pre-load macros (so they can be injected into run-time Jinja contexts) and then just allow the Jinja to render and macro definitions down to nothing in the config YAML... you do have to be careful with Jinja linebreak supression, i.e.
+    ```yaml
+    config:
+    macros: > # this is a macro!
+        {%- macro test() -%}
+        testing!
+        {%- endmacro -%}
+    sources:
+    ...
+    ```
+    could render down to
+    ```yaml
+    config:
+    macros: > # this is a macro!sources:
+    ...
+    ```
+    which will fail with an error about no sources defined.
+
+* bugfix: charset issues when reading / writing non-UTF8 files - this should be resolved by enforcing every file read/write to specify UTF8 encoding
+
+</details>
+
 ### v0.1.3
 <details>
 <summary>Released 2023-05-05</summary>
