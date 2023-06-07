@@ -1,5 +1,6 @@
 config:
   output_dir: ./output/
+  state_file: ~/.earthmover.csv
   # memory_limit: 2GB
   # show_stacktrace: True
   # show_graph: True
