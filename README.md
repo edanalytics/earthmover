@@ -710,6 +710,34 @@ earthmover run -c path/to/config.yaml --skip-hashing
 ```
 (This makes a one-time run on large input files faster.)
 
+## Structured output of run results
+To produce a JSON file with metadata about the run, invoke earthmover with
+```bash
+earthmover run -c path/to/config.yaml --results-file ./results.json
+```
+For example, for `example_projects/09_edfi/`, a sample results file would be:
+
+```json
+{
+    "started_at": "2023-06-08T10:21:42.445835",
+    "working_dir": "/home/someuser/code/repos/earthmover/example_projects/09_edfi",
+    "config_file": "./earthmover.yaml",
+    "output_dir": "./output/",
+    "row_counts": {
+        "$sources.schools": 6,
+        "$sources.students_anytown": 1199,
+        "$sources.students_someville": 1199,
+        "$destinations.schools": 6,
+        "$transformations.all_students": 2398,
+        "$destinations.students": 2398,
+        "$destinations.studentEducationOrganizationAssociations": 2398,
+        "$destinations.studentSchoolAssociations": 2398
+    },
+    "completed_at": "2023-06-08T10:21:43.118854",
+    "runtime_sec": 0.673019
+}
+```
+
 
 # Tests
 This tool ships with a test suite covering all transformation operations. It can be run with `earthmover -t`, which simply runs the tool on the `config.yaml` and toy data in the `earthmover/tests/` folder. (The DAG is pictured below.) Rendered `earthmover/tests/output/` are then compared against the `earthmover/tests/expected/` output; the test passes only if all files match exactly.
