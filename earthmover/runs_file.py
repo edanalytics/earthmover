@@ -158,7 +158,7 @@ class RunsFile:
             if f"$sources.{source.name}" not in node_data.keys():
                 continue
 
-            if not source.is_remote:
+            if source.file and not source.is_remote:
                 sources_hash += self._get_file_hash(source.file)
 
         if sources_hash:
