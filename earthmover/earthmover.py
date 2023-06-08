@@ -98,6 +98,7 @@ class Earthmover:
         self.start_timestamp = datetime.datetime.now()
         self.metadata = {
             "started_at": self.start_timestamp.isoformat(timespec='microseconds'),
+            "working_dir": os.getcwd(),
             "config_file": self.config_file,
             "output_dir": self.state_configs["output_dir"],
             "row_counts": {}
