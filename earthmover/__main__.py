@@ -92,8 +92,12 @@ def main(argv=None):
         action='store_true',
         help='overwrites `show_stacktrace` config in the config file to true; sets `log_level` to DEBUG'
     )
+    parser.add_argument("--results-file",
+        type=str,
+        help='produces a JSON output file with structured information about run results'
+    )
     
-    _defaults = { "selector":"*", "params": "" }
+    _defaults = { "selector":"*", "params": "", "results_file": "" }
     parser.set_defaults(**_defaults)
 
     args, remaining_argv = parser.parse_known_args()
@@ -151,7 +155,8 @@ def main(argv=None):
             params=args.params,
             force=args.force,
             skip_hashing=args.skip_hashing,
-            cli_state_configs=cli_state_configs
+            cli_state_configs=cli_state_configs,
+            results_file=args.results_file
         )
     except Exception as err:
         logger.exception(err, exc_info=True)
