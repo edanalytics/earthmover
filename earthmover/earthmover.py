@@ -327,7 +327,8 @@ class Earthmover:
                 if not node.data:
                     node.execute()  # Sets self.data in each node.
                     node.post_execute()
-                    self.metadata["row_counts"].update({'$'+node.type+'s.'+node.name: len(node.data)})
+                    if self.results_file:
+                        self.metadata["row_counts"].update({'$'+node.type+'s.'+node.name: len(node.data)})
 
 
     def generate(self, selector):
@@ -456,7 +457,6 @@ class Earthmover:
             self.metadata.update({"runtime_sec": (self.end_timestamp - self.start_timestamp).total_seconds()})
             with open(self.results_file, 'w') as fp:
                 fp.write(json.dumps(self.metadata, indent=4))
-                fp.close()
 
 
     def test(self, tests_dir):
