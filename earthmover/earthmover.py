@@ -1,6 +1,7 @@
 import dask
 import json
 import logging
+import tempfile
 import networkx as nx
 import os
 import string
@@ -30,7 +31,7 @@ class Earthmover:
         "show_graph": False,
         "log_level": "INFO",
         "show_stacktrace": False,
-        "tmp_dir": "/tmp",
+        "tmp_dir": tempfile.gettempdir(),
     }
 
     def __init__(self,
