@@ -30,6 +30,7 @@ class Earthmover:
         "show_graph": False,
         "log_level": "INFO",
         "show_stacktrace": False,
+        "tmp_dir": "/tmp",
     }
 
     def __init__(self,
@@ -67,6 +68,7 @@ class Earthmover:
             'show_graph': _state_configs['show_graph'],
             'log_level': _state_configs['log_level'].upper(),
             'show_stacktrace': _state_configs['show_stacktrace'],
+            'tmp_dir': _state_configs['tmp_dir'],
         }
         if 'state_file' in _state_configs.keys():
             self.state_configs.update({'state_file': _state_configs['state_file']})
@@ -397,6 +399,7 @@ class Earthmover:
 
 
         ### Process the graph
+        dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
         for idx, component in enumerate( nx.weakly_connected_components(active_graph) ):
             self.logger.debug(f"processing component {idx}")
 
