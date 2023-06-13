@@ -393,7 +393,7 @@ class Earthmover:
 
         # Unchanged runs are avoided unless the user forces the run.
         if not self.do_generate:
-            exit(125) # Operation canceled
+            exit(99) # Operation canceled
 
 
         ### Process the graph
