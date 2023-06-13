@@ -708,7 +708,7 @@ To further avoid computing input hashes and not log a run to the `state_file`, u
 earthmover run -c path/to/config.yaml -k
 earthmover run -c path/to/config.yaml --skip-hashing
 ```
-(This makes a one-time run on large input files faster.)
+(This makes a one-time run on large input files faster.) If earthmover skips running because nothing has changed, it returns bash exit code `99` (this was chosen because [it signals a "skipped" task in Airflow](https://airflow.apache.org/docs/apache-airflow/stable/howto/operator/bash.html#skipping)).
 
 
 # Tests
