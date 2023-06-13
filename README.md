@@ -84,6 +84,7 @@ config:
   output_dir: ./
   state_file: ~/.earthmover.csv
   log_level: INFO
+  tmp_dir: /tmp
   show_stacktrace: True
   show_graph: True
   macros: >
@@ -101,6 +102,7 @@ config:
   - `WARNING`: output errors and warnings like when the run log is getting long
   - `INFO`: all errors and warnings plus basic information about what `earthmover` is doing: start and stop, how many rows were removed by a `distinct_rows` or `filter_rows` operation, etc. (This is the default `log_level`.)
   - `DEBUG`: all output above, plus verbose details about each transformation step, timing, memory usage, and more. (This `log_level` is recommended for [debugging](#debugging-practices) transformations.)
+* (optional) Specify the `tmp_dir` path to use when dask must spill data to disk. The default is `/tmp`.
 * (optional) Specify whether to show a stacktrace for runtime errors. The default is `False`.
 * (optional) Specify whether or not `show_graph` (default is `False`), which requires [PyGraphViz](https://pygraphviz.github.io/) to be installed and creates `graph.png` and `graph.svg` which are visual depictions of the dependency graph.
 * (optional) Specify Jinja `macros` which will be available within any Jinja template content throughout the project. (This can slow performance.)
