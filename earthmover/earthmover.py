@@ -7,6 +7,7 @@ import string
 import time
 import yaml
 import jinja2
+import datetime
 import pandas as pd
 
 from string import Template
@@ -38,7 +39,8 @@ class Earthmover:
         params: str = "",
         force: bool = False,
         skip_hashing: bool = False,
-        cli_state_configs: Optional[dict] = None
+        cli_state_configs: Optional[dict] = None,
+        results_file: str = "",
     ):
         self.do_generate = True
         self.force = force
@@ -46,6 +48,7 @@ class Earthmover:
         self.macros = ""
         self.macros_lines = 0
 
+        self.results_file = results_file
         self.config_file = config_file
         self.config_template_string = ""
         self.config_template = None
@@ -90,6 +93,16 @@ class Earthmover:
 
         # Initialize the NetworkX DiGraph
         self.graph = Graph(error_handler=self.error_handler)
+
+        # Initialize a dictionary for tracking run metadata (for structured output)
+        self.start_timestamp = datetime.datetime.now()
+        self.metadata = {
+            "started_at": self.start_timestamp.isoformat(timespec='microseconds'),
+            "working_dir": os.getcwd(),
+            "config_file": self.config_file,
+            "output_dir": self.state_configs["output_dir"],
+            "row_counts": {}
+        }
 
 
     def load_config_file(self) -> dict:
@@ -314,6 +327,8 @@ class Earthmover:
                 if not node.data:
                     node.execute()  # Sets self.data in each node.
                     node.post_execute()
+                    if self.results_file:
+                        self.metadata["row_counts"].update({'$'+node.type+'s.'+node.name: len(node.data)})
 
 
     def generate(self, selector):
@@ -434,6 +449,14 @@ class Earthmover:
                 node.num_rows = num_rows
 
             active_graph.draw()
+        
+        ### Create structured output results_file if necessary
+        if self.results_file:
+            self.end_timestamp = datetime.datetime.now()
+            self.metadata.update({"completed_at": self.end_timestamp.isoformat(timespec='microseconds')})
+            self.metadata.update({"runtime_sec": (self.end_timestamp - self.start_timestamp).total_seconds()})
+            with open(self.results_file, 'w') as fp:
+                fp.write(json.dumps(self.metadata, indent=4))
 
 
     def test(self, tests_dir):
