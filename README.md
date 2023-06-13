@@ -703,12 +703,12 @@ This tool *maintains state about past runs.* Subsequent runs only re-process if 
 earthmover run -c path/to/config.yaml -f
 earthmover run -c path/to/config.yaml --force-regenerate
 ```
-To further avoid computing input hashes and not log a run to the `state_file`, use the `-k` or `--skip-hashing` flag:
+To further avoid computing input hashes and not log a run to the `state_file`, use the `-k` or `--skip-hashing` flag: 
 ```bash
 earthmover run -c path/to/config.yaml -k
 earthmover run -c path/to/config.yaml --skip-hashing
 ```
-(This makes a one-time run on large input files faster.)
+(This makes a one-time run on large input files faster.) If earthmover skips running because nothing has changed, it returns bash exit code `99` (this was chosen because [it signals a "skipped" task in Airflow](https://airflow.apache.org/docs/apache-airflow/stable/howto/operator/bash.html#skipping)).
 
 
 # Tests
