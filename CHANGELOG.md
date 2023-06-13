@@ -1,3 +1,14 @@
+### v0.1.5
+<details>
+<summary>Released 2023-06-13</summary>
+
+* bugfix: [fixing a bug to skip hashing missing optional source files](https://github.com/edanalytics/earthmover/pull/34)
+* feature: [adding a tmp_dir config so we can tell Dask where to store data it spills to disk](https://github.com/edanalytics/earthmover/pull/37)
+* feature: [adding a `--results-file` option to produce structured run metadata](https://github.com/edanalytics/earthmover/pull/35)
+* feature: [adding a skip exit code](https://github.com/edanalytics/earthmover/pull/36)
+
+</details>
+
 ### v0.1.4
 <details>
 <summary>Released 2023-05-12</summary>
