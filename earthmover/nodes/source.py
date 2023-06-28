@@ -159,7 +159,7 @@ class FileSource(Source):
 
         try:
             # if no file path is passed or is passed but does not exist and listed as optional, treat as empty df
-            if not (self.file or os.isfile(self.file)) and self.optional:
+            if not (self.file or os.path.isfile(self.file)) and self.optional:
                 self.data = pd.DataFrame(columns = self.columns_list)
             else:
                 self.data = self.read_lambda(self.file, self.config)
