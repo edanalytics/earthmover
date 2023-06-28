@@ -158,7 +158,8 @@ class FileSource(Source):
         super().execute()
 
         try:
-            if not self.file and self.optional:
+            # if no file path is passed or is passed but does not exist and listed as optional, treat as empty df
+            if not (self.file or os.isfile(self.file)) and self.optional:
                 self.data = pd.DataFrame(columns = self.columns_list)
             else:
                 self.data = self.read_lambda(self.file, self.config)
@@ -180,7 +181,7 @@ class FileSource(Source):
             )
         except FileNotFoundError:
             self.error_handler.throw(
-                f"source file {self.file} not found"
+                f"source file {self.file} not found and not listed as optional"
             )
         except Exception as err:
             self.error_handler.throw(
