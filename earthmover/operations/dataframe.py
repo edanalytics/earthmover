@@ -17,7 +17,6 @@ class JoinOperation(Operation):
             'left_keep_columns', 'left_drop_columns', 'right_keep_columns', 'right_drop_columns',
             'join_type'
         ])
-
         self.join_type = None
 
         self.left_data = None
@@ -168,6 +167,7 @@ class UnionOperation(Operation):
         super().__init__(*args, **kwargs)
 
         self.header = None
+        self.nodes = []
 
 
     def compile(self):
@@ -177,9 +177,7 @@ class UnionOperation(Operation):
         """
         super().compile()
 
-        if len(self.source_list) < 2:
-            self.error_handler.throw('more than one source must be defined in `sources`')
-            raise
+        self.nodes = self.error_handler.assert_get_key(self.config, 'nodes', dtype=list)
 
 
     def verify(self):
@@ -189,9 +187,9 @@ class UnionOperation(Operation):
         """
         super().verify()
 
-        _data_columns = set( self.source_data_list[0].columns )
+        _data_columns = set( self.source.columns )
 
-        for data in self.source_data_list[1:]:
+        for data in self.nodes:
             if set(data.columns) != _data_columns:
                 self.error_handler.throw('dataframes to union do not share identical columns')
                 raise
@@ -206,9 +204,9 @@ class UnionOperation(Operation):
         """
         super().execute()
 
-        self.data = self.source_data_list[0]
+        self.data = self.source
 
-        for _data in self.source_data_list[1:]:
+        for _data in self.nodes:
             try:
                 self.data = dd.concat([self.data, _data], ignore_index=True)
             

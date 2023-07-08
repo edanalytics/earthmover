@@ -1,5 +1,7 @@
 import abc
 
+from typing import Set
+
 from earthmover.node import Node
 
 from typing import TYPE_CHECKING
@@ -11,6 +13,8 @@ class Operation(Node):
     """
 
     """
+    extra_sources: Set = set()
+
     def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
         """
         :param config:
@@ -62,19 +66,6 @@ class Operation(Node):
         self.type = "transformation" # self.config.get('operation')
 
         self.allowed_configs.update(['operation'])
-
-        self.extra_sources = []
-
-        # `source` and `source_list` are optional attributes used for Joins and Unions respectively.
-        _source_list = self.error_handler.assert_get_key(self.config, 'source_list', dtype=str, required=False)
-        if _source_list:
-            self.sources.extend(_source_list)
-
-        _source = self.error_handler.assert_get_key(self.config, 'source', dtype=str, required=False)
-        if _source:
-            self.sources.append(_source)
-
-
 
 
     @abc.abstractmethod

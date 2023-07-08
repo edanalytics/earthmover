@@ -17,6 +17,7 @@ class Node:
     """
 
     """
+    source: str = None
     upstream_sources: Set = set()
 
     CHUNKSIZE = 1024 * 1024 * 100  # 100 MB
