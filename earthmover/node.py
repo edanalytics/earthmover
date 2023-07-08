@@ -66,6 +66,15 @@ class Node:
 
 
     @abc.abstractmethod
+    def verify(self):
+        """
+
+        :return:
+        """
+        pass
+
+
+    @abc.abstractmethod
     def execute(self):
         """
 
@@ -74,6 +83,7 @@ class Node:
         self.error_handler.ctx.update(
             file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
         )
+        self.verify()
         pass
 
 

@@ -28,16 +28,6 @@ class Destination(Node):
 
 
     @abc.abstractmethod
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-        pass
-
-
-    @abc.abstractmethod
     def execute(self):
         """
 
