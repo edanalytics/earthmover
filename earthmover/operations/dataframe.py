@@ -15,7 +15,7 @@ class JoinOperation(Operation):
         self.allowed_configs.update([
             'left_keys', 'left_key', 'right_keys', 'right_key',
             'left_keep_columns', 'left_drop_columns', 'right_keep_columns', 'right_drop_columns',
-            'join_type'
+            'join_type', 'node',
         ])
         self.join_type = None
 
@@ -165,6 +165,8 @@ class UnionOperation(Operation):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.allowed_configs.update(['nodes',])
 
         self.header = None
         self.nodes = []

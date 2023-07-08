@@ -12,7 +12,7 @@ class Transformation(Node):
 
         self.type = 'transformation'
 
-        self.allowed_configs.update(['operations'])
+        self.allowed_configs.update(['operations', 'source'])
 
         # Load in the operation configs and save each under operations.
         # Verify all specified sources exist in the global config.
