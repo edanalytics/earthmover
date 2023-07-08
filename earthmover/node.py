@@ -3,7 +3,7 @@ import dask
 import jinja2
 import pandas as pd
 
-from typing import List
+from typing import List, Set
 
 from earthmover.yaml_parser import YamlMapping
 from earthmover import util
@@ -17,7 +17,7 @@ class Node:
     """
 
     """
-    source: str = None
+    upstream_sources: Set = set()
 
     CHUNKSIZE = 1024 * 1024 * 100  # 100 MB
 

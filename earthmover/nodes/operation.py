@@ -63,7 +63,7 @@ class Operation(Node):
 
         self.allowed_configs.update(['operation'])
 
-        self.sources = []
+        self.extra_sources = []
 
         # `source` and `source_list` are optional attributes used for Joins and Unions respectively.
         _source_list = self.error_handler.assert_get_key(self.config, 'source_list', dtype=str, required=False)

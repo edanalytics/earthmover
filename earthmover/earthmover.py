@@ -123,11 +123,11 @@ class Earthmover:
                 self.graph.add_node(f"${node_type}.{name}", data=node)
 
                 # Place edges for transformations and destinations
-                if node.source:
+                for source in node.upstream_sources:
                     try:
-                        self.graph.add_edge(node.source, f"${node_type}.{name}")
+                        self.graph.add_edge(source, f"${node_type}.{name}")
                     except:
-                        self.error_handler.throw(f"invalid source {node.source}")
+                        self.error_handler.throw(f"invalid source {source}")
 
         ### Confirm that the graph is a DAG
         self.logger.debug("checking dataflow graph")
