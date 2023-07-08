@@ -61,19 +61,20 @@ class Operation(Node):
 
         self.type = "transformation" # self.config.get('operation')
 
-        self.allowed_configs.update(['operation', 'sources', 'source'])
+        self.allowed_configs.update(['operation'])
 
-        # `source` and `source_list` are mutually-exclusive attributes.
-        # `source_list` is for operations with multiple sources (i.e., dataframe operations)
-        self.source = self.error_handler.assert_get_key(self.config, 'source', dtype=str, required=False)
-        self.source_list = self.error_handler.assert_get_key(self.config, 'sources', dtype=list, required=False)
-        self.source_data_list = None  # Retrieved data for operations with multiple sources
+        self.sources = []
 
-        if bool(self.source) == bool(self.source_list):  # Fail if both or neither are populated.
-            self.error_handler.throw(
-                "A `source` or a list of `sources` must be defined for any operation!"
-            )
-            raise
+        # `source` and `source_list` are optional attributes used for Joins and Unions respectively.
+        _source_list = self.error_handler.assert_get_key(self.config, 'source_list', dtype=str, required=False)
+        if _source_list:
+            self.sources.extend(_source_list)
+
+        _source = self.error_handler.assert_get_key(self.config, 'source', dtype=str, required=False)
+        if _source:
+            self.sources.append(_source)
+
+
 
 
     @abc.abstractmethod

@@ -17,6 +17,8 @@ class Node:
     """
 
     """
+    source: str = None
+
     CHUNKSIZE = 1024 * 1024 * 100  # 100 MB
 
     def __init__(self, name: str, config: YamlMapping, *, earthmover: 'Earthmover'):
