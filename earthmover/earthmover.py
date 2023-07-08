@@ -107,49 +107,35 @@ class Earthmover:
         """
         self.logger.debug("building dataflow graph")
 
-        ### Build all nodes into a graph
-        # sources:
-        _sources = self.error_handler.assert_get_key(self.user_configs, 'sources', dtype=dict)
-        for name, config in _sources.items():
+        node_types = {
+            'sources': Source,
+            'transformations': Transformation,
+            'destinations': Destination,
+        }
 
-            node = Source(name, config, earthmover=self)
-            self.graph.add_node(f"$sources.{name}", data=node)
+        ### Build the graph type-by-type
+        for node_type, node_class in node_types.items():
+            nodes = self.error_handler.assert_get_key(self.user_configs, node_type, dtype=dict, required=False, default={})
 
-        # transformations:
-        _transformations = self.error_handler.assert_get_key(
-            self.user_configs, 'transformations',
-            dtype=dict, required=False, default={}
-        )
+            # Place the nodes
+            for name, config in nodes.items():
+                node_repr = f"${node_type}.{name}"
+                # print(node_repr)
+                node = node_class(name, config, earthmover=self)
+                self.graph.add_node(node_repr, data=node)
 
-        for name, config in _transformations.items():
+                # Verify and link the edges
+                if hasattr(node, 'sources'):  # Transformations
+                    for source in node.sources:
+                        if self.graph.ref(source):
+                            if source != node_repr:
+                                self.graph.add_edge(source, node_repr)
+                        else:
+                            self.error_handler.throw(f"invalid source {source}")
 
-            node = Transformation(name, config, earthmover=self)
-            self.graph.add_node(f"$transformations.{name}", data=node)
+                if hasattr(node, 'source' ):  # Destinations
+                    self.graph.add_edge(node.source, node_repr)
 
-            for source in node.sources:
-                if not self.graph.ref(source):
-                    self.error_handler.throw(
-                        f"invalid source {source}"
-                    )
-                    raise
-
-                if source != f"$transformations.{name}":
-                    self.graph.add_edge(source, f"$transformations.{name}")
-
-        # destinations:
-        _destinations = self.error_handler.assert_get_key(self.user_configs, 'destinations', dtype=dict)
-        for name, config in _destinations.items():
-
-            node = Destination(name, config, earthmover=self)
-            self.graph.add_node(f"$destinations.{name}", data=node)
-
-            if not self.graph.ref(node.source):
-                self.error_handler.throw(
-                    f"invalid source {node.source}"
-                )
-                raise
-
-            self.graph.add_edge(node.source, f"$destinations.{name}")
 
         ### Confirm that the graph is a DAG
         self.logger.debug("checking dataflow graph")
