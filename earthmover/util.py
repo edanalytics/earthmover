@@ -1,7 +1,9 @@
 import jinja2
 import hashlib
+import logging
+import os
 
-from typing import Optional
+from typing import Any, Optional
 from sys import exc_info
 
 from earthmover.error_handler import ErrorHandler
@@ -117,3 +119,37 @@ def jinja2_template_error_lineno():
     
 def jinja_md5(str):
     return hashlib.md5(str.encode('utf-8')).hexdigest()
+
+
+def build_jinja_template(template_string: str, macros: str = ""):
+    """
+
+    """
+    template = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(os.path.dirname('./'))
+    ).from_string(macros + template_string)
+
+    template.globals['md5'] = hashlib.md5(str.encode('utf-8')).hexdigest()
+
+    return template
+
+
+# TODO: This has to be a NULL variable, without being None!
+__UNDEFINED = "[[UNDEFINED]]"
+
+def assert_get_key(obj: dict, key: str, *, default: Optional[Any] = __UNDEFINED, dtype: Any = object):
+    value = obj.get(key, default)
+
+    if value == __UNDEFINED:
+        logging.critical(
+            f"YAML parse error: Field not defined: {key}."
+        )
+
+    if not isinstance(value, dtype):
+        logging.critical(
+            f"YAML parse error: Field does not match expected datatype: {key}\n"
+            f"    Expected: {dtype}\n"
+            f"    Received: {value}"
+        )
+
+    return value
