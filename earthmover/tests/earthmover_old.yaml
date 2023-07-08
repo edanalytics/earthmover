@@ -1,0 +1,296 @@
+config:
+  output_dir: ${BASE_DIR}/outputs/
+  log_level: INFO
+  show_stacktrace: False
+  show_graph: False
+  parameter_defaults:
+    BASE_DIR: "."
+
+
+sources:
+  mammal_species:
+    file: ${BASE_DIR}/sources/mammals.csv
+    header_rows: 1
+  bird_species:
+    file: ${BASE_DIR}/sources/birds.csv
+    header_rows: 1
+  fish_species:
+    file: ${BASE_DIR}/sources/fishes.csv
+    header_rows: 1
+  reptile_species:
+    file: ${BASE_DIR}/sources/reptiles.csv
+    header_rows: 1
+  zoos:
+    file: ${BASE_DIR}/sources/zoos.csv
+    header_rows: 1
+  zoo_inventories:
+    file: ${BASE_DIR}/sources/inventories.csv
+
+
+transformations:
+  mammal_species:
+    operations:
+      - operation: add_columns
+        source: $sources.mammal_species
+        columns:
+          family: mammal
+        debug: True
+      - operation: modify_columns
+        source: $transformations.mammal_species
+        columns:
+          id: {%raw%}1_{{value}}{%endraw%}
+  bird_species:
+    operations:
+      - operation: add_columns
+        source: $sources.bird_species
+        columns:
+          family: bird
+      - operation: modify_columns
+        source: $transformations.bird_species
+        columns:
+          id: {%raw%}2_{{value}}{%endraw%}
+  fish_species:
+    operations:
+      - operation: distinct_rows
+        source: $sources.fish_species
+        columns: [ id, name, genus, species ]
+      - operation: add_columns
+        source: $transformations.fish_species
+        columns:
+          family: fish
+      - operation: modify_columns
+        source: $transformations.fish_species
+        columns:
+          id: {%raw%}3_{{value}}{%endraw%}
+  reptile_species:
+    operations:
+      - operation: add_columns
+        source: $sources.reptile_species
+        columns:
+          family: reptile
+      - operation: modify_columns
+        source: $transformations.reptile_species
+        columns:
+          id: {%raw%}4_{{value}}{%endraw%}
+  animal_species:
+    operations:
+      - operation: union
+        sources:
+          - $transformations.mammal_species
+          - $transformations.bird_species
+          - $transformations.fish_species
+          - $transformations.reptile_species
+        debug: True
+  joined_inventories:
+    operations:
+      - operation: join
+        sources:
+          - $sources.zoo_inventories
+          - $sources.zoos
+        join_type: inner
+        left_key: zoo
+        right_key: id
+      - operation: duplicate_columns
+        source: $transformations.joined_inventories
+        columns:
+          name: zoo_name
+      - operation: drop_columns
+        source: $transformations.joined_inventories
+        columns:
+          - id
+          - name
+      - operation: join
+        sources:
+          - $transformations.joined_inventories
+          - $transformations.animal_species
+        join_type: inner
+        left_key: animal
+        right_key: id
+      - operation: duplicate_columns
+        source: $transformations.joined_inventories
+        columns:
+          name: species_name
+      - operation: drop_columns
+        source: $transformations.joined_inventories
+        columns:
+          - id
+          - name
+  species_count_by_zoo:
+    operations:
+      - operation: join
+        sources:
+          - $sources.zoos
+          - $sources.zoo_inventories
+        join_type: right
+        left_key: id
+        right_key: zoo
+      - operation: group_by
+        source: $transformations.species_count_by_zoo
+        group_by_columns:
+          - id
+        create_columns:
+          count: count()
+      - operation: join
+        sources:
+          - $sources.zoos
+          - $transformations.species_count_by_zoo
+        join_type: left
+        left_key: id
+        right_key: id
+        left_keep_columns:
+          - name
+        right_keep_columns:
+          - id
+          - count
+      - operation: keep_columns
+        source: $transformations.species_count_by_zoo
+        columns:
+          - name
+          - count
+      - operation: modify_columns
+        source: $transformations.species_count_by_zoo
+        columns:
+          count: "{%raw%}{% if value!=value %}0.0{% else %}{{value}}{% endif %}{%endraw%}"
+      - operation: add_columns
+        source: $transformations.species_count_by_zoo
+        columns:
+          entity: zoo
+          count_column: species_count
+  zoo_count_by_species:
+    operations:
+      - operation: group_by
+        source: $transformations.joined_inventories
+        group_by_columns:
+          - animal
+          - species_name
+        create_columns:
+          count: count()
+      - operation: duplicate_columns
+        source: $transformations.zoo_count_by_species
+        columns:
+          species_name: name
+      - operation: keep_columns
+        source: $transformations.zoo_count_by_species
+        columns:
+          - name
+          - count
+      - operation: add_columns
+        source: $transformations.zoo_count_by_species
+        columns:
+          entity: species
+          count_column: zoo_count
+  zoo_count_by_year_founded:
+    operations:
+      - operation: date_format
+        source: $sources.zoos
+        column: date_founded
+        from_format: "%b %d %Y"
+        to_format: "%Y-%m-%d"
+      - operation: modify_columns
+        source: $transformations.zoo_count_by_year_founded
+        columns:
+          date_founded: "{%raw%}{{value[0:4]}}{%endraw%}"
+      - operation: rename_columns
+        source: $transformations.zoo_count_by_year_founded
+        columns:
+          date_founded: year_founded
+      - operation: keep_columns
+        source: $transformations.zoo_count_by_year_founded
+        columns:
+          - year_founded
+      - operation: group_by
+        source: $transformations.zoo_count_by_year_founded
+        group_by_columns:
+          - year_founded
+        create_columns:
+          count: count()
+      - operation: rename_columns
+        source: $transformations.zoo_count_by_year_founded
+        columns:
+          year_founded: name
+      - operation: add_columns
+        source: $transformations.zoo_count_by_year_founded
+        columns:
+          entity: year
+          count_column: zoos_founded
+  big_cats:
+    operations:
+      - operation: filter_rows
+        source: $sources.mammal_species
+        query: "name.str.contains('Cheetah') or name.str.contains('Lion') or name.str.contains('Tiger')"
+        behavior: include
+      - operation: duplicate_columns
+        source: $transformations.big_cats
+        columns:
+          genus: branch
+      - operation: map_values
+        source: $transformations.big_cats
+        column: branch
+        mapping:
+          Acinonyx:
+          Panthera: panther
+      - operation: combine_columns
+        source: $transformations.big_cats
+        columns:
+          - genus
+          - species
+        new_column: scientific_name
+        separator: " "
+  total_of_each_species:
+    operations:
+      - operation: group_by
+        source: $transformations.joined_inventories
+        # function: sum
+        group_by_columns:
+          - animal
+          - species_name
+        create_columns:
+          count: count()
+      - operation: duplicate_columns
+        source: $transformations.total_of_each_species
+        columns:
+          species_name: name
+      - operation: keep_columns
+        source: $transformations.total_of_each_species
+        columns:
+          - name
+          - count
+      - operation: add_columns
+        source: $transformations.total_of_each_species
+        columns:
+          entity: species
+          count_column: total_count
+
+
+
+destinations:
+  animals:
+    source: $transformations.animal_species
+    template: ${BASE_DIR}/templates/animal.jsont
+    extension: jsonl
+    linearize: True
+  species_count_by_zoo:
+    source: $transformations.species_count_by_zoo
+    template: ${BASE_DIR}/templates/count.jsont
+    extension: jsonl
+    linearize: True
+  zoo_count_by_species:
+    source: $transformations.zoo_count_by_species
+    template: ${BASE_DIR}/templates/count.jsont
+    extension: jsonl
+    linearize: True
+  zoo_count_by_year_founded:
+    source: $transformations.zoo_count_by_year_founded
+    template: ${BASE_DIR}/templates/count.jsont
+    extension: jsonl
+    linearize: True
+  big_cats:
+    source: $transformations.big_cats
+    template: ${BASE_DIR}/templates/cats.jsont
+    extension: jsonl
+    linearize: True
+  total_of_each_species:
+    source: $transformations.total_of_each_species
+    template: ${BASE_DIR}/templates/count.jsont
+    extension: jsonl
+    linearize: True
