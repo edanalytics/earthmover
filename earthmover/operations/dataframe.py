@@ -73,11 +73,8 @@ class JoinOperation(Operation):
             raise
 
         # Verify the correct number of datasets has been provided.
-        if len(self.source_list) != 2:
-            self.error_handler.throw(
-                f"`sources` must define exactly two sources to join"
-            )
-            raise
+        self.left_data = self.source
+        self.right_data = self.error_handler.assert_get_key(self.config, 'node', dtype=str)
 
         # Collect columns
         #   - There is a "if keep - elif drop" block in verify, so doesn't matter if both are populated.
@@ -95,7 +92,6 @@ class JoinOperation(Operation):
         super().verify()
 
         # Build left dataset columns
-        self.left_data  = self.source_data_list[0]
         self.left_cols = self.left_data.columns
 
         if self.left_keep_cols:
@@ -117,7 +113,6 @@ class JoinOperation(Operation):
             self.left_cols = list(set(self.left_cols).difference(self.left_drop_cols))
 
         # Build right dataset columns
-        self.right_data = self.source_data_list[1]
         self.right_cols = self.right_data.columns
 
         if self.right_keep_cols:
