@@ -67,23 +67,15 @@ class Operation(Node):
 
         self.allowed_configs.update(['operation'])
 
-    @abc.abstractmethod
     def execute(self):
         """
 
         :return:
         """
         super().execute()
-
-        # If multiple sources are required for an operation, self.data must be defined in the child class execute().
-        self.data = self.get_source_node(self.source).data
-        if hasattr(self, 'nodes'):
-            self.nodes = [
-                self.get_source_node(node).data for node in self.nodes
-            ]
-        if hasattr(self, 'node'):
-            self.node = self.get_source_node(self.node).data
-
         self.verify()
-
         pass
+
+    def run(self, data: 'DataFrame'):
+        self.data = data
+        return self.execute()

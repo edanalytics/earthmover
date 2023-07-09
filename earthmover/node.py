@@ -83,6 +83,7 @@ class Node:
         self.error_handler.ctx.update(
             file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
         )
+
         self.verify()
         pass
 
@@ -113,7 +114,7 @@ class Node:
 
         :return:
         """
-        return self.earthmover.graph.ref(source)
+        return self.earthmover.graph.ref(source).data.copy()
 
 
     def check_expectations(self, expectations: List[str]):

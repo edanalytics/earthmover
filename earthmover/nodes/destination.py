@@ -27,19 +27,6 @@ class Destination(Node):
         self.upstream_sources.add(self.source)
 
 
-    @abc.abstractmethod
-    def execute(self):
-        """
-
-        :return:
-        """
-        super().execute()
-        self.data = self.get_source_node(self.source).data
-
-        pass
-
-
-
 class FileDestination(Destination):
     """
 

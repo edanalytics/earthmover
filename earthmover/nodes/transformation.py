@@ -37,7 +37,6 @@ class Transformation(Node):
         super().compile()
 
         for operation in self.operations:
-            operation.source = self
             operation.compile()
 
 
@@ -48,6 +47,8 @@ class Transformation(Node):
         """
         super().execute()
 
+        self.data = self.get_source_node(self.source)
+
         for operation in self.operations:
-            self.data = operation.execute()
+            self.data = operation.run(self.data)
             operation.post_execute()

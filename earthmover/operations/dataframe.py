@@ -7,6 +7,9 @@ class JoinOperation(Operation):
     """
 
     """
+    node: str = None
+    node_data: list = []
+
     JOIN_TYPES = ["inner", "left", "right", "outer"]
 
     def __init__(self, *args, **kwargs):
@@ -30,6 +33,10 @@ class JoinOperation(Operation):
         self.right_keep_cols = None
         self.right_drop_cols = None
         self.right_cols = None  # The final column list built of cols and keys
+
+        # Check joined node
+        self.node = self.error_handler.assert_get_key(self.config, 'node', dtype=str)
+        self.extra_sources.add(self.node)
 
 
     def compile(self):
@@ -70,10 +77,6 @@ class JoinOperation(Operation):
                 f"`join_type` must be one of [inner, left, right, outer], not `{self.join_type}`"
             )
             raise
-
-        # Verify the correct number of datasets has been provided.
-        self.left_data = self.source
-        self.right_data = self.error_handler.assert_get_key(self.config, 'node', dtype=str)
 
         # Collect columns
         #   - There is a "if keep - elif drop" block in verify, so doesn't matter if both are populated.
@@ -138,6 +141,9 @@ class JoinOperation(Operation):
 
         :return:
         """
+        self.left_data = self.data
+        self.right_data = self.get_source_node(self.node)
+
         super().execute()
 
         _left_data  = self.left_data[ self.left_cols ]
@@ -163,13 +169,18 @@ class UnionOperation(Operation):
     """
 
     """
+    nodes: list = []
+    node_data: list = []
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.allowed_configs.update(['nodes',])
 
         self.header = None
-        self.nodes = []
+
+        self.nodes = self.error_handler.assert_get_key(self.config, 'nodes', dtype=list)
+        self.extra_sources.update(self.nodes)
 
 
     def compile(self):
@@ -179,8 +190,6 @@ class UnionOperation(Operation):
         """
         super().compile()
 
-        self.nodes = self.error_handler.assert_get_key(self.config, 'nodes', dtype=list)
-
 
     def verify(self):
         """
@@ -189,9 +198,9 @@ class UnionOperation(Operation):
         """
         super().verify()
 
-        _data_columns = set( self.source.columns )
+        _data_columns = set( self.data.columns )
 
-        for data in self.nodes:
+        for data in self.node_data:
             if set(data.columns) != _data_columns:
                 self.error_handler.throw('dataframes to union do not share identical columns')
                 raise
@@ -204,11 +213,11 @@ class UnionOperation(Operation):
 
         :return:
         """
+        self.node_data = list(map(self.get_source_node, self.nodes))
+
         super().execute()
 
-        self.data = self.source
-
-        for _data in self.nodes:
+        for _data in self.node_data:
             try:
                 self.data = dd.concat([self.data, _data], ignore_index=True)
             
