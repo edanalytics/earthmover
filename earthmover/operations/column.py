@@ -1,6 +1,8 @@
 import csv
 import dask.dataframe as dd
 import jinja2
+import re
+import string
 import os
 import pandas as pd
 
@@ -495,3 +497,49 @@ class DateFormatOperation(Operation):
                 )
 
         return self.data
+
+
+
+class SnakeCaseColumnsOperation(Operation):
+    """
+
+    """
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+    )
+
+    def execute(self) -> 'DataFrame':
+        """
+
+        :return:
+        """
+        super().execute()
+
+        data_columns  = list(self.data.columns)
+        snake_columns = list(map(self.to_snake_case, data_columns))
+
+        if len(set(data_columns)) != len(set(snake_columns)):
+            self.error_handler.throw(
+                f"Snake case operation creates duplicate columns!\n"
+                f"Columns before: {len(set(data_columns))}\n"
+                f"Columns after : {len(set(snake_columns))}"
+            )
+
+        self.data = self.data.rename(columns=dict(zip(data_columns, snake_columns)))
+        return self.data
+
+    @staticmethod
+    def to_snake_case(text: str):
+        """
+        Convert camelCase names to snake_case names.
+        :param text: A camelCase string value to be converted to snake_case.
+        :return: A string in snake_case.
+        """
+        punctuation_regex = re.compile("[" + re.escape(string.punctuation) + " ]")  # Include space
+
+        text = re.sub(r'(.)([A-Z][a-z]+)', r'\1_\2', text)
+        text = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', text)
+        text = punctuation_regex.sub("_", text)  # Replace any punctuation or spaces with underscores
+        text = re.sub(r'_+', '_', text)  # Consolidate underscores
+        text = re.sub(r'^_', '', text)  # Remove leading underscores
+        return text.lower()
