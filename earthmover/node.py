@@ -4,7 +4,7 @@ import jinja2
 import pandas as pd
 
 import dask.dataframe as dd
-from typing import List
+from typing import List, Set
 
 from earthmover.yaml_parser import YamlMapping
 from earthmover import util
@@ -30,6 +30,8 @@ class Node:
 
     allowed_configs: tuple = ('debug', 'expect',)
 
+    source: str = None
+    sources: Set = set()  # Optional additional sources that do not need to be copied when referenced.
     source_node_mapping: dict = {}
 
     CHUNKSIZE = 1024 * 1024 * 100  # 100 MB

@@ -17,9 +17,6 @@ class Operation(Node):
 
     allowed_configs: tuple = ('operation',)
 
-    sources: Set = set()  # Optional additional sources that do not need to be copied when referenced.
-    sources_data: list = []
-
     def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
         """
         :param config:

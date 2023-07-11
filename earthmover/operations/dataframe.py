@@ -25,8 +25,6 @@ class JoinOperation(Operation):
     right_drop_cols: list = None
     right_cols: list = None  # The final column list built of cols and keys
 
-    sources_data: list = []
-
     JOIN_TYPES = ["inner", "left", "right", "outer"]
 
     def __init__(self, *args, **kwargs):
@@ -83,16 +81,18 @@ class JoinOperation(Operation):
         self.right_drop_cols = self.error_handler.assert_get_key(self.config, 'right_drop_columns', dtype=list, required=False)
 
 
-    def verify(self):
+    def execute(self):
         """
 
         :return:
         """
-        # Build left dataset columns
+        super().execute()
+
+        # Build left dataset
         self.left_cols = self.data.columns
 
         if self.left_keep_cols:
-            if not set(self.left_keep_cols).issubset(self.data.columns):
+            if not set(self.left_keep_cols).issubset(self.left_cols):
                 self.error_handler.throw(
                     "columns in `left_keep_columns` are not defined in the dataset"
                 )
@@ -109,12 +109,15 @@ class JoinOperation(Operation):
 
             self.left_cols = list(set(self.left_cols).difference(self.left_drop_cols))
 
-        # Build right dataset columns
-        for right_data in self.sources_data:
+        self.data = self.data[self.left_cols]
+
+        # Iterate each right dataset
+        for source in self.sources:
+            right_data = self.source_node_mapping[source].data.copy()
             self.right_cols = right_data.columns
 
             if self.right_keep_cols:
-                if not set(self.right_keep_cols).issubset(right_data.columns):
+                if not set(self.right_keep_cols).issubset(self.right_cols):
                     self.error_handler.throw(
                         "columns in `right_keep_columns` are not defined in the dataset"
                     )
@@ -131,23 +134,11 @@ class JoinOperation(Operation):
 
                 self.right_cols = list(set(self.right_cols).difference(self.right_drop_cols))
 
-
-    def execute(self):
-        """
-
-        :return:
-        """
-        super().execute()
-        self.verify()
-
-        left_data = self.data[ self.left_cols ]
-        for source in self.sources:
-
-            right_data = self.source_node_mapping[source].data.copy()[ self.right_cols ]
+            right_data = right_data[self.right_cols]
 
             try:
                 self.data = dd.merge(
-                    left_data, right_data, how=self.join_type,
+                    self.data, right_data, how=self.join_type,
                     left_on=self.left_keys, right_on=self.right_keys
                 )
 
@@ -157,7 +148,7 @@ class JoinOperation(Operation):
                 )
                 raise
 
-            return self.data
+        return self.data
 
 
 
@@ -167,36 +158,9 @@ class UnionOperation(Operation):
     """
     allowed_configs: tuple = ('debug', 'expect', 'operation', 'sources',)
 
-    header: list = None
-    sources_data: list = []
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.sources = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
-
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-
-
-    def verify(self):
-        """
-
-        :return:
-        """
-        _data_columns = set( self.data.columns )
-
-        for data in self.sources_data:
-            if set(data.columns) != _data_columns:
-                self.error_handler.throw('dataframes to union do not share identical columns')
-                raise
-        else:
-            self.header = list(_data_columns)
 
 
     def execute(self):
@@ -205,10 +169,13 @@ class UnionOperation(Operation):
         :return:
         """
         super().execute()
-        self.verify()
 
         for source in self.sources:
             source_data = self.source_node_mapping[source].data.copy()
+
+            if set(source_data.columns) != set(self.data.columns):
+                self.error_handler.throw('dataframes to union do not share identical columns')
+                raise
 
             try:
                 self.data = dd.concat([self.data, source_data], ignore_index=True)

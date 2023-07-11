@@ -54,5 +54,4 @@ class Transformation(Node):
         for operation in self.operations:
             self.data = operation.run(self.data)
 
-        print(f"{self.name} :: {self.data}")
         self.post_execute()

@@ -247,8 +247,6 @@ class Earthmover:
                 elif node.type == 'destination':
                     self.destinations.append(node)
 
-                node.compile()
-
 
     def execute(self, subgraph):
         """
@@ -263,7 +261,7 @@ class Earthmover:
                     node.execute()  # Sets self.data in each node.
                     node.post_execute()
                     if self.results_file:
-                        self.metadata["row_counts"].update({'$'+node.type+'s.'+node.name: len(node.data)})
+                        self.metadata["row_counts"].update({f"${node.type}s.{node.name}": len(node.data)})
 
 
     def generate(self, selector):

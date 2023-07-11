@@ -138,21 +138,6 @@ class FileSource(Source):
                 raise
 
 
-    def verify(self):
-        """
-
-        :return:
-        """
-        if self.columns_list:
-            _num_data_cols = len(self.data.columns)
-            _num_list_cols = len(self.columns_list)
-            if _num_data_cols != _num_list_cols:
-                self.error_handler.throw(
-                    f"source file {self.file} specified {_num_list_cols} `columns` but has {_num_data_cols} columns"
-                )
-                raise
-
-
     def execute(self):
         """
 
@@ -167,7 +152,15 @@ class FileSource(Source):
                 self.data = self.read_lambda(self.file, self.config)
             self.ensure_dask_dataframe()
 
-            self.verify()  # Verify the column list provided matches the number of columns in the dataframe.
+            # Verify the column list provided matches the number of columns in the dataframe.
+            if self.columns_list:
+                _num_data_cols = len(self.data.columns)
+                _num_list_cols = len(self.columns_list)
+                if _num_data_cols != _num_list_cols:
+                    self.error_handler.throw(
+                        f"source file {self.file} specified {_num_list_cols} `columns` but has {_num_data_cols} columns"
+                    )
+                    raise
 
             if self.columns_list:
                 self.data.columns = self.columns_list

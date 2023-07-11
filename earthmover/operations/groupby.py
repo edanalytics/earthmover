@@ -30,25 +30,18 @@ class GroupByWithCountOperation(Operation):
         self.count_column     = self.error_handler.assert_get_key(self.config, 'count_column', dtype=str)
 
 
-    def verify(self):
-        """
-
-        :return:
-        """
-        if not set(self.group_by_columns).issubset(self.data.columns):
-            self.error_handler.throw(
-                "one or more specified group-by columns not in the dataset"
-            )
-            raise
-
-
     def execute(self):
         """
 
         :return:
         """
         super().execute()
-        self.verify()
+
+        if not set(self.group_by_columns).issubset(self.data.columns):
+            self.error_handler.throw(
+                "one or more specified group-by columns not in the dataset"
+            )
+            raise
 
         self.data[self.GROUPED_COL_NAME] = self.data.apply(
             lambda x: self.GROUPED_COL_SEP.join([*self.group_by_columns])
@@ -102,17 +95,6 @@ class GroupByWithAggOperation(Operation):
             required=False, default=self.DEFAULT_AGG_SEP
         )
 
-    def verify(self):
-        """
-
-        :return:
-        """
-        if not set(self.group_by_columns).issubset(self.data.columns):
-            self.error_handler.throw(
-                "one or more specified group-by columns not in the dataset"
-            )
-            raise
-
 
     def execute(self):
         """
@@ -120,7 +102,12 @@ class GroupByWithAggOperation(Operation):
         :return:
         """
         super().execute()
-        self.verify()
+
+        if not set(self.group_by_columns).issubset(self.data.columns):
+            self.error_handler.throw(
+                "one or more specified group-by columns not in the dataset"
+            )
+            raise
 
         self.data[self.GROUPED_COL_NAME] = self.data.apply(
             lambda x: self.GROUPED_COL_SEP.join([*self.group_by_columns])
@@ -175,18 +162,6 @@ class GroupByOperation(Operation):
         self.create_columns_dict = self.error_handler.assert_get_key(self.config, 'create_columns', dtype=dict)
 
 
-    def verify(self):
-        """
-
-        :return:
-        """
-        if not set(self.group_by_columns).issubset(self.data.columns):
-            self.error_handler.throw(
-                "one or more specified group-by columns not in the dataset"
-            )
-            raise
-
-
     def execute(self):
         """
         Note: There is a bug in Dask Groupby operations.
@@ -195,7 +170,12 @@ class GroupByOperation(Operation):
         :return:
         """
         super().execute()
-        self.verify()
+
+        if not set(self.group_by_columns).issubset(self.data.columns):
+            self.error_handler.throw(
+                "one or more specified group-by columns not in the dataset"
+            )
+            raise
 
         #
         grouped = self.data.groupby(self.group_by_columns)
