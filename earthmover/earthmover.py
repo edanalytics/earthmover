@@ -458,9 +458,7 @@ class Earthmover:
         if self.results_file:
 
             # create directory if not exists
-            results_dir = os.path.dirname(self.results_file)
-            if not os.path.isdir(results_dir):
-                os.makedirs(results_dir)
+            os.makedirs(os.path.dirname(self.results_file), exist_ok=True)
 
             self.end_timestamp = datetime.datetime.now()
             self.metadata.update({"completed_at": self.end_timestamp.isoformat(timespec='microseconds')})
