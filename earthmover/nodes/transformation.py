@@ -1,3 +1,5 @@
+from typing import Set
+
 from earthmover.node import Node
 from earthmover.nodes.operation import Operation
 
@@ -11,7 +13,7 @@ class Transformation(Node):
     allowed_configs: tuple = ('debug', 'expect', 'operations', 'source',)
 
     operations: list = []
-
+    sources: Set = set()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

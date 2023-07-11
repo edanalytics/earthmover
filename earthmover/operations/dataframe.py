@@ -168,7 +168,7 @@ class UnionOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = ('debug', 'expect', 'operation',)
+    allowed_configs: tuple = ('debug', 'expect', 'operation', 'sources',)
 
     header: list = None
     sources_data: list = []

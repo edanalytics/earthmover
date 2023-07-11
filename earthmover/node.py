@@ -4,7 +4,7 @@ import jinja2
 import pandas as pd
 
 import dask.dataframe as dd
-from typing import List, Set
+from typing import List
 
 from earthmover.yaml_parser import YamlMapping
 from earthmover import util
@@ -26,7 +26,6 @@ class Node:
     num_cols: int = None
 
     source: str = None
-    sources: Set = set()  # Optional additional sources that do not need to be copied when referenced.
     expectations: list = None
 
     allowed_configs: tuple = ('debug', 'expect',)

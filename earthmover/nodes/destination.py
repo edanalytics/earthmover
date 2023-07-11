@@ -33,7 +33,7 @@ class FileDestination(Destination):
     mode: str = 'file'
 
     allowed_configs: tuple = (
-        'debug', 'expect',
+        'debug', 'expect', 'source',
         'template', 'extension', 'linearize', 'header', 'footer',
     )
 

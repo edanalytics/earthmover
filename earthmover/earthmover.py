@@ -123,14 +123,18 @@ class Earthmover:
                 self.graph.add_node(f"${node_type}.{name}", data=node)
 
                 # Place edges for transformations and destinations
-                for source in [node.source, *node.sources]:
-
-                    if not source: continue  # Skip sourcing Sources
-
+                if node.source:
                     try:
-                        self.graph.add_edge(source, f"${node_type}.{name}")
+                        self.graph.add_edge(node.source, f"${node_type}.{name}")
                     except:
-                        self.error_handler.throw(f"invalid source {source}")
+                        self.error_handler.throw(f"invalid source {node.source}")
+
+                if hasattr(node, 'sources'):
+                    for source in node.sources:
+                        try:
+                            self.graph.add_edge(source, f"${node_type}.{name}")
+                        except:
+                            self.error_handler.throw(f"invalid source {source}")
 
         ### Confirm that the graph is a DAG
         self.logger.debug("checking dataflow graph")

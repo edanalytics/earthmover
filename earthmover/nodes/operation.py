@@ -1,5 +1,7 @@
 import abc
 
+from typing import Set
+
 from earthmover.node import Node
 
 from typing import TYPE_CHECKING
@@ -15,6 +17,7 @@ class Operation(Node):
 
     allowed_configs: tuple = ('debug', 'expect', 'operation',)
 
+    sources: Set = set()  # Optional additional sources that do not need to be copied when referenced.
     sources_data: list = []
 
     def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
