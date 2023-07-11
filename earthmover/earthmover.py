@@ -456,6 +456,12 @@ class Earthmover:
         
         ### Create structured output results_file if necessary
         if self.results_file:
+
+            # create directory if not exists
+            results_dir = os.path.dirname(self.results_file)
+            if not os.path.isdir(results_dir):
+                os.makedirs(results_dir)
+
             self.end_timestamp = datetime.datetime.now()
             self.metadata.update({"completed_at": self.end_timestamp.isoformat(timespec='microseconds')})
             self.metadata.update({"runtime_sec": (self.end_timestamp - self.start_timestamp).total_seconds()})
