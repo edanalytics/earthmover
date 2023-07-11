@@ -69,28 +69,6 @@ class Operation(Node):
         super().__init__(full_name, config, earthmover=earthmover)
 
 
-    @abc.abstractmethod
-    def verify(self):
-        """
-
-        :return:
-        """
-        pass
-
-    def execute(self):
-        """
-
-        :return:
-        """
-        super().execute()
-
-        self.data = self.get_source_node(self.source)
-        self.sources_data = list(map(self.get_source_node, self.sources))
-
-        self.verify()
-
-        pass
-
     def run(self, data: 'DataFrame'):
         self.data = data
         return self.execute()

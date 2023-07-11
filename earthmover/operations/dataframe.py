@@ -88,8 +88,6 @@ class JoinOperation(Operation):
 
         :return:
         """
-        super().verify()
-
         # Build left dataset columns
         self.left_cols = self.data.columns
 
@@ -142,6 +140,7 @@ class JoinOperation(Operation):
         self.sources_data = list(map(self.get_source_node, self.sources))
 
         super().execute()
+        self.verify()
 
         left_data = self.data[ self.left_cols ]
         for right_data in self.sources:
@@ -192,8 +191,6 @@ class UnionOperation(Operation):
 
         :return:
         """
-        super().verify()
-
         _data_columns = set( self.data.columns )
 
         for data in self.sources_data:
@@ -209,7 +206,10 @@ class UnionOperation(Operation):
 
         :return:
         """
+        self.sources_data = list(map(self.get_source_node, self.sources))
+
         super().execute()
+        self.verify()
 
         for _data in self.sources_data:
             try:

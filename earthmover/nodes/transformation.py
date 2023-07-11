@@ -13,6 +13,7 @@ class Transformation(Node):
     allowed_configs: tuple = ('debug', 'expect', 'operations', 'source',)
 
     operations: list = []
+    source: str = None
     sources: Set = set()
 
     def __init__(self, *args, **kwargs):

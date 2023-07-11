@@ -183,6 +183,7 @@ class DuplicateColumnsOperation(Operation):
         :return:
         """
         super().execute()
+        self.verify()
 
         for old_col, new_col in self.columns_dict.items():
 
@@ -242,6 +243,7 @@ class RenameColumnsOperation(Operation):
         :return:
         """
         super().execute()
+        self.verify()
 
         self.data = self.data.rename(columns=self.columns_dict)
 
@@ -275,8 +277,6 @@ class DropColumnsOperation(Operation):
 
         :return:
         """
-        super().verify()
-
         if not set(self.columns_to_drop).issubset(self.data.columns):
             self.error_handler.throw(
                 "one or more columns specified to drop are not present in the dataset"
@@ -290,6 +290,7 @@ class DropColumnsOperation(Operation):
         :return:
         """
         super().execute()
+        self.verify()
 
         self.data = self.data.drop(columns=self.columns_to_drop)
 
@@ -323,8 +324,6 @@ class KeepColumnsOperation(Operation):
 
         :return:
         """
-        super().verify()
-
         if not set(self.header).issubset(self.data.columns):
             self.error_handler.throw(
                 "one or more columns specified to keep are not present in the dataset"
@@ -338,6 +337,7 @@ class KeepColumnsOperation(Operation):
         :return:
         """
         super().execute()
+        self.verify()
 
         self.data = self.data[self.header]
 
@@ -376,8 +376,6 @@ class CombineColumnsOperation(Operation):
 
         :return:
         """
-        super().verify()
-
         if not set(self.columns_list).issubset(self.data.columns):
             self.error_handler.throw(
                 f"one or more defined columns is not present in the dataset"
@@ -390,6 +388,7 @@ class CombineColumnsOperation(Operation):
         :return:
         """
         super().execute()
+        self.verify()
 
         self.data[self.new_column] = self.data.apply(
             lambda x: self.separator.join(x[col] for col in self.columns_list),
@@ -454,8 +453,6 @@ class MapValuesOperation(Operation):
 
         :return:
         """
-        super().verify()
-
         if not set(self.columns_list).issubset(self.data.columns):
             self.error_handler.throw(
                 "one or more columns to map are undefined in the dataset"
@@ -468,6 +465,7 @@ class MapValuesOperation(Operation):
         :return:
         """
         super().execute()
+        self.verify()
 
         try:
             for _column in self.columns_list:
@@ -545,8 +543,6 @@ class DateFormatOperation(Operation):
 
         :return:
         """
-        super().verify()
-
         if not set(self.columns_list).issubset(self.data.columns):
             self.error_handler.throw(
                 "one or more columns to map are undefined in the dataset"
@@ -560,6 +556,7 @@ class DateFormatOperation(Operation):
         :return:
         """
         super().execute()
+        self.verify()
 
         for _column in self.columns_list:
             try:

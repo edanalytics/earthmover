@@ -25,6 +25,8 @@ class Source(Node):
 
     allowed_configs: tuple = ('debug', 'expect', 'optional',)
 
+    optional: bool = False
+
     def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
         """
         Logic for assigning sources to their respective classes.

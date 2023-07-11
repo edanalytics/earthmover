@@ -35,8 +35,6 @@ class GroupByWithCountOperation(Operation):
 
         :return:
         """
-        super().verify()
-
         if not set(self.group_by_columns).issubset(self.data.columns):
             self.error_handler.throw(
                 "one or more specified group-by columns not in the dataset"
@@ -50,6 +48,7 @@ class GroupByWithCountOperation(Operation):
         :return:
         """
         super().execute()
+        self.verify()
 
         self.data[self.GROUPED_COL_NAME] = self.data.apply(
             lambda x: self.GROUPED_COL_SEP.join([*self.group_by_columns])
@@ -108,8 +107,6 @@ class GroupByWithAggOperation(Operation):
 
         :return:
         """
-        super().verify()
-
         if not set(self.group_by_columns).issubset(self.data.columns):
             self.error_handler.throw(
                 "one or more specified group-by columns not in the dataset"
@@ -123,6 +120,7 @@ class GroupByWithAggOperation(Operation):
         :return:
         """
         super().execute()
+        self.verify()
 
         self.data[self.GROUPED_COL_NAME] = self.data.apply(
             lambda x: self.GROUPED_COL_SEP.join([*self.group_by_columns])
@@ -182,8 +180,6 @@ class GroupByOperation(Operation):
 
         :return:
         """
-        super().verify()
-
         if not set(self.group_by_columns).issubset(self.data.columns):
             self.error_handler.throw(
                 "one or more specified group-by columns not in the dataset"
@@ -199,6 +195,7 @@ class GroupByOperation(Operation):
         :return:
         """
         super().execute()
+        self.verify()
 
         #
         grouped = self.data.groupby(self.group_by_columns)

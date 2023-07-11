@@ -12,18 +12,11 @@ class Destination(Node):
     """
     type: str = 'destination'
     mode: str = None  # Documents which class was chosen.
-
-    allowed_configs: tuple = ('debug', 'expect', 'source',)
+    source: str = None
 
     def __new__(cls, *args, **kwargs):
         return object.__new__(FileDestination)
 
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Should this be moved to compile?
-        self.source = self.error_handler.assert_get_key(self.config, 'source', dtype=str)
 
 
 class FileDestination(Destination):
@@ -53,6 +46,7 @@ class FileDestination(Destination):
         :return:
         """
         super().compile()
+        self.source = self.error_handler.assert_get_key(self.config, 'source', dtype=str)
         self.template = self.error_handler.assert_get_key(self.config, 'template', dtype=str)
 
         #config->extension is optional: if not present, we assume the destination name has an extension

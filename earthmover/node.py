@@ -25,8 +25,8 @@ class Node:
     num_rows: int = None
     num_cols: int = None
 
-    source: str = None
     expectations: list = None
+    debug: bool = False
 
     allowed_configs: tuple = ('debug', 'expect',)
 
@@ -39,8 +39,6 @@ class Node:
         self.earthmover = earthmover
         self.logger = earthmover.logger
         self.error_handler = earthmover.error_handler
-
-        self.debug = self.config.get('debug', False)
 
 
     @abc.abstractmethod
@@ -61,7 +59,8 @@ class Node:
                     f"Config `{_config}` not defined for node `{self.name}`."
                 )
 
-        # Always check for expectations
+        # Always check for debug and expectations
+        self.debug = self.config.get('debug', False)
         self.expectations = self.error_handler.assert_get_key(self.config, 'expect', dtype=list, required=False)
 
         pass

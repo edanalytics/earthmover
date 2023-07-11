@@ -37,8 +37,6 @@ class DistinctRowsOperation(Operation):
 
         :return:
         """
-        super().verify()
-
         if not set(self.columns_list).issubset(self.data.columns):
             self.error_handler.throw(
                 "one or more columns for checking for distinctness are undefined in the dataset"
@@ -52,6 +50,7 @@ class DistinctRowsOperation(Operation):
         :return:
         """
         super().execute()
+        self.verify()
 
         if not self.columns_list:
             self.columns_list = self.data.columns
