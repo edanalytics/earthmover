@@ -13,18 +13,6 @@ class JoinOperation(Operation):
         'left_keep_columns', 'left_drop_columns', 'right_keep_columns', 'right_drop_columns',
     )
 
-    join_type: str = None
-
-    left_keys: list = None
-    left_keep_cols: list = None
-    left_drop_cols: list = None
-    left_cols: list = None  # The final column list built of cols and keys
-
-    right_keys: list = None
-    right_keep_cols: list = None
-    right_drop_cols: list = None
-    right_cols: list = None  # The final column list built of cols and keys
-
     JOIN_TYPES = ["inner", "left", "right", "outer"]
 
     def __init__(self, *args, **kwargs):
@@ -33,6 +21,18 @@ class JoinOperation(Operation):
         # Check joined node
         self.sources = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
         self.source_data_mapping = None
+
+        self.join_type: str = None
+
+        self.left_keys: list = None
+        self.left_keep_cols: list = None
+        self.left_drop_cols: list = None
+        self.left_cols: list = None  # The final column list built of cols and keys
+
+        self.right_keys: list = None
+        self.right_keep_cols: list = None
+        self.right_drop_cols: list = None
+        self.right_cols: list = None  # The final column list built of cols and keys
 
     def compile(self):
         """
@@ -79,7 +79,6 @@ class JoinOperation(Operation):
         self.left_drop_cols  = self.error_handler.assert_get_key(self.config, 'left_drop_columns', dtype=list, required=False)
         self.right_keep_cols = self.error_handler.assert_get_key(self.config, 'right_keep_columns', dtype=list, required=False)
         self.right_drop_cols = self.error_handler.assert_get_key(self.config, 'right_drop_columns', dtype=list, required=False)
-
 
     def execute(self):
         """
@@ -149,7 +148,6 @@ class JoinOperation(Operation):
                 raise
 
         return self.data
-
 
 
 class UnionOperation(Operation):

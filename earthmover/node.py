@@ -18,15 +18,6 @@ class Node:
 
     """
     type: str = None
-    data: 'DataFrame' = None
-
-    size: int = None
-    num_rows: int = None
-    num_cols: int = None
-
-    expectations: list = None
-    debug: bool = False
-
     allowed_configs: tuple = ('debug', 'expect',)
 
     CHUNKSIZE = 1024 * 1024 * 100  # 100 MB
@@ -40,6 +31,15 @@ class Node:
         self.error_handler = earthmover.error_handler
 
         self.upstream_sources: dict = {}
+
+        self.data: 'DataFrame' = None
+
+        self.size: int = None
+        self.num_rows: int = None
+        self.num_cols: int = None
+
+        self.expectations: list = None
+        self.debug: bool = False
 
 
     @abc.abstractmethod

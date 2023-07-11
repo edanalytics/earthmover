@@ -10,8 +10,6 @@ class Operation:
 
     """
     type: str = "operation"
-    data: 'DataFrame' = None
-
     allowed_configs: tuple = ('operation',)
 
     def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
@@ -65,6 +63,8 @@ class Operation:
         self.earthmover = earthmover
         self.logger = earthmover.logger
         self.error_handler = earthmover.error_handler
+
+        self.data: 'DataFrame' = None
 
 
     @abc.abstractmethod

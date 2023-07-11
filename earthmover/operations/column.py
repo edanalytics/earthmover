@@ -17,8 +17,9 @@ class AddColumnsOperation(Operation):
         'columns',
     )
 
-    columns_dict: dict = None
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.columns_dict: dict = None
 
     def compile(self):
         """
@@ -27,7 +28,6 @@ class AddColumnsOperation(Operation):
         """
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
-
 
     def execute(self):
         """
@@ -67,7 +67,6 @@ class AddColumnsOperation(Operation):
         return self.data
 
 
-
 class ModifyColumnsOperation(Operation):
     """
 
@@ -77,8 +76,9 @@ class ModifyColumnsOperation(Operation):
         'columns',
     )
 
-    columns_dict: dict = None
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.columns_dict: dict = None
 
     def compile(self):
         """
@@ -87,7 +87,6 @@ class ModifyColumnsOperation(Operation):
         """
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
-
 
     def execute(self):
         """
@@ -132,7 +131,6 @@ class ModifyColumnsOperation(Operation):
         return self.data
 
 
-
 class DuplicateColumnsOperation(Operation):
     """
 
@@ -142,8 +140,9 @@ class DuplicateColumnsOperation(Operation):
         'columns',
     )
 
-    columns_dict: dict = None
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.columns_dict: dict = None
 
     def compile(self):
         """
@@ -152,7 +151,6 @@ class DuplicateColumnsOperation(Operation):
         """
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
-
 
     def execute(self):
         """
@@ -178,7 +176,6 @@ class DuplicateColumnsOperation(Operation):
         return self.data
 
 
-
 class RenameColumnsOperation(Operation):
     """
 
@@ -188,8 +185,9 @@ class RenameColumnsOperation(Operation):
         'columns',
     )
 
-    columns_dict: dict = None
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.columns_dict: dict = None
 
     def compile(self):
         """
@@ -198,7 +196,6 @@ class RenameColumnsOperation(Operation):
         """
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
-
 
     def execute(self):
         """
@@ -222,7 +219,6 @@ class RenameColumnsOperation(Operation):
         return self.data
 
 
-
 class DropColumnsOperation(Operation):
     """
 
@@ -232,8 +228,9 @@ class DropColumnsOperation(Operation):
         'columns',
     )
 
-    columns_to_drop: list = None
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.columns_to_drop: list = None
 
     def compile(self):
         """
@@ -242,7 +239,6 @@ class DropColumnsOperation(Operation):
         """
         super().compile()
         self.columns_to_drop = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
-
 
     def execute(self):
         """
@@ -271,8 +267,9 @@ class KeepColumnsOperation(Operation):
         'columns',
     )
 
-    header: str = None
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.header: list = None
 
     def compile(self):
         """
@@ -282,7 +279,6 @@ class KeepColumnsOperation(Operation):
         super().compile()
 
         self.header = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
-
 
     def execute(self):
         """
@@ -311,10 +307,11 @@ class CombineColumnsOperation(Operation):
         'columns', 'new_column', 'separator',
     )
 
-    columns_list: list = None
-    new_column: str = None
-    separator: str = None
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.columns_list: list = None
+        self.new_column: str = None
+        self.separator: str = None
 
     def compile(self):
         """
@@ -327,7 +324,6 @@ class CombineColumnsOperation(Operation):
         self.new_column   = self.error_handler.assert_get_key(self.config, 'new_column', dtype=str)
 
         self.separator = self.config.get('separator', "")
-
 
     def execute(self):
         """
@@ -361,10 +357,11 @@ class MapValuesOperation(Operation):
         'column', 'columns', 'mapping', 'map_file',
     )
 
-    columns_list: list = None
-    map_file: str = None
-    mapping: dict = None
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.columns_list: list = None
+        self.map_file: str = None
+        self.mapping: dict = None
 
     def compile(self):
         """
@@ -399,7 +396,6 @@ class MapValuesOperation(Operation):
             )
             raise
 
-
     def execute(self):
         """
 
@@ -422,7 +418,6 @@ class MapValuesOperation(Operation):
             )
 
         return self.data
-
 
     def _read_map_file(self, file) -> dict:
         """
@@ -455,10 +450,11 @@ class DateFormatOperation(Operation):
         'column', 'columns', 'from_format', 'to_format',
     )
 
-    columns_list: list = None
-    from_format: str = None
-    to_format: str = None
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.columns_list: list = None
+        self.from_format: str = None
+        self.to_format: str = None
 
     def compile(self):
         """
@@ -481,7 +477,6 @@ class DateFormatOperation(Operation):
             raise
 
         self.columns_list = _columns or [_column]  # `[None]` evaluates to True
-
 
     def execute(self):
         """

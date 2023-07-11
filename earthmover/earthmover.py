@@ -249,8 +249,6 @@ class Earthmover:
         for layer in list(nx.topological_generations(subgraph)):
             for node_name in layer:
                 node = self.graph.ref(node_name)
-                print(f"{node.type}.{node.name}")
-                print(node.upstream_sources)
                 if not node.data:
                     node.execute()  # Sets self.data in each node.
                     node.post_execute()

@@ -13,12 +13,15 @@ class GroupByWithCountOperation(Operation):
         'group_by_columns', 'count_column',
     )
 
-    group_by_columns: list = None
-    count_column: str = None
+
 
     GROUPED_COL_NAME = "____grouped_col____"
     GROUPED_COL_SEP = "_____"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.group_by_columns: list = None
+        self.count_column: str = None
 
     def compile(self):
         """
@@ -28,7 +31,6 @@ class GroupByWithCountOperation(Operation):
         super().compile()
         self.group_by_columns = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
         self.count_column     = self.error_handler.assert_get_key(self.config, 'count_column', dtype=str)
-
 
     def execute(self):
         """
@@ -62,7 +64,6 @@ class GroupByWithCountOperation(Operation):
         return self.data
 
 
-
 class GroupByWithAggOperation(Operation):
     """
 
@@ -72,14 +73,15 @@ class GroupByWithAggOperation(Operation):
         'group_by_columns', 'agg_column', 'separator',
     )
 
-    group_by_columns: list = None
-    agg_column: str = None
-    separator: str = None
-
     DEFAULT_AGG_SEP = ","
     GROUPED_COL_NAME = "____grouped_col____"
     GROUPED_COL_SEP = "_____"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.group_by_columns: list = None
+        self.agg_column: str = None
+        self.separator: str = None
 
     def compile(self):
         """
@@ -94,7 +96,6 @@ class GroupByWithAggOperation(Operation):
             self.config, 'separator', dtype=str,
             required=False, default=self.DEFAULT_AGG_SEP
         )
-
 
     def execute(self):
         """
@@ -126,7 +127,6 @@ class GroupByWithAggOperation(Operation):
         return self.data
 
 
-
 class GroupByOperation(Operation):
     """
 
@@ -135,9 +135,6 @@ class GroupByOperation(Operation):
         'debug', 'expect', 'operation',
         'group_by_columns', 'create_columns',
     )
-
-    group_by_columns: list = None
-    create_columns_dict: dict = None
 
     COLUMN_REQ_AGG_TYPES = [
         "agg", "aggregate",
@@ -151,6 +148,10 @@ class GroupByOperation(Operation):
 
     GROUP_SIZE_COL = "__GROUP_SIZE__"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.group_by_columns: list = None
+        self.create_columns_dict: dict = None
 
     def compile(self):
         """
@@ -160,7 +161,6 @@ class GroupByOperation(Operation):
         super().compile()
         self.group_by_columns    = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
         self.create_columns_dict = self.error_handler.assert_get_key(self.config, 'create_columns', dtype=dict)
-
 
     def execute(self):
         """
@@ -231,7 +231,6 @@ class GroupByOperation(Operation):
         del self.data[self.GROUP_SIZE_COL]
 
         return self.data
-
 
     @staticmethod
     def _get_agg_lambda(agg_type: str, column: str = "", separator: str = ""):

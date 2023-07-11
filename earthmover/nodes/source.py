@@ -21,8 +21,6 @@ class Source(Node):
     """
     type: str = 'source'
     mode: str = None  # Documents which class was chosen.
-    is_remote: bool = False  # False only for local files.
-
     allowed_configs: tuple = ('debug', 'expect', 'optional',)
 
     def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
@@ -56,6 +54,8 @@ class Source(Node):
         # (In this case, `columns` must be specified, and are used to construct an empty
         # dataframe which is passed through to downstream transformations and destinations.)
         self.optional = self.config.get('optional', False)
+
+        self.is_remote: bool = False  # False only for local files.
 
 
     def ensure_dask_dataframe(self):

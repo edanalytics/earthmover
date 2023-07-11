@@ -7,13 +7,11 @@ class Transformation(Node):
 
     """
     type: str = 'transformation'
-
     allowed_configs: tuple = ('debug', 'expect', 'operations', 'source',)
-
-    operations: list = []
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.operations: list = []
 
         # Load in the operation configs and save each under operations.
         # Verify all specified sources exist in the global config.

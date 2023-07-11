@@ -10,8 +10,9 @@ class DistinctRowsOperation(Operation):
         'column', 'columns',
     )
 
-    columns_list: list = None
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.columns_list: list = None
 
     def compile(self):
         """
@@ -30,7 +31,6 @@ class DistinctRowsOperation(Operation):
             self.columns_list = _columns
         else:
             self.columns_list = []
-
 
     def execute(self):
         """
@@ -62,11 +62,12 @@ class FilterRowsOperation(Operation):
         'query', 'behavior',
     )
 
-    query: str = None
-    behavior: str = None
-
     BEHAVIORS = ["include", "exclude"]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.query: str = None
+        self.behavior: str = None
 
     def compile(self):
         """
@@ -83,7 +84,6 @@ class FilterRowsOperation(Operation):
                 "`behavior` must be one of [include, exclude]"
             )
             raise
-
 
     def execute(self):
         """

@@ -11,7 +11,6 @@ class Destination(Node):
     """
     type: str = 'destination'
     mode: str = None  # Documents which class was chosen.
-    source: str = None
 
     def __new__(cls, *args, **kwargs):
         return object.__new__(FileDestination)
