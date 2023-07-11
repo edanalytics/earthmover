@@ -105,10 +105,10 @@ class Operation(Node):
         # If multiple sources are required for an operation, self.data must be defined in the child class execute().
         if self.source_list:
             self.source_data_list = [
-                self.get_source_node(source).data for source in self.source_list
+                self.get_source_node(source).data.copy() for source in self.source_list
             ]
         else:
-            self.data = self.get_source_node(self.source).data
+            self.data = self.get_source_node(self.source).data.copy()
 
         self.verify()
 
