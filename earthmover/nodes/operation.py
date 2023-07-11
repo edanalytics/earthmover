@@ -11,6 +11,10 @@ class Operation(Node):
     """
 
     """
+    type: str = "operation"
+
+    allowed_configs: tuple = ('debug', 'expect', 'operation',)
+
     sources_data: list = []
 
     def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
@@ -61,9 +65,6 @@ class Operation(Node):
         full_name = f"{name}.operations:{config.get('operation')}"
         super().__init__(full_name, config, earthmover=earthmover)
 
-        self.type = "transformation" # self.config.get('operation')
-
-        self.allowed_configs.update(['operation'])
 
     @abc.abstractmethod
     def verify(self):

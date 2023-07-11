@@ -7,29 +7,30 @@ class JoinOperation(Operation):
     """
 
     """
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation', 'sources', 'join_type',
+        'left_keys', 'left_key', 'right_keys', 'right_key',
+        'left_keep_columns', 'left_drop_columns', 'right_keep_columns', 'right_drop_columns',
+    )
+
+    join_type: str = None
+
+    left_keys: list = None
+    left_keep_cols: list = None
+    left_drop_cols: list = None
+    left_cols: list = None  # The final column list built of cols and keys
+
+    right_keys: list = None
+    right_keep_cols: list = None
+    right_drop_cols: list = None
+    right_cols: list = None  # The final column list built of cols and keys
+
     sources_data: list = []
 
     JOIN_TYPES = ["inner", "left", "right", "outer"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update([
-            'left_keys', 'left_key', 'right_keys', 'right_key',
-            'left_keep_columns', 'left_drop_columns', 'right_keep_columns', 'right_drop_columns',
-            'join_type', 'sources'
-        ])
-        self.join_type = None
-
-        self.left_keys = None
-        self.left_keep_cols = None
-        self.left_drop_cols = None
-        self.left_cols  = None # The final column list built of cols and keys
-
-        self.right_keys = None
-        self.right_keep_cols = None
-        self.right_drop_cols = None
-        self.right_cols = None  # The final column list built of cols and keys
 
         # Check joined node
         self.sources = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
@@ -167,14 +168,13 @@ class UnionOperation(Operation):
     """
 
     """
+    allowed_configs: tuple = ('debug', 'expect', 'operation',)
+
+    header: list = None
     sources_data: list = []
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['sources',])
-
-        self.header = None
 
         self.sources = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
 

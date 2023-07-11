@@ -12,12 +12,12 @@ class AddColumnsOperation(Operation):
     """
 
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'columns',
+    )
 
-        self.allowed_configs.update(['columns'])
-
-        self.columns_dict = None
+    columns_dict: dict = None
 
 
     def compile(self):
@@ -72,12 +72,12 @@ class ModifyColumnsOperation(Operation):
     """
 
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'columns',
+    )
 
-        self.allowed_configs.update(['columns'])
-
-        self.columns_dict = None
+    columns_dict: dict = None
 
 
     def compile(self):
@@ -137,12 +137,12 @@ class DuplicateColumnsOperation(Operation):
     """
 
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'columns',
+    )
 
-        self.allowed_configs.update(['columns'])
-
-        self.columns_dict = None
+    columns_dict: dict = None
 
 
     def compile(self):
@@ -196,12 +196,12 @@ class RenameColumnsOperation(Operation):
     """
 
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'columns',
+    )
 
-        self.allowed_configs.update(['columns'])
-
-        self.columns_dict = None
+    columns_dict: dict = None
 
 
     def compile(self):
@@ -253,12 +253,12 @@ class DropColumnsOperation(Operation):
     """
 
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'columns',
+    )
 
-        self.allowed_configs.update(['columns'])
-
-        self.columns_to_drop = None
+    columns_to_drop: list = None
 
 
     def compile(self):
@@ -300,13 +300,12 @@ class KeepColumnsOperation(Operation):
     """
 
     """
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'columns',
+    )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['columns'])
-
-        self.header = None
+    header: str = None
 
 
     def compile(self):
@@ -349,14 +348,14 @@ class CombineColumnsOperation(Operation):
     """
 
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'columns', 'new_column', 'separator',
+    )
 
-        self.allowed_configs.update(['columns', 'new_column', 'separator'])
-
-        self.columns_list = None
-        self.new_column = None
-        self.separator = None
+    columns_list: list = None
+    new_column: str = None
+    separator: str = None
 
 
     def compile(self):
@@ -406,14 +405,14 @@ class MapValuesOperation(Operation):
     """
 
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'column', 'columns', 'mapping', 'map_file',
+    )
 
-        self.allowed_configs.update(['column', 'columns', 'mapping', 'map_file'])
-
-        self.columns_list = None
-        self.map_file = None
-        self.mapping = None
+    columns_list: list = None
+    map_file: str = None
+    mapping: dict = None
 
 
     def compile(self):
@@ -508,14 +507,14 @@ class DateFormatOperation(Operation):
     """
 
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'column', 'columns', 'from_format', 'to_format',
+    )
 
-        self.allowed_configs.update(['column', 'columns', 'from_format', 'to_format'])
-
-        self.columns_list = None
-        self.from_format = None
-        self.to_format = None
+    columns_list: list = None
+    from_format: str = None
+    to_format: str = None
 
 
     def compile(self):

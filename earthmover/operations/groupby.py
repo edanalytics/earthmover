@@ -8,16 +8,16 @@ class GroupByWithCountOperation(Operation):
     """
 
     """
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'group_by_columns', 'count_column',
+    )
+
+    group_by_columns: list = None
+    count_column: str = None
+
     GROUPED_COL_NAME = "____grouped_col____"
     GROUPED_COL_SEP = "_____"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['group_by_columns', 'count_column'])
-
-        self.group_by_columns = None
-        self.count_column = None
 
 
     def compile(self):
@@ -75,19 +75,18 @@ class GroupByWithAggOperation(Operation):
     """
 
     """
-    DEFAULT_AGG_SEP = ","
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'group_by_columns', 'agg_column', 'separator',
+    )
 
+    group_by_columns: list = None
+    agg_column: str = None
+    separator: str = None
+
+    DEFAULT_AGG_SEP = ","
     GROUPED_COL_NAME = "____grouped_col____"
     GROUPED_COL_SEP = "_____"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['group_by_columns', 'agg_column', 'separator'])
-
-        self.group_by_columns = None
-        self.agg_column = None
-        self.separator = None
 
 
     def compile(self):
@@ -147,6 +146,14 @@ class GroupByOperation(Operation):
     """
 
     """
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'group_by_columns', 'create_columns',
+    )
+
+    group_by_columns: list = None
+    create_columns_dict: dict = None
+
     COLUMN_REQ_AGG_TYPES = [
         "agg", "aggregate",
         "max", "maximum",
@@ -158,14 +165,6 @@ class GroupByOperation(Operation):
     ]
 
     GROUP_SIZE_COL = "__GROUP_SIZE__"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['group_by_columns', 'create_columns'])
-
-        self.group_by_columns = None
-        self.create_columns_dict = None
 
 
     def compile(self):

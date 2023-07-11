@@ -5,6 +5,8 @@ import os
 import pandas as pd
 import re
 
+from typing import Callable
+
 from earthmover.node import Node
 from earthmover import util
 
@@ -17,6 +19,12 @@ class Source(Node):
     """
 
     """
+    type: str = 'source'
+    mode: str = None  # Documents which class was chosen.
+    is_remote: bool = False  # False only for local files.
+
+    allowed_configs: tuple = ('debug', 'expect', 'optional',)
+
     def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
         """
         Logic for assigning sources to their respective classes.
@@ -43,12 +51,6 @@ class Source(Node):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.type = 'source'
-
-        self.allowed_configs.update(['optional'])
-
-        self.mode = None  # Documents which class was chosen.
-        self.is_remote = False  # False only for local files.
 
         # A source can be blank if `optional=True` is specified in its configs.
         # (In this case, `columns` must be specified, and are used to construct an empty
@@ -60,19 +62,18 @@ class FileSource(Source):
     """
 
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.mode = 'file'
+    mode: str = 'file'
 
-        self.allowed_configs.update([
-            'file', 'type', 'columns', 'header_rows',
-            'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath'
-        ])
+    allowed_configs: tuple = (
+        'debug', 'expect', 'optional',
+        'file', 'type', 'columns', 'header_rows',
+        'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
+    )
 
-        self.file = None
-        self.file_type = None
-        self.read_lambda = None
-        self.columns_list = None
+    file: str = None
+    file_type: str = None
+    read_lambda: Callable = None
+    columns_list: list = None
 
 
     def compile(self):
@@ -265,17 +266,17 @@ class FtpSource(Source):
     """
 
     """
+    mode: str = 'ftp'
+    is_remote: bool = True
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.mode = 'ftp'
-        self.is_remote = True
+    allowed_configs: tuple = (
+        'debug', 'expect', 'optional',
+        'connection', 'query',
+    )
 
-        self.allowed_configs.update(['connection', 'query'])
-
-        self.connection = None
-        self.ftp = None
-        self.file = None
+    connection: str = None
+    ftp: ftplib.FTP = None
+    file: str = None
 
 
     def compile(self):
@@ -340,15 +341,16 @@ class SqlSource(Source):
     """
 
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.mode = 'sql'
-        self.is_remote = True
+    mode: str = 'sql'
+    is_remote: bool = True
 
-        self.allowed_configs.update(['connection', 'query'])
+    allowed_configs: tuple = (
+        'debug', 'expect', 'optional',
+        'connection', 'query',
+    )
 
-        self.connection = None
-        self.query = None
+    connection: str = None
+    query: str = None
 
 
     def compile(self):

@@ -5,12 +5,12 @@ class DistinctRowsOperation(Operation):
     """
 
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'column', 'columns',
+    )
 
-        self.allowed_configs.update(['column', 'columns'])
-
-        self.columns_list = None
+    columns_list: list = None
 
 
     def compile(self):
@@ -65,15 +65,15 @@ class FilterRowsOperation(Operation):
     """
 
     """
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'query', 'behavior',
+    )
+
+    query: str = None
+    behavior: str = None
+
     BEHAVIORS = ["include", "exclude"]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['query', 'behavior'])
-
-        self.query = None
-        self.behavior = None
 
 
     def compile(self):

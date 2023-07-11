@@ -29,6 +29,8 @@ class Node:
     sources: Set = set()  # Optional additional sources that do not need to be copied when referenced.
     expectations: list = None
 
+    allowed_configs: tuple = ('debug', 'expect',)
+
     CHUNKSIZE = 1024 * 1024 * 100  # 100 MB
 
     def __init__(self, name: str, config: YamlMapping, *, earthmover: 'Earthmover'):
@@ -39,7 +41,6 @@ class Node:
         self.logger = earthmover.logger
         self.error_handler = earthmover.error_handler
 
-        self.allowed_configs = {'debug', 'expect'}
         self.debug = self.config.get('debug', False)
 
 
