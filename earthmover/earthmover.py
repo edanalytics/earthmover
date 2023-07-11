@@ -121,19 +121,11 @@ class Earthmover:
             for name, config in nodes.items():
                 node = node_class(name, config, earthmover=self)
                 self.graph.add_node(f"${node_type}.{name}", data=node)
-                print(f"${node_type}.{name}")
-                print(node.source)
-                print(node.sources)
 
                 # Place edges for transformations and destinations
-                for source in [node.source, *node.sources]:
-
-                    # Sources don't have sources.
-                    if not source:
-                        continue
-
+                for source in node.upstream_sources:
                     try:
-                        node.source_node_mapping[source] = self.graph.ref(source)
+                        node.upstream_sources[source] = self.graph.ref(source)
                         self.graph.add_edge(source, f"${node_type}.{name}")
                     except:
                         self.error_handler.throw(f"invalid source {source}")

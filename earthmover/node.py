@@ -3,8 +3,7 @@ import dask
 import jinja2
 import pandas as pd
 
-import dask.dataframe as dd
-from typing import List, Set
+from typing import List
 
 from earthmover.yaml_parser import YamlMapping
 from earthmover import util
@@ -40,9 +39,7 @@ class Node:
         self.logger = earthmover.logger
         self.error_handler = earthmover.error_handler
 
-        self.source: str = None
-        self.sources: Set = set()  # Optional additional sources that do not need to be copied when referenced.
-        self.source_node_mapping: dict = {}
+        self.upstream_sources: dict = {}
 
 
     @abc.abstractmethod
@@ -134,17 +131,3 @@ class Node:
                     self.logger.info(
                         f"Assertion passed! {self.name}: {expectation}"
                     )
-
-
-    def ensure_dask_dataframe(self):
-        """
-        Converts a Pandas DataFrame to a Dask DataFrame.
-        """
-        if isinstance(self.data, pd.DataFrame):
-            self.logger.debug(
-                f"Casting data in {self.type} node `{self.name}` to a Dask dataframe."
-            )
-            self.data = dask.dataframe.from_pandas(
-                self.data,
-                chunksize=self.CHUNKSIZE
-            )

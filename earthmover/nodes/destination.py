@@ -1,4 +1,3 @@
-import abc
 import os
 import jinja2
 import re
@@ -20,6 +19,7 @@ class Destination(Node):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.source = self.error_handler.assert_get_key(self.config, 'source', dtype=str)
+        self.upstream_sources[self.source] = None
 
 
 
@@ -106,7 +106,7 @@ class FileDestination(Destination):
         """
         super().execute()
 
-        self.data = self.source_node_mapping[self.source].data.copy().fillna('')
+        self.data = self.upstream_sources[self.source].data.copy().fillna('')
 
         os.makedirs(os.path.dirname(self.file), exist_ok=True)
         with open(self.file, 'w', encoding='utf-8') as fp:

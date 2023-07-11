@@ -25,8 +25,6 @@ class Source(Node):
 
     allowed_configs: tuple = ('debug', 'expect', 'optional',)
 
-    optional: bool = False
-
     def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
         """
         Logic for assigning sources to their respective classes.
@@ -58,6 +56,20 @@ class Source(Node):
         # (In this case, `columns` must be specified, and are used to construct an empty
         # dataframe which is passed through to downstream transformations and destinations.)
         self.optional = self.config.get('optional', False)
+
+
+    def ensure_dask_dataframe(self):
+        """
+        Converts a Pandas DataFrame to a Dask DataFrame.
+        """
+        if isinstance(self.data, pd.DataFrame):
+            self.logger.debug(
+                f"Casting data in {self.type} node `{self.name}` to a Dask dataframe."
+            )
+            self.data = dd.from_pandas(
+                self.data,
+                chunksize=self.CHUNKSIZE
+            )
 
 
 class FileSource(Source):
