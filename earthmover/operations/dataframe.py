@@ -137,15 +137,13 @@ class JoinOperation(Operation):
 
         :return:
         """
-        self.sources_data = list(map(self.get_source_node, self.sources))
-
         super().execute()
         self.verify()
 
         left_data = self.data[ self.left_cols ]
-        for right_data in self.sources:
-            print(self.right_cols)
-            right_data = right_data[ self.right_cols ]
+        for source in self.sources:
+
+            right_data = self.source_node_mapping[source].data.copy()[ self.right_cols ]
 
             try:
                 self.data = dd.merge(
@@ -206,14 +204,14 @@ class UnionOperation(Operation):
 
         :return:
         """
-        self.sources_data = list(map(self.get_source_node, self.sources))
-
         super().execute()
         self.verify()
 
-        for _data in self.sources_data:
+        for source in self.sources:
+            source_data = self.source_node_mapping[source].data.copy()
+
             try:
-                self.data = dd.concat([self.data, _data], ignore_index=True)
+                self.data = dd.concat([self.data, source_data], ignore_index=True)
             
             except Exception as _:
                 self.error_handler.throw(

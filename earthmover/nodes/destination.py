@@ -17,6 +17,11 @@ class Destination(Node):
     def __new__(cls, *args, **kwargs):
         return object.__new__(FileDestination)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.source = self.error_handler.assert_get_key(self.config, 'source', dtype=str)
+
+
 
 
 class FileDestination(Destination):
@@ -46,7 +51,6 @@ class FileDestination(Destination):
         :return:
         """
         super().compile()
-        self.source = self.error_handler.assert_get_key(self.config, 'source', dtype=str)
         self.template = self.error_handler.assert_get_key(self.config, 'template', dtype=str)
 
         #config->extension is optional: if not present, we assume the destination name has an extension
@@ -102,7 +106,7 @@ class FileDestination(Destination):
         """
         super().execute()
 
-        self.data = self.get_source_node(self.source).fillna('')
+        self.data = self.source_node_mapping[self.source].data.copy().fillna('')
 
         os.makedirs(os.path.dirname(self.file), exist_ok=True)
         with open(self.file, 'w', encoding='utf-8') as fp:

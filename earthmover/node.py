@@ -30,6 +30,8 @@ class Node:
 
     allowed_configs: tuple = ('debug', 'expect',)
 
+    source_node_mapping: dict = {}
+
     CHUNKSIZE = 1024 * 1024 * 100  # 100 MB
 
     def __init__(self, name: str, config: YamlMapping, *, earthmover: 'Earthmover'):
@@ -100,14 +102,6 @@ class Node:
             )
 
 
-    def get_source_node(self, source) -> 'DataFrame':
-        """
-
-        :return:
-        """
-        return self.earthmover.graph.ref(source).data.copy()
-
-
     def check_expectations(self, expectations: List[str]):
         """
 
@@ -152,3 +146,7 @@ class Node:
                 self.data,
                 chunksize=self.CHUNKSIZE
             )
+
+
+    def map_source_node(self, source, node):
+        self.source_node_mapping[source] = node

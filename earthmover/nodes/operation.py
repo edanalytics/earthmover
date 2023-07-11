@@ -15,7 +15,7 @@ class Operation(Node):
     """
     type: str = "operation"
 
-    allowed_configs: tuple = ('debug', 'expect', 'operation',)
+    allowed_configs: tuple = ('operation',)
 
     sources: Set = set()  # Optional additional sources that do not need to be copied when referenced.
     sources_data: list = []

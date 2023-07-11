@@ -123,15 +123,17 @@ class Earthmover:
                 self.graph.add_node(f"${node_type}.{name}", data=node)
 
                 # Place edges for transformations and destinations
-                if node.source:
+                if hasattr(node, 'source'):
                     try:
+                        node.map_source_node(node.source, self.graph.ref(node.source))
                         self.graph.add_edge(node.source, f"${node_type}.{name}")
                     except:
                         self.error_handler.throw(f"invalid source {node.source}")
 
-                if hasattr(node, 'sources'):
-                    for source in node.sources:
+                if hasattr(node, 'source_list'):
+                    for source in node.source_list:
                         try:
+                            node.map_source_node(source, self.graph.ref(source))
                             self.graph.add_edge(source, f"${node_type}.{name}")
                         except:
                             self.error_handler.throw(f"invalid source {source}")
@@ -161,6 +163,63 @@ class Earthmover:
             # Iterate until no nodes are removed.
             if set(terminal_nodes) == set(self.graph.get_terminal_nodes()):
                 break
+
+
+    def hash_graph_to_runs_file(self, subgraph):
+        """
+
+        :return:
+        """
+        ### Hashing requires an entire class mixin and multiple additional steps.
+        if not self.skip_hashing and self.state_configs.get('state_file', False):
+            _runs_path = os.path.expanduser(self.state_configs['state_file'])
+
+            self.logger.info(f"computing input hashes for run log at {_runs_path}")
+
+            runs_file = RunsFile(_runs_path, earthmover=self)
+
+            # Remote sources cannot be hashed; no hashed runs contain remote sources.
+            if any(source.is_remote for source in self.sources):
+                self.logger.info(
+                    "forcing regenerate, since some sources are remote (and we cannot know if they changed)"
+                )
+
+            elif self.force:
+                self.logger.info("forcing regenerate")
+
+            else:
+                self.logger.info("checking for prior runs...")
+
+                # Find the latest run that matched our selector(s)...
+                most_recent_run = runs_file.get_newest_compatible_run(
+                    active_nodes=subgraph.get_node_data()
+                )
+
+                if most_recent_run is None:
+                    self.logger.info("regenerating (no prior runs found, or config.yaml has changed since last run)")
+
+                else:
+                    _run_differences = runs_file.find_hash_differences(most_recent_run)
+                    if _run_differences:
+                        self.logger.info("regenerating (changes since last run: ")
+                        self.logger.info("   [{0}])".format(", ".join(_run_differences)))
+                    else:
+                        _last_run_string = util.human_time(
+                            int(time.time()) - int(float(most_recent_run['run_timestamp'])))
+                        self.logger.info(
+                            f"skipping (no changes since the last run {_last_run_string} ago)"
+                        )
+                        self.do_generate = False
+
+        elif not self.state_configs.get('state_file', False):
+            self.logger.info("skipping hashing and run-logging (no `state_file` defined in config)")
+            runs_file = None  # This instantiation will never be used, but this avoids linter alerts.
+
+        else:  # Skip hashing
+            self.logger.info("skipping hashing and run-logging (run initiated with `--skip-hashing` flag)")
+            runs_file = None  # This instantiation will never be used, but this avoids linter alerts.
+
+        return runs_file
 
 
     def compile(self, subgraph = None):
@@ -230,52 +289,7 @@ class Earthmover:
 
 
         ### Hashing requires an entire class mixin and multiple additional steps.
-        if not self.skip_hashing and self.state_configs.get('state_file', False):
-            _runs_path = os.path.expanduser(self.state_configs['state_file'])
-            
-            self.logger.info(f"computing input hashes for run log at {_runs_path}")
-
-            runs_file = RunsFile(_runs_path, earthmover=self)
-
-            # Remote sources cannot be hashed; no hashed runs contain remote sources.
-            if any(source.is_remote for source in self.sources):
-                self.logger.info(
-                    "forcing regenerate, since some sources are remote (and we cannot know if they changed)"
-                )
-
-            elif self.force:
-                self.logger.info("forcing regenerate")
-
-            else:
-                self.logger.info("checking for prior runs...")
-
-                # Find the latest run that matched our selector(s)...
-                most_recent_run = runs_file.get_newest_compatible_run(
-                    active_nodes=active_graph.get_node_data()
-                )
-
-                if most_recent_run is None:
-                    self.logger.info("regenerating (no prior runs found, or config.yaml has changed since last run)")
-
-                else:
-                    _run_differences = runs_file.find_hash_differences(most_recent_run)
-                    if _run_differences:
-                        self.logger.info("regenerating (changes since last run: ")
-                        self.logger.info("   [{0}])".format(", ".join(_run_differences)))
-                    else:
-                        _last_run_string = util.human_time(int(time.time()) - int(float(most_recent_run['run_timestamp'])))
-                        self.logger.info(
-                            f"skipping (no changes since the last run {_last_run_string} ago)"
-                        )
-                        self.do_generate = False
-
-        elif not self.state_configs.get('state_file', False):
-            self.logger.info("skipping hashing and run-logging (no `state_file` defined in config)")
-            runs_file = None  # This instantiation will never be used, but this avoids linter alerts.
-         
-        else:  # Skip hashing
-            self.logger.info("skipping hashing and run-logging (run initiated with `--skip-hashing` flag)")
-            runs_file = None  # This instantiation will never be used, but this avoids linter alerts.
+        runs_file = self.hash_graph_to_runs_file(active_graph)
 
 
         ### Draw the graph, regardless of whether a run is completed.

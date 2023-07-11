@@ -14,7 +14,7 @@ class Transformation(Node):
 
     operations: list = []
     source: str = None
-    sources: Set = set()
+    source_list: Set = set()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -28,7 +28,7 @@ class Transformation(Node):
 
             operation = Operation(self.name, operation_config, earthmover=self.earthmover)
             self.operations.append(operation)
-            self.sources.update(operation.sources)
+            self.source_list.update(operation.sources)
 
 
     def compile(self):
@@ -49,8 +49,10 @@ class Transformation(Node):
         """
         super().execute()
 
-        self.data = self.get_source_node(self.source)
+        self.data = self.source_node_mapping[self.source].data.copy()
 
         for operation in self.operations:
             self.data = operation.run(self.data)
-            operation.post_execute()
+
+        print(f"{self.name} :: {self.data}")
+        self.post_execute()
