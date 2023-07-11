@@ -32,6 +32,8 @@ class JoinOperation(Operation):
 
         # Check joined node
         self.sources = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
+        for source in self.sources:
+            self.upstream_sources[source] = None
 
 
     def compile(self):
@@ -160,7 +162,10 @@ class UnionOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
         self.sources = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
+        for source in self.sources:
+            self.upstream_sources[source] = None
 
 
     def execute(self):
