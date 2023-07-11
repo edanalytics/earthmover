@@ -66,6 +66,7 @@ class Operation(Node):
         super().__init__(full_name, config, earthmover=earthmover)
 
 
-    def run(self, data: 'DataFrame'):
+    def run(self, data: 'DataFrame', data_mapping: dict):
         self.data = data
+        self.source_node_mapping = data_mapping
         return self.execute()

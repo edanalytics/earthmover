@@ -30,10 +30,6 @@ class Node:
 
     allowed_configs: tuple = ('debug', 'expect',)
 
-    source: str = None
-    sources: Set = set()  # Optional additional sources that do not need to be copied when referenced.
-    source_node_mapping: dict = {}
-
     CHUNKSIZE = 1024 * 1024 * 100  # 100 MB
 
     def __init__(self, name: str, config: YamlMapping, *, earthmover: 'Earthmover'):
@@ -43,6 +39,10 @@ class Node:
         self.earthmover = earthmover
         self.logger = earthmover.logger
         self.error_handler = earthmover.error_handler
+
+        self.source: str = None
+        self.sources: Set = set()  # Optional additional sources that do not need to be copied when referenced.
+        self.source_node_mapping: dict = {}
 
 
     @abc.abstractmethod

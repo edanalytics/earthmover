@@ -13,8 +13,6 @@ class Transformation(Node):
     allowed_configs: tuple = ('debug', 'expect', 'operations', 'source',)
 
     operations: list = []
-    source: str = None
-    source_list: Set = set()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -28,7 +26,7 @@ class Transformation(Node):
 
             operation = Operation(self.name, operation_config, earthmover=self.earthmover)
             self.operations.append(operation)
-            self.source_list.update(operation.sources)
+            self.sources.update(operation.sources)
 
 
     def compile(self):
@@ -52,6 +50,6 @@ class Transformation(Node):
         self.data = self.source_node_mapping[self.source].data.copy()
 
         for operation in self.operations:
-            self.data = operation.run(self.data)
+            self.data = operation.run(self.data, self.source_node_mapping)
 
         self.post_execute()
