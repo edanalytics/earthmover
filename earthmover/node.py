@@ -68,15 +68,6 @@ class Node:
 
 
     @abc.abstractmethod
-    def verify(self):
-        """
-
-        :return:
-        """
-        pass
-
-
-    @abc.abstractmethod
     def execute(self) -> 'DataFrame':
         """
 
@@ -86,7 +77,6 @@ class Node:
             file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
         )
 
-        self.verify()
         pass
 
 

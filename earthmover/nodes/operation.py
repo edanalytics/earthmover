@@ -1,3 +1,5 @@
+import abc
+
 from earthmover.node import Node
 
 from typing import TYPE_CHECKING
@@ -9,6 +11,8 @@ class Operation(Node):
     """
 
     """
+    sources_data: list = []
+
     def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
         """
         :param config:
@@ -61,13 +65,26 @@ class Operation(Node):
 
         self.allowed_configs.update(['operation'])
 
+    @abc.abstractmethod
+    def verify(self):
+        """
+
+        :return:
+        """
+        pass
+
     def execute(self):
         """
 
         :return:
         """
         super().execute()
+
+        self.data = self.get_source_node(self.source)
+        self.sources_data = list(map(self.get_source_node, self.sources))
+
         self.verify()
+
         pass
 
     def run(self, data: 'DataFrame'):
