@@ -32,9 +32,7 @@ class JoinOperation(Operation):
 
         # Check joined node
         self.sources = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
-        for source in self.sources:
-            self.upstream_sources[source] = None
-
+        self.source_data_mapping = None
 
     def compile(self):
         """
@@ -115,7 +113,7 @@ class JoinOperation(Operation):
 
         # Iterate each right dataset
         for source in self.sources:
-            right_data = self.upstream_sources[source].data.copy()
+            right_data = self.source_data_mapping[source].data.copy()
             self.right_cols = right_data.columns
 
             if self.right_keep_cols:
@@ -164,9 +162,7 @@ class UnionOperation(Operation):
         super().__init__(*args, **kwargs)
 
         self.sources = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
-        for source in self.sources:
-            self.upstream_sources[source] = None
-
+        self.source_data_mapping = None
 
     def execute(self):
         """
@@ -176,7 +172,7 @@ class UnionOperation(Operation):
         super().execute()
 
         for source in self.sources:
-            source_data = self.upstream_sources[source].data.copy()
+            source_data = self.source_data_mapping[source].data.copy()
 
             if set(source_data.columns) != set(self.data.columns):
                 self.error_handler.throw('dataframes to union do not share identical columns')

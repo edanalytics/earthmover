@@ -26,8 +26,9 @@ class Transformation(Node):
             operation = Operation(self.name, operation_config, earthmover=self.earthmover)
             self.operations.append(operation)
 
-            for source in operation.upstream_sources:
-                self.upstream_sources[source] = None
+            if hasattr(operation, 'sources'):
+                for source in operation.sources:
+                    self.upstream_sources[source] = None
 
 
     def compile(self):

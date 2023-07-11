@@ -66,8 +66,6 @@ class Operation:
         self.logger = earthmover.logger
         self.error_handler = earthmover.error_handler
 
-        self.source: str = None
-        self.upstream_sources: dict = {}
 
     @abc.abstractmethod
     def compile(self):
@@ -104,5 +102,11 @@ class Operation:
 
     def run(self, data: 'DataFrame', data_mapping: dict):
         self.data = data
-        self.upstream_sources = data_mapping
+
+        if hasattr(self, 'sources'):
+            self.source_data_mapping = {
+                source: data_mapping[source]
+                for source in self.sources
+            }
+
         return self.execute()
