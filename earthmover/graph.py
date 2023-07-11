@@ -55,7 +55,6 @@ class Graph(nx.DiGraph):
         :param ref:
         :return:
         """
-        # print(f"Reffing {ref}")
         _node = self.nodes.get(ref)
         if _node:
             return _node['data']

@@ -1,7 +1,3 @@
-import abc
-
-from typing import Set
-
 from earthmover.node import Node
 
 from typing import TYPE_CHECKING

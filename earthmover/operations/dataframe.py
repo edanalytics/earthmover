@@ -209,6 +209,7 @@ class UnionOperation(Operation):
 
         :return:
         """
+        print(self.sources)
         self.sources_data = list(map(self.get_source_node, self.sources))
 
         super().execute()

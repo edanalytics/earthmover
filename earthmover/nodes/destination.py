@@ -108,7 +108,7 @@ class FileDestination(Destination):
         """
         super().execute()
 
-        self.data = self.data.fillna('')
+        self.data = self.get_source_node(self.source).fillna('')
 
         os.makedirs(os.path.dirname(self.file), exist_ok=True)
         with open(self.file, 'w', encoding='utf-8') as fp:

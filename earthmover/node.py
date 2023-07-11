@@ -111,7 +111,7 @@ class Node:
             )
 
 
-    def get_source_node(self, source) -> 'Node':
+    def get_source_node(self, source) -> 'DataFrame':
         """
 
         :return:
