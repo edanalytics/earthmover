@@ -146,7 +146,3 @@ class Node:
                 self.data,
                 chunksize=self.CHUNKSIZE
             )
-
-
-    def map_source_node(self, source, node):
-        self.source_node_mapping[source] = node

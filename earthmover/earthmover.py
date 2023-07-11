@@ -125,7 +125,7 @@ class Earthmover:
                 # Place edges for transformations and destinations
                 if hasattr(node, 'source'):
                     try:
-                        node.map_source_node(node.source, self.graph.ref(node.source))
+                        node.source_node_mapping[node.source] = self.graph.ref(node.source)
                         self.graph.add_edge(node.source, f"${node_type}.{name}")
                     except:
                         self.error_handler.throw(f"invalid source {node.source}")
@@ -133,7 +133,7 @@ class Earthmover:
                 if hasattr(node, 'source_list'):
                     for source in node.source_list:
                         try:
-                            node.map_source_node(source, self.graph.ref(source))
+                            node.source_node_mapping[node.source] = self.graph.ref(node.source)
                             self.graph.add_edge(source, f"${node_type}.{name}")
                         except:
                             self.error_handler.throw(f"invalid source {source}")
