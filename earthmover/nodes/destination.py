@@ -24,7 +24,6 @@ class Destination(Node):
 
         # Should this be moved to compile?
         self.source = self.error_handler.assert_get_key(self.config, 'source', dtype=str)
-        self.upstream_sources.add(self.source)
 
 
 class FileDestination(Destination):

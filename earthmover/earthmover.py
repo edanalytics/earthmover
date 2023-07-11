@@ -123,7 +123,10 @@ class Earthmover:
                 self.graph.add_node(f"${node_type}.{name}", data=node)
 
                 # Place edges for transformations and destinations
-                for source in node.upstream_sources:
+                for source in [node.source, *node.sources]:
+
+                    if not source: continue  # Skip sourcing Sources
+
                     try:
                         self.graph.add_edge(source, f"${node_type}.{name}")
                     except:

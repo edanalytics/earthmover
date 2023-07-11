@@ -3,6 +3,7 @@ import dask
 import jinja2
 import pandas as pd
 
+import dask.dataframe as dd
 from typing import List, Set
 
 from earthmover.yaml_parser import YamlMapping
@@ -17,26 +18,27 @@ class Node:
     """
 
     """
+    type: str = None
+    data: 'DataFrame' = None
+
+    size: int = None
+    num_rows: int = None
+    num_cols: int = None
+
     source: str = None
-    upstream_sources: Set = set()
+    sources: Set = set()  # Optional additional sources that do not need to be copied when referenced.
+    expectations: list = None
 
     CHUNKSIZE = 1024 * 1024 * 100  # 100 MB
 
     def __init__(self, name: str, config: YamlMapping, *, earthmover: 'Earthmover'):
         self.name = name
         self.config = config
-        self.type = None
 
         self.earthmover = earthmover
         self.logger = earthmover.logger
         self.error_handler = earthmover.error_handler
 
-        self.data = None
-        self.size = None
-        self.num_rows = None
-        self.num_cols = None
-
-        self.expectations = None
         self.allowed_configs = {'debug', 'expect'}
         self.debug = self.config.get('debug', False)
 
@@ -75,7 +77,7 @@ class Node:
 
 
     @abc.abstractmethod
-    def execute(self):
+    def execute(self) -> 'DataFrame':
         """
 
         :return:

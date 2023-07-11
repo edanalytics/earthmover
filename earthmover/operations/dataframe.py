@@ -7,8 +7,7 @@ class JoinOperation(Operation):
     """
 
     """
-    node: str = None
-    node_data: list = []
+    sources_data: list = []
 
     JOIN_TYPES = ["inner", "left", "right", "outer"]
 
@@ -18,25 +17,22 @@ class JoinOperation(Operation):
         self.allowed_configs.update([
             'left_keys', 'left_key', 'right_keys', 'right_key',
             'left_keep_columns', 'left_drop_columns', 'right_keep_columns', 'right_drop_columns',
-            'join_type', 'node',
+            'join_type', 'sources'
         ])
         self.join_type = None
 
-        self.left_data = None
         self.left_keys = None
         self.left_keep_cols = None
         self.left_drop_cols = None
         self.left_cols  = None # The final column list built of cols and keys
 
-        self.right_data = None
         self.right_keys = None
         self.right_keep_cols = None
         self.right_drop_cols = None
         self.right_cols = None  # The final column list built of cols and keys
 
         # Check joined node
-        self.node = self.error_handler.assert_get_key(self.config, 'node', dtype=str)
-        self.extra_sources.add(self.node)
+        self.sources = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
 
 
     def compile(self):
@@ -94,10 +90,10 @@ class JoinOperation(Operation):
         super().verify()
 
         # Build left dataset columns
-        self.left_cols = self.left_data.columns
+        self.left_cols = self.data.columns
 
         if self.left_keep_cols:
-            if not set(self.left_keep_cols).issubset(self.left_data.columns):
+            if not set(self.left_keep_cols).issubset(self.data.columns):
                 self.error_handler.throw(
                     "columns in `left_keep_columns` are not defined in the dataset"
                 )
@@ -115,25 +111,26 @@ class JoinOperation(Operation):
             self.left_cols = list(set(self.left_cols).difference(self.left_drop_cols))
 
         # Build right dataset columns
-        self.right_cols = self.right_data.columns
+        for right_data in self.sources_data:
+            self.right_cols = right_data.columns
 
-        if self.right_keep_cols:
-            if not set(self.right_keep_cols).issubset(self.right_data.columns):
-                self.error_handler.throw(
-                    "columns in `right_keep_columns` are not defined in the dataset"
-                )
-                raise
+            if self.right_keep_cols:
+                if not set(self.right_keep_cols).issubset(right_data.columns):
+                    self.error_handler.throw(
+                        "columns in `right_keep_columns` are not defined in the dataset"
+                    )
+                    raise
 
-            self.right_cols = list(set(self.right_keep_cols).union(self.right_keys))
+                self.right_cols = list(set(self.right_keep_cols).union(self.right_keys))
 
-        elif self.right_drop_cols:
-            if any(col in self.right_keys for col in self.right_drop_cols):
-                self.error_handler.throw(
-                    "you may not `right_drop_columns` that are part of the `right_key(s)`"
-                )
-                raise
+            elif self.right_drop_cols:
+                if any(col in self.right_keys for col in self.right_drop_cols):
+                    self.error_handler.throw(
+                        "you may not `right_drop_columns` that are part of the `right_key(s)`"
+                    )
+                    raise
 
-            self.right_cols = list(set(self.right_cols).difference(self.right_drop_cols))
+                self.right_cols = list(set(self.right_cols).difference(self.right_drop_cols))
 
 
     def execute(self):
@@ -141,27 +138,28 @@ class JoinOperation(Operation):
 
         :return:
         """
-        self.left_data = self.data
-        self.right_data = self.get_source_node(self.node)
+        self.sources_data = list(map(self.get_source_node, self.sources))
 
         super().execute()
 
-        _left_data  = self.left_data[ self.left_cols ]
-        _right_data = self.right_data[ self.right_cols ]
+        left_data = self.data[ self.left_cols ]
+        for right_data in self.sources:
+            print(self.right_cols)
+            right_data = right_data[ self.right_cols ]
 
-        try:
-            self.data = dd.merge(
-                _left_data, _right_data, how=self.join_type,
-                left_on=self.left_keys, right_on=self.right_keys
-            )
+            try:
+                self.data = dd.merge(
+                    left_data, right_data, how=self.join_type,
+                    left_on=self.left_keys, right_on=self.right_keys
+                )
 
-        except Exception as _:
-            self.error_handler.throw(
-                "error during `join` operation. Check your join keys?"
-            )
-            raise
+            except Exception as _:
+                self.error_handler.throw(
+                    "error during `join` operation. Check your join keys?"
+                )
+                raise
 
-        return self.data
+            return self.data
 
 
 
@@ -169,18 +167,16 @@ class UnionOperation(Operation):
     """
 
     """
-    nodes: list = []
-    node_data: list = []
+    sources_data: list = []
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.allowed_configs.update(['nodes',])
+        self.allowed_configs.update(['sources',])
 
         self.header = None
 
-        self.nodes = self.error_handler.assert_get_key(self.config, 'nodes', dtype=list)
-        self.extra_sources.update(self.nodes)
+        self.sources = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
 
 
     def compile(self):
@@ -200,7 +196,7 @@ class UnionOperation(Operation):
 
         _data_columns = set( self.data.columns )
 
-        for data in self.node_data:
+        for data in self.sources_data:
             if set(data.columns) != _data_columns:
                 self.error_handler.throw('dataframes to union do not share identical columns')
                 raise
@@ -213,11 +209,11 @@ class UnionOperation(Operation):
 
         :return:
         """
-        self.node_data = list(map(self.get_source_node, self.nodes))
+        self.sources_data = list(map(self.get_source_node, self.sources))
 
         super().execute()
 
-        for _data in self.node_data:
+        for _data in self.sources_data:
             try:
                 self.data = dd.concat([self.data, _data], ignore_index=True)
             

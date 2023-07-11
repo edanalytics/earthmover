@@ -85,7 +85,7 @@ transformations:
     source: $transformations.mammal_species
     operations:
       - operation: union
-        nodes:
+        sources:
           - $transformations.bird_species
           - $transformations.fish_species
           - $transformations.reptile_species
@@ -95,7 +95,8 @@ transformations:
     source: $sources.zoo_inventories
     operations:
       - operation: join
-        node: $sources.zoos
+        sources:
+          - $sources.zoos
         join_type: inner
         left_key: zoo
         right_key: id
@@ -107,7 +108,8 @@ transformations:
           - id
           - name
       - operation: join
-        node: $transformations.animal_species
+        sources:
+          - $transformations.animal_species
         join_type: inner
         left_key: animal
         right_key: id
@@ -123,7 +125,8 @@ transformations:
     source: $sources.zoos
     operations:
       - operation: join
-        node: $sources.zoo_inventories
+        sources:
+          - $sources.zoo_inventories
         join_type: right
         left_key: id
         right_key: zoo
@@ -136,7 +139,8 @@ transformations:
     source: $sources.zoos
     operations:
       - operation: join
-        node: $transformations.species_counts
+        sources:
+          - $transformations.species_counts
         join_type: left
         left_key: id
         right_key: id

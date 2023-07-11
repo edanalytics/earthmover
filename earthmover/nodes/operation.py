@@ -13,8 +13,6 @@ class Operation(Node):
     """
 
     """
-    extra_sources: Set = set()
-
     def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
         """
         :param config:

@@ -1,3 +1,4 @@
+import logging
 import math
 import re
 import networkx as nx
@@ -54,7 +55,7 @@ class Graph(nx.DiGraph):
         :param ref:
         :return:
         """
-        print(f"Reffing {ref}")
+        # print(f"Reffing {ref}")
         _node = self.nodes.get(ref)
         if _node:
             return _node['data']
