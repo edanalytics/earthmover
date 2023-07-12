@@ -10,9 +10,9 @@ sources:
 
 transformations:
   grouped_scores:
+    source: $sources.scores
     operations:
       - operation: group_by
-        source: $sources.scores
         group_by_columns:
           - group_id
         create_columns:
