@@ -44,7 +44,6 @@ transformations:
       - operation: add_columns
         columns:
           family: mammal
-        debug: True
       - operation: modify_columns
         columns:
           id: {%raw%}1_{{value}}{%endraw%}
@@ -212,7 +211,7 @@ transformations:
           count_column: zoos_founded
 
   big_cats:
-    source: $sources.mammal_species
+    source: $transformations.mammal_species
     operations:
       - operation: filter_rows
         query: "name.str.contains('Cheetah') or name.str.contains('Lion') or name.str.contains('Tiger')"
