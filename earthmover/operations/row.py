@@ -5,13 +5,14 @@ class DistinctRowsOperation(Operation):
     """
 
     """
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'column', 'columns',
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['column', 'columns'])
-
-        self.columns_list = None
-
+        self.columns_list: list = None
 
     def compile(self):
         """
@@ -31,27 +32,18 @@ class DistinctRowsOperation(Operation):
         else:
             self.columns_list = []
 
-
-    def verify(self):
-        """
-
-        :return:
-        """
-        super().verify()
-
-        if not set(self.columns_list).issubset(self.data.columns):
-            self.error_handler.throw(
-                "one or more columns for checking for distinctness are undefined in the dataset"
-            )
-            raise
-
-
     def execute(self):
         """
 
         :return:
         """
         super().execute()
+
+        if not set(self.columns_list).issubset(self.data.columns):
+            self.error_handler.throw(
+                "one or more columns for checking for distinctness are undefined in the dataset"
+            )
+            raise
 
         if not self.columns_list:
             self.columns_list = self.data.columns
@@ -65,16 +57,17 @@ class FilterRowsOperation(Operation):
     """
 
     """
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'query', 'behavior',
+    )
+
     BEHAVIORS = ["include", "exclude"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['query', 'behavior'])
-
-        self.query = None
-        self.behavior = None
-
+        self.query: str = None
+        self.behavior: str = None
 
     def compile(self):
         """
@@ -91,7 +84,6 @@ class FilterRowsOperation(Operation):
                 "`behavior` must be one of [include, exclude]"
             )
             raise
-
 
     def execute(self):
         """

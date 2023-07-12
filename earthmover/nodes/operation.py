@@ -1,16 +1,17 @@
 import abc
 
-from earthmover.node import Node
-
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from earthmover.earthmover import Earthmover
 
 
-class Operation(Node):
+class Operation:
     """
 
     """
+    type: str = "operation"
+    allowed_configs: tuple = ('operation',)
+
     def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
         """
         :param config:
@@ -56,24 +57,15 @@ class Operation(Node):
 
 
     def __init__(self, name: str, config: dict, *, earthmover: 'Earthmover'):
-        full_name = f"{name}.operations:{config.get('operation')}"
-        super().__init__(full_name, config, earthmover=earthmover)
+        self.name = f"{name}.operations:{config.get('operation')}"
+        self.config = config
 
-        self.type = "transformation" # self.config.get('operation')
+        self.earthmover = earthmover
+        self.logger = earthmover.logger
+        self.error_handler = earthmover.error_handler
 
-        self.allowed_configs.update(['operation', 'sources', 'source'])
-
-        # `source` and `source_list` are mutually-exclusive attributes.
-        # `source_list` is for operations with multiple sources (i.e., dataframe operations)
-        self.source = self.error_handler.assert_get_key(self.config, 'source', dtype=str, required=False)
-        self.source_list = self.error_handler.assert_get_key(self.config, 'sources', dtype=list, required=False)
-        self.source_data_list = None  # Retrieved data for operations with multiple sources
-
-        if bool(self.source) == bool(self.source_list):  # Fail if both or neither are populated.
-            self.error_handler.throw(
-                "A `source` or a list of `sources` must be defined for any operation!"
-            )
-            raise
+        self.data: 'DataFrame' = None
+        self.source_data_mapping: dict = None
 
 
     @abc.abstractmethod
@@ -82,34 +74,40 @@ class Operation(Node):
 
         :return:
         """
-        super().compile()
+        self.error_handler.ctx.update(
+            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
+        )
 
+        # Verify all configs provided by the user are specified for the node.
+        # (This ensures the user doesn't pass in unexpected or misspelled configs.)
+        for _config in self.config:
+            if _config not in self.allowed_configs:
+                self.logger.warning(
+                    f"Config `{_config}` not defined for node `{self.name}`."
+                )
 
-    def verify(self):
-        """
-        Because verifications are optional, this is not an abstract method.
-
-        :return:
-        """
         pass
-
 
     @abc.abstractmethod
-    def execute(self):
+    def execute(self) -> 'DataFrame':
         """
 
         :return:
         """
-        super().execute()
-
-        # If multiple sources are required for an operation, self.data must be defined in the child class execute().
-        if self.source_list:
-            self.source_data_list = [
-                self.get_source_node(source).data for source in self.source_list
-            ]
-        else:
-            self.data = self.get_source_node(self.source).data
-
-        self.verify()
+        self.error_handler.ctx.update(
+            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
+        )
 
         pass
+
+
+    def run(self, data: 'DataFrame', data_mapping: dict):
+        self.data = data
+
+        if hasattr(self, 'sources'):
+            self.source_data_mapping = {
+                source: data_mapping[source].data.copy()
+                for source in self.sources
+            }
+
+        return self.execute()

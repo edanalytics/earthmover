@@ -12,13 +12,14 @@ class AddColumnsOperation(Operation):
     """
 
     """
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'columns',
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['columns'])
-
-        self.columns_dict = None
-
+        self.columns_dict: dict = None
 
     def compile(self):
         """
@@ -27,7 +28,6 @@ class AddColumnsOperation(Operation):
         """
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
-
 
     def execute(self):
         """
@@ -67,18 +67,18 @@ class AddColumnsOperation(Operation):
         return self.data
 
 
-
 class ModifyColumnsOperation(Operation):
     """
 
     """
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'columns',
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['columns'])
-
-        self.columns_dict = None
-
+        self.columns_dict: dict = None
 
     def compile(self):
         """
@@ -87,7 +87,6 @@ class ModifyColumnsOperation(Operation):
         """
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
-
 
     def execute(self):
         """
@@ -132,18 +131,18 @@ class ModifyColumnsOperation(Operation):
         return self.data
 
 
-
 class DuplicateColumnsOperation(Operation):
     """
 
     """
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'columns',
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['columns'])
-
-        self.columns_dict = None
-
+        self.columns_dict: dict = None
 
     def compile(self):
         """
@@ -153,30 +152,6 @@ class DuplicateColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-    
-    def verify(self):
-        """
-        
-        :return:
-        """
-        _columns = set(self.data.columns)
-
-        for old_col, new_col in self.columns_dict.items():
-
-            if new_col in _columns:
-                self.logger.warning(
-                    f"Duplicate column operation overwrites existing column `{new_col}`."
-                )
-
-            if old_col not in _columns:
-                self.error_handler.throw(
-                    f"column {old_col} not present in the dataset"
-                )
-            
-            _columns.remove(old_col)
-            _columns.add(new_col)
-
-
     def execute(self):
         """
 
@@ -185,24 +160,34 @@ class DuplicateColumnsOperation(Operation):
         super().execute()
 
         for old_col, new_col in self.columns_dict.items():
+
+            if new_col in self.data.columns:
+                self.logger.warning(
+                    f"Duplicate column operation overwrites existing column `{new_col}`."
+                )
+
+            if old_col not in self.data.columns:
+                self.error_handler.throw(
+                    f"column {old_col} not present in the dataset"
+                )
 
             self.data[new_col] = self.data[old_col]
 
         return self.data
 
 
-
 class RenameColumnsOperation(Operation):
     """
 
     """
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'columns',
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['columns'])
-
-        self.columns_dict = None
-
+        self.columns_dict: dict = None
 
     def compile(self):
         """
@@ -212,30 +197,6 @@ class RenameColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-
-    def verify(self):
-        """
-        
-        :return:
-        """
-        _columns = set(self.data.columns)
-
-        for old_col, new_col in self.columns_dict.items():
-
-            if new_col in _columns:
-                self.logger.warning(
-                    f"Rename column operation overwrites existing column `{new_col}`."
-                )
-
-            if old_col not in _columns:
-                self.error_handler.throw(
-                    f"column {old_col} not present in the dataset"
-                )
-            
-            _columns.remove(old_col)
-            _columns.add(new_col)
-
-
     def execute(self):
         """
 
@@ -243,23 +204,33 @@ class RenameColumnsOperation(Operation):
         """
         super().execute()
 
+        for old_col, new_col in self.columns_dict.items():
+            if new_col in self.data.columns:
+                self.logger.warning(
+                    f"Rename column operation overwrites existing column `{new_col}`."
+                )
+            if old_col not in self.data.columns:
+                self.error_handler.throw(
+                    f"column {old_col} not present in the dataset"
+                )
+
         self.data = self.data.rename(columns=self.columns_dict)
 
         return self.data
-
 
 
 class DropColumnsOperation(Operation):
     """
 
     """
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'columns',
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['columns'])
-
-        self.columns_to_drop = None
-
+        self.columns_to_drop: list = None
 
     def compile(self):
         """
@@ -269,27 +240,18 @@ class DropColumnsOperation(Operation):
         super().compile()
         self.columns_to_drop = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
 
-
-    def verify(self):
-        """
-
-        :return:
-        """
-        super().verify()
-
-        if not set(self.columns_to_drop).issubset(self.data.columns):
-            self.error_handler.throw(
-                "one or more columns specified to drop are not present in the dataset"
-            )
-            raise
-
-
     def execute(self):
         """
 
         :return:
         """
         super().execute()
+
+        if not set(self.columns_to_drop).issubset(self.data.columns):
+            self.error_handler.throw(
+                "one or more columns specified to drop are not present in the dataset"
+            )
+            raise
 
         self.data = self.data.drop(columns=self.columns_to_drop)
 
@@ -300,14 +262,14 @@ class KeepColumnsOperation(Operation):
     """
 
     """
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'columns',
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['columns'])
-
-        self.header = None
-
+        self.header: list = None
 
     def compile(self):
         """
@@ -318,27 +280,18 @@ class KeepColumnsOperation(Operation):
 
         self.header = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
 
-
-    def verify(self):
-        """
-
-        :return:
-        """
-        super().verify()
-
-        if not set(self.header).issubset(self.data.columns):
-            self.error_handler.throw(
-                "one or more columns specified to keep are not present in the dataset"
-            )
-            raise
-
-
     def execute(self):
         """
 
         :return:
         """
         super().execute()
+
+        if not set(self.header).issubset(self.data.columns):
+            self.error_handler.throw(
+                "one or more columns specified to keep are not present in the dataset"
+            )
+            raise
 
         self.data = self.data[self.header]
 
@@ -349,15 +302,16 @@ class CombineColumnsOperation(Operation):
     """
 
     """
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'columns', 'new_column', 'separator',
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['columns', 'new_column', 'separator'])
-
-        self.columns_list = None
-        self.new_column = None
-        self.separator = None
-
+        self.columns_list: list = None
+        self.new_column: str = None
+        self.separator: str = None
 
     def compile(self):
         """
@@ -371,26 +325,18 @@ class CombineColumnsOperation(Operation):
 
         self.separator = self.config.get('separator', "")
 
-
-    def verify(self):
-        """
-
-        :return:
-        """
-        super().verify()
-
-        if not set(self.columns_list).issubset(self.data.columns):
-            self.error_handler.throw(
-                f"one or more defined columns is not present in the dataset"
-            )
-            raise
-
     def execute(self):
         """
 
         :return:
         """
         super().execute()
+
+        if not set(self.columns_list).issubset(self.data.columns):
+            self.error_handler.throw(
+                f"one or more defined columns is not present in the dataset"
+            )
+            raise
 
         self.data[self.new_column] = self.data.apply(
             lambda x: self.separator.join(x[col] for col in self.columns_list),
@@ -406,15 +352,16 @@ class MapValuesOperation(Operation):
     """
 
     """
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'column', 'columns', 'mapping', 'map_file',
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['column', 'columns', 'mapping', 'map_file'])
-
-        self.columns_list = None
-        self.map_file = None
-        self.mapping = None
-
+        self.columns_list: list = None
+        self.map_file: str = None
+        self.mapping: dict = None
 
     def compile(self):
         """
@@ -449,26 +396,17 @@ class MapValuesOperation(Operation):
             )
             raise
 
-
-    def verify(self):
-        """
-
-        :return:
-        """
-        super().verify()
-
-        if not set(self.columns_list).issubset(self.data.columns):
-            self.error_handler.throw(
-                "one or more columns to map are undefined in the dataset"
-            )
-
-
     def execute(self):
         """
 
         :return:
         """
         super().execute()
+
+        if not set(self.columns_list).issubset(self.data.columns):
+            self.error_handler.throw(
+                "one or more columns to map are undefined in the dataset"
+            )
 
         try:
             for _column in self.columns_list:
@@ -480,7 +418,6 @@ class MapValuesOperation(Operation):
             )
 
         return self.data
-
 
     def _read_map_file(self, file) -> dict:
         """
@@ -508,15 +445,16 @@ class DateFormatOperation(Operation):
     """
 
     """
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'column', 'columns', 'from_format', 'to_format',
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['column', 'columns', 'from_format', 'to_format'])
-
-        self.columns_list = None
-        self.from_format = None
-        self.to_format = None
-
+        self.columns_list: list = None
+        self.from_format: str = None
+        self.to_format: str = None
 
     def compile(self):
         """
@@ -540,27 +478,18 @@ class DateFormatOperation(Operation):
 
         self.columns_list = _columns or [_column]  # `[None]` evaluates to True
 
-
-    def verify(self):
-        """
-
-        :return:
-        """
-        super().verify()
-
-        if not set(self.columns_list).issubset(self.data.columns):
-            self.error_handler.throw(
-                "one or more columns to map are undefined in the dataset"
-            )
-            raise
-
-
     def execute(self):
         """
 
         :return:
         """
         super().execute()
+
+        if not set(self.columns_list).issubset(self.data.columns):
+            self.error_handler.throw(
+                "one or more columns to map are undefined in the dataset"
+            )
+            raise
 
         for _column in self.columns_list:
             try:

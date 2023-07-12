@@ -17,25 +17,29 @@ class Node:
     """
 
     """
+    type: str = None
+    allowed_configs: tuple = ('debug', 'expect',)
+
     CHUNKSIZE = 1024 * 1024 * 100  # 100 MB
 
     def __init__(self, name: str, config: YamlMapping, *, earthmover: 'Earthmover'):
         self.name = name
         self.config = config
-        self.type = None
 
         self.earthmover = earthmover
         self.logger = earthmover.logger
         self.error_handler = earthmover.error_handler
 
-        self.data = None
-        self.size = None
-        self.num_rows = None
-        self.num_cols = None
+        self.upstream_sources: dict = {}
 
-        self.expectations = None
-        self.allowed_configs = {'debug', 'expect'}
-        self.debug = self.config.get('debug', False)
+        self.data: 'DataFrame' = None
+
+        self.size: int = None
+        self.num_rows: int = None
+        self.num_cols: int = None
+
+        self.expectations: list = None
+        self.debug: bool = False
 
 
     @abc.abstractmethod
@@ -56,14 +60,15 @@ class Node:
                     f"Config `{_config}` not defined for node `{self.name}`."
                 )
 
-        # Always check for expectations
+        # Always check for debug and expectations
+        self.debug = self.config.get('debug', False)
         self.expectations = self.error_handler.assert_get_key(self.config, 'expect', dtype=list, required=False)
 
         pass
 
 
     @abc.abstractmethod
-    def execute(self):
+    def execute(self) -> 'DataFrame':
         """
 
         :return:
@@ -71,6 +76,7 @@ class Node:
         self.error_handler.ctx.update(
             file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
         )
+
         pass
 
 
@@ -93,14 +99,6 @@ class Node:
                 f"Node {self.name}: {self.num_rows} rows; {self.num_cols} columns\n"
                 f"Header: {self.data.columns}"
             )
-
-
-    def get_source_node(self, source) -> 'Node':
-        """
-
-        :return:
-        """
-        return self.earthmover.graph.ref(source)
 
 
     def check_expectations(self, expectations: List[str]):
@@ -133,17 +131,3 @@ class Node:
                     self.logger.info(
                         f"Assertion passed! {self.name}: {expectation}"
                     )
-
-
-    def ensure_dask_dataframe(self):
-        """
-        Converts a Pandas DataFrame to a Dask DataFrame.
-        """
-        if isinstance(self.data, pd.DataFrame):
-            self.logger.debug(
-                f"Casting data in {self.type} node `{self.name}` to a Dask dataframe."
-            )
-            self.data = dask.dataframe.from_pandas(
-                self.data,
-                chunksize=self.CHUNKSIZE
-            )

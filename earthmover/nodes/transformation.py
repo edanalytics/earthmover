@@ -6,40 +6,26 @@ class Transformation(Node):
     """
 
     """
+    type: str = 'transformation'
+    allowed_configs: tuple = ('debug', 'expect', 'operations', 'source',)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.type = 'transformation'
-
-        self.allowed_configs.update(['operations'])
+        self.operations: list = []
 
         # Load in the operation configs and save each under operations.
         # Verify all specified sources exist in the global config.
-        self.operations = []
-        self.sources = set()
+        self.source = self.error_handler.assert_get_key(self.config, 'source', dtype=str)
+        self.upstream_sources[self.source] = None
 
-        _operations = self.error_handler.assert_get_key(self.config, 'operations', dtype=list)
-        for idx, operation_config in enumerate(_operations, start=1):
+        for operation_config in self.error_handler.assert_get_key(self.config, 'operations', dtype=list):
 
             operation = Operation(self.name, operation_config, earthmover=self.earthmover)
             self.operations.append(operation)
 
-            # Sources are defined in a 'source_list' or 'source' class attribute, but never both.
-            _source_list = operation.__dict__.get('source_list')
-            _source = operation.__dict__.get('source')
-
-            if _source_list:
-                self.sources.update(_source_list)
-            elif _source:
-                self.sources.add(_source)
-
-        # Sources are saved as an attribute to build network edges in `Earthmover.graph`.
-        if not self.sources:
-            self.error_handler.throw(
-                "no source(s) defined for transformation operation"
-            )
-            raise
+            if hasattr(operation, 'sources'):
+                for source in operation.sources:
+                    self.upstream_sources[source] = None
 
 
     def compile(self):
@@ -60,6 +46,9 @@ class Transformation(Node):
         """
         super().execute()
 
+        self.data = self.upstream_sources[self.source].data.copy()
+
         for operation in self.operations:
-            self.data = operation.execute()
-            operation.post_execute()
+            self.data = operation.run(self.data, self.upstream_sources)
+
+        self.post_execute()

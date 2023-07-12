@@ -1,4 +1,3 @@
-import abc
 import os
 import jinja2
 import re
@@ -10,42 +9,17 @@ class Destination(Node):
     """
 
     """
+    type: str = 'destination'
+    mode: str = None  # Documents which class was chosen.
+
     def __new__(cls, *args, **kwargs):
         return object.__new__(FileDestination)
 
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.type = 'destination'
-
-        self.allowed_configs.update(['source'])
-
-        self.mode = None  # Documents which class was chosen.
-
-        # Should this be moved to compile?
         self.source = self.error_handler.assert_get_key(self.config, 'source', dtype=str)
+        self.upstream_sources[self.source] = None
 
-
-    @abc.abstractmethod
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-        pass
-
-
-    @abc.abstractmethod
-    def execute(self):
-        """
-
-        :return:
-        """
-        super().execute()
-        self.data = self.get_source_node(self.source).data
-
-        pass
 
 
 
@@ -53,21 +27,21 @@ class FileDestination(Destination):
     """
 
     """
+    mode: str = 'file'
+
+    allowed_configs: tuple = (
+        'debug', 'expect', 'source',
+        'template', 'extension', 'linearize', 'header', 'footer',
+    )
+
+    file: str = None
+    template: str = None
+    jinja_template: str = None
+    header: str = None
+    footer: str = None
+
     EXP = re.compile(r"\s+")
-
     TEMPLATED_COL = "____OUTPUT____"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.mode = 'file'
-
-        self.allowed_configs.update(['template', 'extension', 'linearize', 'header', 'footer'])
-
-        self.file = None
-        self.template = None
-        self.jinja_template = None
-        self.header = None
-        self.footer = None
 
 
     def compile(self):
@@ -131,7 +105,7 @@ class FileDestination(Destination):
         """
         super().execute()
 
-        self.data = self.data.fillna('')
+        self.data = self.upstream_sources[self.source].data.copy().fillna('')
 
         os.makedirs(os.path.dirname(self.file), exist_ok=True)
         with open(self.file, 'w', encoding='utf-8') as fp:

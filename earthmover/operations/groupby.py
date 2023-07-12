@@ -8,17 +8,20 @@ class GroupByWithCountOperation(Operation):
     """
 
     """
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'group_by_columns', 'count_column',
+    )
+
+
+
     GROUPED_COL_NAME = "____grouped_col____"
     GROUPED_COL_SEP = "_____"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['group_by_columns', 'count_column'])
-
-        self.group_by_columns = None
-        self.count_column = None
-
+        self.group_by_columns: list = None
+        self.count_column: str = None
 
     def compile(self):
         """
@@ -29,27 +32,18 @@ class GroupByWithCountOperation(Operation):
         self.group_by_columns = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
         self.count_column     = self.error_handler.assert_get_key(self.config, 'count_column', dtype=str)
 
-
-    def verify(self):
-        """
-
-        :return:
-        """
-        super().verify()
-
-        if not set(self.group_by_columns).issubset(self.data.columns):
-            self.error_handler.throw(
-                "one or more specified group-by columns not in the dataset"
-            )
-            raise
-
-
     def execute(self):
         """
 
         :return:
         """
         super().execute()
+
+        if not set(self.group_by_columns).issubset(self.data.columns):
+            self.error_handler.throw(
+                "one or more specified group-by columns not in the dataset"
+            )
+            raise
 
         self.data[self.GROUPED_COL_NAME] = self.data.apply(
             lambda x: self.GROUPED_COL_SEP.join([*self.group_by_columns])
@@ -70,25 +64,24 @@ class GroupByWithCountOperation(Operation):
         return self.data
 
 
-
 class GroupByWithAggOperation(Operation):
     """
 
     """
-    DEFAULT_AGG_SEP = ","
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'group_by_columns', 'agg_column', 'separator',
+    )
 
+    DEFAULT_AGG_SEP = ","
     GROUPED_COL_NAME = "____grouped_col____"
     GROUPED_COL_SEP = "_____"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['group_by_columns', 'agg_column', 'separator'])
-
-        self.group_by_columns = None
-        self.agg_column = None
-        self.separator = None
-
+        self.group_by_columns: list = None
+        self.agg_column: str = None
+        self.separator: str = None
 
     def compile(self):
         """
@@ -104,26 +97,18 @@ class GroupByWithAggOperation(Operation):
             required=False, default=self.DEFAULT_AGG_SEP
         )
 
-    def verify(self):
-        """
-
-        :return:
-        """
-        super().verify()
-
-        if not set(self.group_by_columns).issubset(self.data.columns):
-            self.error_handler.throw(
-                "one or more specified group-by columns not in the dataset"
-            )
-            raise
-
-
     def execute(self):
         """
 
         :return:
         """
         super().execute()
+
+        if not set(self.group_by_columns).issubset(self.data.columns):
+            self.error_handler.throw(
+                "one or more specified group-by columns not in the dataset"
+            )
+            raise
 
         self.data[self.GROUPED_COL_NAME] = self.data.apply(
             lambda x: self.GROUPED_COL_SEP.join([*self.group_by_columns])
@@ -142,11 +127,15 @@ class GroupByWithAggOperation(Operation):
         return self.data
 
 
-
 class GroupByOperation(Operation):
     """
 
     """
+    allowed_configs: tuple = (
+        'debug', 'expect', 'operation',
+        'group_by_columns', 'create_columns',
+    )
+
     COLUMN_REQ_AGG_TYPES = [
         "agg", "aggregate",
         "max", "maximum",
@@ -161,12 +150,8 @@ class GroupByOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['group_by_columns', 'create_columns'])
-
-        self.group_by_columns = None
-        self.create_columns_dict = None
-
+        self.group_by_columns: list = None
+        self.create_columns_dict: dict = None
 
     def compile(self):
         """
@@ -177,21 +162,6 @@ class GroupByOperation(Operation):
         self.group_by_columns    = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
         self.create_columns_dict = self.error_handler.assert_get_key(self.config, 'create_columns', dtype=dict)
 
-
-    def verify(self):
-        """
-
-        :return:
-        """
-        super().verify()
-
-        if not set(self.group_by_columns).issubset(self.data.columns):
-            self.error_handler.throw(
-                "one or more specified group-by columns not in the dataset"
-            )
-            raise
-
-
     def execute(self):
         """
         Note: There is a bug in Dask Groupby operations.
@@ -200,6 +170,12 @@ class GroupByOperation(Operation):
         :return:
         """
         super().execute()
+
+        if not set(self.group_by_columns).issubset(self.data.columns):
+            self.error_handler.throw(
+                "one or more specified group-by columns not in the dataset"
+            )
+            raise
 
         #
         grouped = self.data.groupby(self.group_by_columns)
@@ -255,7 +231,6 @@ class GroupByOperation(Operation):
         del self.data[self.GROUP_SIZE_COL]
 
         return self.data
-
 
     @staticmethod
     def _get_agg_lambda(agg_type: str, column: str = "", separator: str = ""):
