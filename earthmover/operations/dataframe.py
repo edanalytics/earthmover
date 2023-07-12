@@ -112,7 +112,7 @@ class JoinOperation(Operation):
 
         # Iterate each right dataset
         for source in self.sources:
-            right_data = self.source_data_mapping[source].data.copy()
+            right_data = self.source_data_mapping[source]
             self.right_cols = right_data.columns
 
             if self.right_keep_cols:
@@ -170,7 +170,7 @@ class UnionOperation(Operation):
         super().execute()
 
         for source in self.sources:
-            source_data = self.source_data_mapping[source].data.copy()
+            source_data = self.source_data_mapping[source]
 
             if set(source_data.columns) != set(self.data.columns):
                 self.error_handler.throw('dataframes to union do not share identical columns')

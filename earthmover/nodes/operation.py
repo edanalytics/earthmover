@@ -65,6 +65,7 @@ class Operation:
         self.error_handler = earthmover.error_handler
 
         self.data: 'DataFrame' = None
+        self.source_data_mapping: dict = None
 
 
     @abc.abstractmethod
@@ -105,7 +106,7 @@ class Operation:
 
         if hasattr(self, 'sources'):
             self.source_data_mapping = {
-                source: data_mapping[source]
+                source: data_mapping[source].data.copy()
                 for source in self.sources
             }
 
