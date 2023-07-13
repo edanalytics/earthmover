@@ -35,6 +35,7 @@ class Operation:
             'combine_columns': column_operations.CombineColumnsOperation,
             'map_values': column_operations.MapValuesOperation,
             'date_format': column_operations.DateFormatOperation,
+            'snake_case_columns': column_operations.SnakeCaseColumnsOperation,
 
             'distinct_rows': row_operations.DistinctRowsOperation,
             'filter_rows': row_operations.FilterRowsOperation,
