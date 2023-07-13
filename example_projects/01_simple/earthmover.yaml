@@ -22,20 +22,18 @@ sources:
 
 transformations:
   attendance:
+    source: $sources.attendance
     operations:
       - operation: map_values
-        source: $sources.attendance
         column: absent
         mapping:
           "TRUE": absent
           "FALSE": present
       - operation: rename_columns
-        source: $transformations.attendance
         columns:
           absent: status
           section: session
       - operation: add_columns
-        source: $transformations.attendance
         columns:
           school: '{% raw %}{{ md5( range(1, 51) | random | string )}}{% endraw %}'
 

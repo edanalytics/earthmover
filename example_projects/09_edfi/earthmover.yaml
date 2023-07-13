@@ -49,15 +49,14 @@ sources:
 
 transformations:
   all_students:
+    source: $sources.students_anytown
     operations:
       - operation: union
         sources:
-          - $sources.students_anytown
           - $sources.students_someville
       # add district_id:
       - operation: join
         sources:
-          - $transformations.all_students
           - $sources.schools
         join_type: inner
         left_key: school_id
@@ -66,7 +65,6 @@ transformations:
           - district_id
       # map race to Ed-Fi values:
       - operation: map_values
-        source: $transformations.all_students
         column: race
         mapping:
           Black: Black - African American
