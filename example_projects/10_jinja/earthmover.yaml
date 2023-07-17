@@ -1,4 +1,3 @@
----
 version: 2
 
 config:
@@ -12,7 +11,7 @@ config:
     {%- endmacro %}
   parameter_defaults:
     DO_LINEARIZE: "True"
----
+
 
 sources:
   incidents:
