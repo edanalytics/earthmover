@@ -263,32 +263,22 @@ destinations:
     extension: jsonl
     linearize: True
 
-  species_count_by_zoo:
-    source: $transformations.species_count_by_zoo
-    template: ${BASE_DIR}/templates/count.jsont
-    extension: jsonl
-    linearize: True
-
-  zoo_count_by_species:
-    source: $transformations.zoo_count_by_species
-    template: ${BASE_DIR}/templates/count.jsont
-    extension: jsonl
-    linearize: True
-
-  zoo_count_by_year_founded:
-    source: $transformations.zoo_count_by_year_founded
-    template: ${BASE_DIR}/templates/count.jsont
-    extension: jsonl
-    linearize: True
-
   big_cats:
     source: $transformations.big_cats
     template: ${BASE_DIR}/templates/cats.jsont
     extension: jsonl
     linearize: True
 
-  total_of_each_species:
-    source: $transformations.total_of_each_species
+  {% set count_outputs = [
+      'species_count_by_zoo',
+      'zoo_count_by_species',
+      'zoo_count_by_year_founded',
+      'total_of_each_species',
+  ] %}
+  {% for output_type in count_outputs %}
+  {{ output_type }}:
+    source: $transformations.{{ output_type }}
     template: ${BASE_DIR}/templates/count.jsont
     extension: jsonl
     linearize: True
+  {% endfor %}
