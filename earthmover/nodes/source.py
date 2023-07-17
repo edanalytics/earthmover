@@ -21,6 +21,7 @@ class Source(Node):
     """
     type: str = 'source'
     mode: str = None  # Documents which class was chosen.
+    is_remote: bool = None
     allowed_configs: tuple = ('debug', 'expect', 'optional',)
 
     def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
@@ -77,18 +78,19 @@ class FileSource(Source):
 
     """
     mode: str = 'file'
-
+    is_remote: bool = False
     allowed_configs: tuple = (
         'debug', 'expect', 'optional',
         'file', 'type', 'columns', 'header_rows',
         'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
     )
 
-    file: str = None
-    file_type: str = None
-    read_lambda: Callable = None
-    columns_list: list = None
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.file: str = None
+        self.file_type: str = None
+        self.read_lambda: Callable = None
+        self.columns_list: list = None
 
     def compile(self):
         """
@@ -149,7 +151,6 @@ class FileSource(Source):
                 )
                 raise
 
-
     def execute(self):
         """
 
@@ -195,7 +196,6 @@ class FileSource(Source):
                 f"error with source file {self.file} ({err})"
             )
 
-
     @staticmethod
     def _get_filetype(file):
         """
@@ -233,7 +233,6 @@ class FileSource(Source):
         ext = file.lower().rsplit('.', 1)[-1]
         return ext_mapping.get(ext)
 
-
     def _get_read_lambda(self, file_type: str, sep: str = None):
         """
 
@@ -268,23 +267,22 @@ class FileSource(Source):
         return read_lambda_mapping.get(file_type)
 
 
-
 class FtpSource(Source):
     """
 
     """
     mode: str = 'ftp'
     is_remote: bool = True
-
     allowed_configs: tuple = (
         'debug', 'expect', 'optional',
         'connection', 'query',
     )
 
-    connection: str = None
-    ftp: ftplib.FTP = None
-    file: str = None
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.connection: str = None
+        self.ftp: ftplib.FTP = None
+        self.file: str = None
 
     def compile(self):
         """
@@ -315,7 +313,6 @@ class FtpSource(Source):
                 f"source file {self.connection} could not be accessed: {err}"
             )
 
-
     def execute(self):
         """
         ftp://user:pass@host:port/path/to/file.ext
@@ -343,22 +340,21 @@ class FtpSource(Source):
         )
 
 
-
 class SqlSource(Source):
     """
 
     """
     mode: str = 'sql'
     is_remote: bool = True
-
     allowed_configs: tuple = (
         'debug', 'expect', 'optional',
         'connection', 'query',
     )
 
-    connection: str = None
-    query: str = None
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.connection: str = None
+        self.query: str = None
 
     def compile(self):
         """
@@ -379,7 +375,6 @@ class SqlSource(Source):
         #     flags=re.M | re.I
         # )
         # self.size = pd.read_sql(sql=count_query, con=self.connection).iloc[0, 0]
-
 
     def execute(self):
         """

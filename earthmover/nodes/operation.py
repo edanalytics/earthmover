@@ -56,7 +56,6 @@ class Operation:
 
         return object.__new__(operation_class)
 
-
     def __init__(self, name: str, config: dict, *, earthmover: 'Earthmover'):
         self.name = f"{name}.operations:{config.get('operation')}"
         self.config = config
@@ -67,7 +66,6 @@ class Operation:
 
         self.data: 'DataFrame' = None
         self.source_data_mapping: dict = None
-
 
     @abc.abstractmethod
     def compile(self):
@@ -86,7 +84,6 @@ class Operation:
                 self.logger.warning(
                     f"Config `{_config}` not defined for node `{self.name}`."
                 )
-
         pass
 
     @abc.abstractmethod
@@ -98,9 +95,7 @@ class Operation:
         self.error_handler.ctx.update(
             file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
         )
-
         pass
-
 
     def run(self, data: 'DataFrame', data_mapping: dict):
         self.data = data
