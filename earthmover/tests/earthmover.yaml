@@ -5,6 +5,10 @@ config:
   log_level: INFO
   show_stacktrace: False
   show_graph: False
+  macros: >
+    {% macro test() -%}
+      testing!
+    {%- endmacro %}
   parameter_defaults:
     BASE_DIR: "."
 
