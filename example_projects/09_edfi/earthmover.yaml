@@ -1,7 +1,11 @@
+---
+version: 2
+
 config:
   log_level: DEBUG
   output_dir: ./output/
   # show_graph: True
+---
 
 sources:
   # this is fake data!

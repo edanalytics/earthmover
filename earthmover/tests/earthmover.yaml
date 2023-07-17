@@ -1,3 +1,6 @@
+---
+version: 2
+
 config:
   output_dir: ${BASE_DIR}/outputs/
   log_level: INFO
@@ -5,7 +8,7 @@ config:
   show_graph: False
   parameter_defaults:
     BASE_DIR: "."
-
+---
 
 
 sources:

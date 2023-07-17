@@ -16,11 +16,15 @@ from earthmover.runs_file import RunsFile
 from earthmover.nodes.destination import Destination
 from earthmover.nodes.source import Source
 from earthmover.nodes.transformation import Transformation
-from earthmover.yaml_parser import SafeLineEnvVarLoader
+from earthmover.yaml_parser import YamlJinjaLoader
 from earthmover import util
 
 
 class Earthmover:
+    """
+
+    """
+    start_timestamp = datetime.datetime.now()
 
     config_defaults = {
         "output_dir": "./",
@@ -30,6 +34,10 @@ class Earthmover:
         "show_stacktrace": False,
         "tmp_dir": tempfile.gettempdir(),
     }
+
+    sources = []
+    transformations = []
+    destinations = []
 
     def __init__(self,
         config_file: str,
@@ -52,45 +60,32 @@ class Earthmover:
         # Parse the user-provided config file and retrieve state-configs.
         # Merge the optional user state configs into the defaults, then clean as necessary.
         self.params = json.loads(params) if params else {}
-        self.user_configs = SafeLineEnvVarLoader.load_config_file(self.config_file, params=self.params)
+        project_configs, self.node_configs = YamlJinjaLoader.load_config_file(self.config_file, params=self.params)
 
-        if cli_state_configs is None:
-            cli_state_configs = {}
-
-        _state_configs = {**self.config_defaults, **self.user_configs.get('config', {}), **cli_state_configs}
         self.state_configs = {
-            'output_dir': os.path.expanduser(_state_configs['output_dir']),
-            'macros': _state_configs['macros'].strip(),
-            'show_graph': _state_configs['show_graph'],
-            'log_level': _state_configs['log_level'].upper(),
-            'show_stacktrace': _state_configs['show_stacktrace'],
-            'tmp_dir': _state_configs['tmp_dir'],
+            **self.config_defaults,
+            **project_configs,
+            **(cli_state_configs or {})
         }
-        if 'state_file' in _state_configs.keys():
-            self.state_configs.update({'state_file': _state_configs['state_file']})
 
         # Set up the logger
         self.logger = logger
         self.logger.setLevel(
-            logging.getLevelName( self.state_configs['log_level'] )
+            logging.getLevelName( self.state_configs['log_level'].upper() )
         )
 
         # Prepare the output directory for destinations.
-        _output_dir = self.state_configs['output_dir']
-        if not os.path.isdir(_output_dir):
-            self.logger.info(f"creating output directory {_output_dir}")
-            os.makedirs(_output_dir, exist_ok=True)
-
-        # Initialize the sources, transformations, and destinations
-        self.sources = []
-        self.transformations = []
-        self.destinations = []
+        self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
+        if not os.path.isdir(self.state_configs['output_dir']):
+            self.logger.info(
+                f"creating output directory {self.state_configs['output_dir']}"
+            )
+            os.makedirs(self.state_configs['output_dir'], exist_ok=True)
 
         # Initialize the NetworkX DiGraph
         self.graph = Graph(error_handler=self.error_handler)
 
         # Initialize a dictionary for tracking run metadata (for structured output)
-        self.start_timestamp = datetime.datetime.now()
         self.metadata = {
             "started_at": self.start_timestamp.isoformat(timespec='microseconds'),
             "working_dir": os.getcwd(),
@@ -115,7 +110,7 @@ class Earthmover:
 
         ### Build the graph type-by-type
         for node_type, node_class in node_types.items():
-            nodes = self.error_handler.assert_get_key(self.user_configs, node_type, dtype=dict, required=False, default={})
+            nodes = self.error_handler.assert_get_key(self.node_configs, node_type, dtype=dict, required=False, default={})
 
             # Place the nodes
             for name, config in nodes.items():
