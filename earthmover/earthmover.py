@@ -51,7 +51,6 @@ class Earthmover:
         self.do_generate = True
         self.force = force
         self.skip_hashing = skip_hashing
-        self.macros = ""
 
         self.results_file = results_file
         self.config_file = config_file
@@ -61,6 +60,7 @@ class Earthmover:
         # Merge the optional user state configs into the defaults, then clean as necessary.
         self.params = json.loads(params) if params else {}
         self.user_configs = YamlJinjaLoader.load_config_file(self.config_file, params=self.params)
+        self.macros = YamlJinjaLoader.macros
 
         self.state_configs = {
             **self.config_defaults,
