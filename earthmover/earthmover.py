@@ -60,11 +60,11 @@ class Earthmover:
         # Parse the user-provided config file and retrieve state-configs.
         # Merge the optional user state configs into the defaults, then clean as necessary.
         self.params = json.loads(params) if params else {}
-        project_configs, self.node_configs = YamlJinjaLoader.load_config_file(self.config_file, params=self.params)
+        self.user_configs = YamlJinjaLoader.load_config_file(self.config_file, params=self.params)
 
         self.state_configs = {
             **self.config_defaults,
-            **project_configs,
+            **self.user_configs.get('config', {}),
             **(cli_state_configs or {})
         }
 
@@ -110,7 +110,7 @@ class Earthmover:
 
         ### Build the graph type-by-type
         for node_type, node_class in node_types.items():
-            nodes = self.error_handler.assert_get_key(self.node_configs, node_type, dtype=dict, required=False, default={})
+            nodes = self.error_handler.assert_get_key(self.user_configs, node_type, dtype=dict, required=False, default={})
 
             # Place the nodes
             for name, config in nodes.items():

@@ -16,6 +16,10 @@ class YamlMapping(dict):
 
 
 class EnvironmentJinjaReader(Reader):
+    """
+    Overload yaml.Reader to substitute environment variables and process Jinja before parsing.
+    This class acts as a Mixin and references class attributes `params` and `macros` of YamlJinjaLoader.
+    """
     def __init__(self, stream):
 
         try:
@@ -46,6 +50,7 @@ class YamlJinjaLoader(EnvironmentJinjaReader, SafeLoader):
     Add environment variable interpolation
         - See https://stackoverflow.com/questions/52412297
     """
+    # Set class variables that update during parsing
     params: dict = {}
     macros: str = ""
 
@@ -65,11 +70,37 @@ class YamlJinjaLoader(EnvironmentJinjaReader, SafeLoader):
         data.update(value)
 
 
-    @classmethod
-    def load_config_file(cls, filepath: str, params: dict) -> (YamlMapping, YamlMapping):
+    def construct_mapping(self, node, deep=False):
         """
-        TODO: I jerryrig this function by splitting the input into two pseudo-YAML documents before parsing:
-              the project configs and the node configs. I'd prefer to use the YAML loader directly to parse these.
+        Immediately after constructing the mapping, search for and update config macros and parameter_defaults.
+        TODO: There may be a more efficient way to use this such that *every* mapping need not be searched.
+
+        :param node:
+        :param deep:
+        :return:
+        """
+        mapping = super().construct_mapping(node, deep=deep)
+
+        # Dynamically unpack macros and parameter defaults
+        if "config" in mapping:
+            if "macros" in mapping["config"]:
+                self.macros += mapping["config"]["macros"] + "\n"
+
+            if "parameter_defaults" in mapping["config"]:
+                for k, v in mapping["config"]["parameter_defaults"].items():
+                    if isinstance(v, str):
+                        self.params.setdefault(k, v)  # set defaults, if any
+                    else:
+                        raise TypeError(
+                            f"YAML config.parameter_defaults.{k} must be a string"
+                        )
+
+        return mapping
+
+
+    @classmethod
+    def load_config_file(cls, filepath: str, params: dict) -> YamlMapping:
+        """
 
         :param filepath:
         :param params:
@@ -77,42 +108,12 @@ class YamlJinjaLoader(EnvironmentJinjaReader, SafeLoader):
         """
         cls.params = {**os.environ.copy(), **params}
 
-        ### Read the full configs and split into "header" and "node" configs.
+        # Load configs string and parse using custom classes.
         with open(filepath, "r", encoding='utf-8') as stream:
-            raw_configs_string = stream.read()
+            raw_config_string = stream.read()  # Force to a string for new EnvironmentJinjaReader constructor
 
-        if not len(raw_configs_string.split('---')) >= 3:
-            raise Exception(
-                "Earthmover 1.x requires the config-level parameters to be wrapped in triple dashes (---).\n"
-                "Please verify your YAML file adheres to this requirement before reattempting run."
-            )
-
-        _, header_configs_string, node_configs_string = raw_configs_string.split('---', 2)
-
-        ### Load in header config block first to parse `version`, `macros`, and `parameter_defaults`
-        header_configs = yaml.load(header_configs_string, Loader=cls)
-
-        if header_configs.get('version') != 2:
-            raise Exception(
-                "Earthmover version 1.x requires `version: 2` be defined in your YAML file!\n"
-                "Please add this key and reattempt run."
-            )
-
-        project_configs = header_configs.get("config", {})
-        cls.macros = project_configs.get("macros", "").strip()
-
-        # Add parameter defaults to class params
-        for k, v in project_configs.get("parameter_defaults", {}).items():
-            if isinstance(v, str):
-                cls.params.setdefault(k, v)  # set defaults, if any
-            else:
-                logging.critical(
-                    f"YAML config.parameter_defaults.{k} must be a string"
-                )
-
-        ### Load in the rest of the template, applying Jinja templating before streaming to the parser
         try:
-            node_configs = yaml.load(node_configs_string, Loader=cls)
+            yaml_configs = yaml.load(raw_config_string, Loader=cls)
 
         except yaml.YAMLError as err:
             linear_err = " ".join(
@@ -124,7 +125,14 @@ class YamlJinjaLoader(EnvironmentJinjaReader, SafeLoader):
             )
             raise
 
-        return project_configs, node_configs
+        # Force version 2 check to ensure consistency across Earthmover versions.
+        if yaml_configs.get('version') != 2:
+            raise Exception(
+                "Earthmover version 1.x requires `version: 2` be defined in your YAML file!\n"
+                "Please add this key and reattempt run."
+            )
+
+        return yaml_configs
 
 
 YamlJinjaLoader.add_constructor(
