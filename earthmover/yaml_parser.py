@@ -1,5 +1,3 @@
-import jinja2
-import hashlib
 import logging
 import string
 import os
@@ -28,16 +26,6 @@ class SafeLineEnvVarLoader(SafeLoader):
         - See https://stackoverflow.com/questions/52412297
     """
 
-    def construct_mapping(self, node, deep=False):
-        """
-        Add environment variable interpolation to Constructor.construct_mapping()
-
-        :param node:
-        :param deep:
-        :return:
-        """
-        return super().construct_mapping(node, deep=deep)
-
     def construct_yaml_map(self, node):
         """
         Add line numbers as attribute of pyyaml.Constructor
@@ -54,7 +42,7 @@ class SafeLineEnvVarLoader(SafeLoader):
         data.update(value)
 
     @classmethod
-    def load_config_file(cls, filepath: str, params: dict) -> dict:
+    def load_config_file(cls, filepath: str, params: dict) -> (YamlMapping, str):
         """
 
         :param: params
@@ -151,7 +139,7 @@ class SafeLineEnvVarLoader(SafeLoader):
             )
             raise
 
-        return configs_pass2
+        return configs_pass2, macros
 
 
 SafeLineEnvVarLoader.add_constructor(
