@@ -130,11 +130,15 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
 
         # Convert the events back into a mapping, then parse.
         config_events = list([
-            yaml.events.StreamStartEvent, yaml.events.MappingStartEvent,
+            yaml.events.StreamStartEvent(),
+            yaml.events.DocumentStartEvent(),
+            yaml.events.MappingStartEvent(anchor=None, tag=None, implicit=True),
             *config_events,
-            yaml.events.MappingEndEvent, yaml.events.StreamEndEvent
+            yaml.events.MappingEndEvent(),
+            yaml.events.DocumentEndEvent(),
+            yaml.events.StreamEndEvent(),
         ])
-        print(config_events)
+        # print(config_events)
         config_events_mapping = yaml.load(yaml.emit(config_events), Loader=yaml.SafeLoader)
 
         # Retrieve and set macros and parameter defaults
