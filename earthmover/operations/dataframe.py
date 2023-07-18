@@ -8,7 +8,8 @@ class JoinOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'operation', 'sources', 'join_type',
+        'debug', 'expect', 'operation',
+        'sources', 'join_type',
         'left_keys', 'left_key', 'right_keys', 'right_key',
         'left_keep_columns', 'left_drop_columns', 'right_keep_columns', 'right_drop_columns',
     )
@@ -155,7 +156,7 @@ class UnionOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'operation', 'sources',
+        'debug', 'expect', 'operation', 'sources',
     )
 
     def __init__(self, *args, **kwargs):
