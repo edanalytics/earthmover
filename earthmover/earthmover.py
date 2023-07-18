@@ -43,7 +43,6 @@ class Earthmover:
         self.do_generate = True
         self.force = force
         self.skip_hashing = skip_hashing
-        self.macros = ""
 
         self.results_file = results_file
         self.config_file = config_file
@@ -52,34 +51,27 @@ class Earthmover:
         # Parse the user-provided config file and retrieve state-configs.
         # Merge the optional user state configs into the defaults, then clean as necessary.
         self.params = json.loads(params) if params else {}
-        self.user_configs = SafeLineEnvVarLoader.load_config_file(self.config_file, params=self.params)
+        self.user_configs, self.macros = SafeLineEnvVarLoader.load_config_file(self.config_file, params=self.params)
 
-        if cli_state_configs is None:
-            cli_state_configs = {}
-
-        _state_configs = {**self.config_defaults, **self.user_configs.get('config', {}), **cli_state_configs}
         self.state_configs = {
-            'output_dir': os.path.expanduser(_state_configs['output_dir']),
-            'macros': _state_configs['macros'].strip(),
-            'show_graph': _state_configs['show_graph'],
-            'log_level': _state_configs['log_level'].upper(),
-            'show_stacktrace': _state_configs['show_stacktrace'],
-            'tmp_dir': _state_configs['tmp_dir'],
+            **self.config_defaults,
+            **self.user_configs.get('config', {}),
+            **(cli_state_configs or {})
         }
-        if 'state_file' in _state_configs.keys():
-            self.state_configs.update({'state_file': _state_configs['state_file']})
 
         # Set up the logger
         self.logger = logger
         self.logger.setLevel(
-            logging.getLevelName( self.state_configs['log_level'] )
+            logging.getLevelName( self.state_configs['log_level'].upper() )
         )
 
         # Prepare the output directory for destinations.
-        _output_dir = self.state_configs['output_dir']
-        if not os.path.isdir(_output_dir):
-            self.logger.info(f"creating output directory {_output_dir}")
-            os.makedirs(_output_dir, exist_ok=True)
+        self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
+        if not os.path.isdir(self.state_configs['output_dir']):
+            self.logger.info(
+                f"creating output directory {self.state_configs['output_dir']}"
+            )
+            os.makedirs(self.state_configs['output_dir'], exist_ok=True)
 
         # Initialize the sources, transformations, and destinations
         self.sources = []
