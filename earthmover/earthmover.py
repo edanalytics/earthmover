@@ -16,7 +16,7 @@ from earthmover.runs_file import RunsFile
 from earthmover.nodes.destination import Destination
 from earthmover.nodes.source import Source
 from earthmover.nodes.transformation import Transformation
-from earthmover.yaml_parser import YamlJinjaLoader
+from earthmover.yaml_parser import YamlEnvironmentJinjaLoader
 from earthmover import util
 
 
@@ -59,8 +59,8 @@ class Earthmover:
         # Parse the user-provided config file and retrieve state-configs.
         # Merge the optional user state configs into the defaults, then clean as necessary.
         self.params = json.loads(params) if params else {}
-        self.user_configs = YamlJinjaLoader.load_config_file(self.config_file, params=self.params)
-        self.macros = YamlJinjaLoader.macros
+        self.user_configs = YamlEnvironmentJinjaLoader.load_config_file(self.config_file, params=self.params)
+        self.macros = YamlEnvironmentJinjaLoader.macros
 
         self.state_configs = {
             **self.config_defaults,
