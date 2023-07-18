@@ -21,6 +21,10 @@ from earthmover import util
 
 
 class Earthmover:
+    """
+
+    """
+    start_timestamp = datetime.datetime.now()
 
     config_defaults = {
         "output_dir": "./",
@@ -30,6 +34,10 @@ class Earthmover:
         "show_stacktrace": False,
         "tmp_dir": tempfile.gettempdir(),
     }
+
+    sources: list = []
+    transformations: list = []
+    destinations: list = []
 
     def __init__(self,
         config_file: str,
@@ -73,16 +81,10 @@ class Earthmover:
             )
             os.makedirs(self.state_configs['output_dir'], exist_ok=True)
 
-        # Initialize the sources, transformations, and destinations
-        self.sources = []
-        self.transformations = []
-        self.destinations = []
-
         # Initialize the NetworkX DiGraph
         self.graph = Graph(error_handler=self.error_handler)
 
         # Initialize a dictionary for tracking run metadata (for structured output)
-        self.start_timestamp = datetime.datetime.now()
         self.metadata = {
             "started_at": self.start_timestamp.isoformat(timespec='microseconds'),
             "working_dir": os.getcwd(),
