@@ -67,7 +67,7 @@ class Operation(Node):
 
         if hasattr(self, 'sources'):
             self.source_data_mapping = {
-                source: data_mapping[source].data.copy()
+                source: data_mapping[source].data
                 for source in self.sources
             }
 
