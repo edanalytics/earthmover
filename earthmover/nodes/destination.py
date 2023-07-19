@@ -21,28 +21,26 @@ class Destination(Node):
         self.upstream_sources[self.source] = None
 
 
-
-
 class FileDestination(Destination):
     """
 
     """
     mode: str = 'file'
-
     allowed_configs: tuple = (
         'debug', 'expect', 'source',
         'template', 'extension', 'linearize', 'header', 'footer',
     )
 
-    file: str = None
-    template: str = None
-    jinja_template: str = None
-    header: str = None
-    footer: str = None
-
     EXP = re.compile(r"\s+")
     TEMPLATED_COL = "____OUTPUT____"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.file: str = None
+        self.template: str = None
+        self.jinja_template: str = None
+        self.header: str = None
+        self.footer: str = None
 
     def compile(self):
         """
@@ -96,7 +94,6 @@ class FileDestination(Destination):
             raise
 
         self.jinja_template.globals['md5'] = util.jinja_md5
-
 
     def execute(self):
         """

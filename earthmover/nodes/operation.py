@@ -1,16 +1,16 @@
-import abc
+from earthmover.node import Node
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from earthmover.earthmover import Earthmover
 
 
-class Operation:
+class Operation(Node):
     """
 
     """
     type: str = "operation"
-    allowed_configs: tuple = ('operation',)
+    allowed_configs: tuple = ('debug', 'expect', 'operation',)
 
     def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
         """
@@ -56,51 +56,11 @@ class Operation:
 
         return object.__new__(operation_class)
 
-
     def __init__(self, name: str, config: dict, *, earthmover: 'Earthmover'):
-        self.name = f"{name}.operations:{config.get('operation')}"
-        self.config = config
+        full_name = f"{name}.operations:{config.get('operation')}"
+        super().__init__(full_name, config, earthmover=earthmover)
 
-        self.earthmover = earthmover
-        self.logger = earthmover.logger
-        self.error_handler = earthmover.error_handler
-
-        self.data: 'DataFrame' = None
         self.source_data_mapping: dict = None
-
-
-    @abc.abstractmethod
-    def compile(self):
-        """
-
-        :return:
-        """
-        self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
-        )
-
-        # Verify all configs provided by the user are specified for the node.
-        # (This ensures the user doesn't pass in unexpected or misspelled configs.)
-        for _config in self.config:
-            if _config not in self.allowed_configs:
-                self.logger.warning(
-                    f"Config `{_config}` not defined for node `{self.name}`."
-                )
-
-        pass
-
-    @abc.abstractmethod
-    def execute(self) -> 'DataFrame':
-        """
-
-        :return:
-        """
-        self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
-        )
-
-        pass
-
 
     def run(self, data: 'DataFrame', data_mapping: dict):
         self.data = data

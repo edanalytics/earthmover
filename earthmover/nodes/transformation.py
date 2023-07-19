@@ -27,7 +27,6 @@ class Transformation(Node):
                 for source in operation.sources:
                     self.upstream_sources[source] = None
 
-
     def compile(self):
         """
 
@@ -37,7 +36,6 @@ class Transformation(Node):
 
         for operation in self.operations:
             operation.compile()
-
 
     def execute(self):
         """

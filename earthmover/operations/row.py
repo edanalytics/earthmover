@@ -6,7 +6,8 @@ class DistinctRowsOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'operation', 'column', 'columns',
+        'debug', 'expect', 'operation',
+        'column', 'columns',
     )
 
     def __init__(self, *args, **kwargs):
@@ -57,7 +58,8 @@ class FilterRowsOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'operation', 'query', 'behavior',
+        'debug', 'expect', 'operation',
+        'query', 'behavior',
     )
 
     BEHAVIORS = ["include", "exclude"]

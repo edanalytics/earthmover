@@ -35,9 +35,9 @@ class Earthmover:
         "tmp_dir": tempfile.gettempdir(),
     }
 
-    sources = []
-    transformations = []
-    destinations = []
+    sources: list = []
+    transformations: list = []
+    destinations: list = []
 
     def __init__(self,
         config_file: str,
@@ -51,6 +51,7 @@ class Earthmover:
         self.do_generate = True
         self.force = force
         self.skip_hashing = skip_hashing
+        self.macros = ""
 
         self.results_file = results_file
         self.config_file = config_file

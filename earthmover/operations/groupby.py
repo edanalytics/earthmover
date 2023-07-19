@@ -9,7 +9,8 @@ class GroupByWithCountOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'operation', 'group_by_columns', 'count_column',
+        'debug', 'expect', 'operation',
+        'group_by_columns', 'count_column',
     )
 
 
@@ -68,7 +69,8 @@ class GroupByWithAggOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'operation', 'group_by_columns', 'agg_column', 'separator',
+        'debug', 'expect', 'operation',
+        'group_by_columns', 'agg_column', 'separator',
     )
 
     DEFAULT_AGG_SEP = ","
@@ -130,7 +132,8 @@ class GroupByOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'operation', 'group_by_columns', 'create_columns',
+        'debug', 'expect', 'operation',
+        'group_by_columns', 'create_columns',
     )
 
     COLUMN_REQ_AGG_TYPES = [

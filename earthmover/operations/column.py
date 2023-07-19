@@ -15,7 +15,8 @@ class AddColumnsOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'operation', 'columns',
+        'debug', 'expect', 'operation',
+        'columns',
     )
 
     def __init__(self, *args, **kwargs):
@@ -73,7 +74,8 @@ class ModifyColumnsOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'operation', 'columns',
+        'debug', 'expect', 'operation',
+        'columns',
     )
 
     def __init__(self, *args, **kwargs):
@@ -136,7 +138,8 @@ class DuplicateColumnsOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'operation', 'columns',
+        'debug', 'expect', 'operation',
+        'columns',
     )
 
     def __init__(self, *args, **kwargs):
@@ -180,7 +183,8 @@ class RenameColumnsOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'operation', 'columns',
+        'debug', 'expect', 'operation',
+        'columns',
     )
 
     def __init__(self, *args, **kwargs):
@@ -222,7 +226,8 @@ class DropColumnsOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'operation', 'columns',
+        'debug', 'expect', 'operation',
+        'columns',
     )
 
     def __init__(self, *args, **kwargs):
@@ -260,7 +265,8 @@ class KeepColumnsOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'operation', 'columns',
+        'debug', 'expect', 'operation',
+        'columns',
     )
 
     def __init__(self, *args, **kwargs):
@@ -299,7 +305,8 @@ class CombineColumnsOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'operation', 'columns', 'new_column', 'separator',
+        'debug', 'expect', 'operation',
+        'columns', 'new_column', 'separator',
     )
 
     def __init__(self, *args, **kwargs):
@@ -348,7 +355,8 @@ class MapValuesOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'operation', 'column', 'columns', 'mapping', 'map_file',
+        'debug', 'expect', 'operation',
+        'column', 'columns', 'mapping', 'map_file',
     )
 
     def __init__(self, *args, **kwargs):
@@ -440,7 +448,8 @@ class DateFormatOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'operation', 'column', 'columns', 'from_format', 'to_format',
+        'debug', 'expect', 'operation',
+        'column', 'columns', 'from_format', 'to_format',
     )
 
     def __init__(self, *args, **kwargs):

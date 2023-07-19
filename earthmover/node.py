@@ -41,7 +41,6 @@ class Node:
         self.expectations: list = None
         self.debug: bool = False
 
-
     @abc.abstractmethod
     def compile(self):
         """
@@ -66,7 +65,6 @@ class Node:
 
         pass
 
-
     @abc.abstractmethod
     def execute(self) -> 'DataFrame':
         """
@@ -78,7 +76,6 @@ class Node:
         )
 
         pass
-
 
     def post_execute(self):
         """
@@ -99,7 +96,6 @@ class Node:
                 f"Node {self.name}: {self.num_rows} rows; {self.num_cols} columns\n"
                 f"Header: {self.data.columns}"
             )
-
 
     def check_expectations(self, expectations: List[str]):
         """
