@@ -102,23 +102,24 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
             loader.get_event()
 
         # Parse the file until we hit a dictionary that is not headed by "config".
-        # (This presumes that the first dictionary mapping of the file is the config block.)
         last_value = None  # Keep track of previous nodes
 
         while True:
-            node = loader.compose_node(None, None)
-            value = loader.construct_object(node, True)
+            try:
+                node = loader.compose_node(None, None)
+                value = loader.construct_object(node, True)
+            except Exception:
+                return {}  # If we run into parsing errors, assume we've hit Jinja (and passed the configs).
 
-            if last_value == "config" and isinstance(value, dict):
-                return value
-
-            if last_value != "config" and isinstance(value, dict):
-                break
+            if isinstance(value, dict):
+                if last_value == "config":
+                    return value
+                else:
+                    break  # Presume the first dictionary mapping of the file is the config block
 
             last_value = value
 
-        # Return empty dict if no configs are found
-        return {}
+        return {}  # Return empty dict if no configs are found
 
     @staticmethod
     def template_open_filepath(filepath: str, params: dict) -> str:
