@@ -23,10 +23,6 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
     Add environment variable interpolation
         - See https://stackoverflow.com/questions/52412297
     """
-    # Set class variables that update during parsing
-    params: dict = {}
-    macros: str = ""
-
     def construct_yaml_map(self, node):
         """
         Add line numbers as attribute of pyyaml.Constructor
@@ -43,36 +39,28 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
         data.update(value)
 
     @classmethod
-    def load_config_file(cls, filepath: str, params: dict) -> YamlMapping:
+    def load_config_file(cls, filepath: str, params: dict, macros: str) -> YamlMapping:
         """
 
         :param filepath:
         :param params:
         :return:
         """
-        cls.params = {**os.environ.copy(), **params}
-
-        # Load configs string and parse the project configs block if present.
-        with open(filepath, "r", encoding='utf-8') as stream:
-            raw_config_string = stream.read()  # Force to a string for new EnvironmentJinjaReader constructor
-
-        cls.parse_project_configs(raw_config_string)
-        # print(cls.macros)
-        # print(cls.params)
+        raw_yaml = cls.template_open_filepath(filepath, params)
 
         # Complete full parsing with environmental vars and macros added.
         try:
-            # print("#1 BEFORE PARSING\n", raw_config_string, "\n")
-            raw_config_string = Template(raw_config_string).safe_substitute(cls.params)
-            # print("#2 AFTER ENV_VARS\n", raw_config_string, "\n")
-            raw_config_string = util.build_jinja_template(raw_config_string, macros=cls.macros).render()
-            # print("#3 AFTER_JINJA\n", raw_config_string, "\n")
-
-            yaml_configs = yaml.load(raw_config_string, Loader=cls)
+            raw_yaml = util.build_jinja_template(raw_yaml, macros=macros).render()
+            yaml_configs = yaml.load(raw_yaml, Loader=cls)
 
         except yaml.YAMLError as err:
+            linear_error_message = " ".join(
+                line.replace("^", "").strip()
+                for line in str(err).split("\n")
+            )
+
             raise Exception(
-                f"YAML could not be parsed: {cls.linearize_error(err)}"
+                f"YAML could not be parsed: {linear_error_message}"
             )
 
         except Exception as err:
@@ -94,72 +82,55 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
         return yaml_configs
 
     @classmethod
-    def parse_project_configs(cls, stream):
+    def load_project_configs(cls, filepath: str, params: dict):
         """
-        Helper method to retrieve user-provided macros and environment vars to apply before parsing.
+        Helper method to retrieve user-provided macros and environment vars to apply at full parsing.
 
-        :param stream:
+        :param filepath:
+        :param params:
         :return:
         """
-        mapping_depth = 0
-        in_config_mapping = False
-        config_events = []
+        raw_yaml = cls.template_open_filepath(filepath, params)
+        loader = yaml.SafeLoader(raw_yaml)
 
-        # Parse the file into events until a non-config element is reached
-        for event in yaml.parse(stream, Loader=yaml.SafeLoader):
-            # print(event, mapping_depth)
-            if isinstance(event, yaml.events.MappingStartEvent):
-                mapping_depth += 1
-            elif isinstance(event, yaml.events.MappingEndEvent):
-                mapping_depth -= 1
+        # Assert the file is properly formatted
+        for required_event in (yaml.StreamStartEvent, yaml.DocumentStartEvent, yaml.MappingStartEvent):
+            assert loader.check_event(required_event)
+            loader.get_event()
 
-            # Configs are top-level (i.e., in the first nested dictionary of the parse)
-            if mapping_depth == 1 and hasattr(event, 'value') and event.value == "config":
-                in_config_mapping = True
+        # Parse the file until we hit a dictionary that is not headed by "config".
+        # (This presumes that the first dictionary mapping of the file is the config block.)
+        last_value = None  # Keep track of previous nodes
 
-            if in_config_mapping:
-                config_events.append(event)
+        while True:
+            node = loader.compose_node(None, None)
+            value = loader.construct_object(node, True)
 
-            # Exit the mapping dict
-            if mapping_depth == 1 and hasattr(event, 'value') and event.value == 'sources':
+            if last_value == "config" and isinstance(value, dict):
+                return value
+
+            if last_value != "config" and isinstance(value, dict):
                 break
 
-        if not config_events:
-            # print("No config mapping found!")
-            return  # End early if no configs are defined
+            last_value = value
 
-        # Convert the events back into a mapping, then parse.
-        config_events = list([
-            yaml.events.StreamStartEvent(),
-            yaml.events.DocumentStartEvent(),
-            yaml.events.MappingStartEvent(anchor=None, tag=None, implicit=True),
-            *config_events,
-            yaml.events.MappingEndEvent(),
-            yaml.events.DocumentEndEvent(),
-            yaml.events.StreamEndEvent(),
-        ])
-        # print(config_events)
-        config_events_mapping = yaml.load(yaml.emit(config_events), Loader=yaml.SafeLoader)
-
-        # Retrieve and set macros and parameter defaults
-        if "macros" in config_events_mapping["config"]:
-            cls.macros = config_events_mapping["config"]["macros"]
-
-        if "parameter_defaults" in config_events_mapping["config"]:
-            for k, v in config_events_mapping["config"]["parameter_defaults"].items():
-                if isinstance(v, str):
-                    cls.params.setdefault(k, v)  # set defaults, if any
-                else:
-                    raise TypeError(
-                        f"YAML config.parameter_defaults.{k} must be a string"
-                    )
+        # Return empty dict if no configs are found
+        return {}
 
     @staticmethod
-    def linearize_error(error_message) -> str:
-        return " ".join(
-            line.replace("^", "").strip()
-            for line in str(error_message).split("\n")
-        )
+    def template_open_filepath(filepath: str, params: dict) -> str:
+        """
+
+        :param filepath:
+        :param params:
+        :return:
+        """
+        full_params = {**os.environ.copy(), **params}
+
+        with open(filepath, "r", encoding='utf-8') as stream:
+            content_string = stream.read()  # Force to a string to apply templating and expand Jinja
+
+        return Template(content_string).safe_substitute(full_params)
 
 
 YamlEnvironmentJinjaLoader.add_constructor(
