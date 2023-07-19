@@ -44,11 +44,13 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
 
         :param filepath:
         :param params:
+        :param macros:
         :return:
         """
+        # Load the YAML filepath and apply environment-variable templating.
         raw_yaml = cls.template_open_filepath(filepath, params)
 
-        # Complete full parsing with environmental vars and macros added.
+        # Expand Jinja and complete full parsing
         try:
             raw_yaml = util.build_jinja_template(raw_yaml, macros=macros).render()
             yaml_configs = yaml.load(raw_yaml, Loader=cls)
@@ -90,6 +92,7 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
         :param params:
         :return:
         """
+        # Load the YAML filepath and apply environment-variable templating.
         raw_yaml = cls.template_open_filepath(filepath, params)
         loader = yaml.SafeLoader(raw_yaml)
 

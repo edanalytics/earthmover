@@ -57,12 +57,12 @@ class Earthmover:
         self.config_file = config_file
         self.error_handler = ErrorHandler(file=self.config_file)
 
-        # Parse the user-provided config file and retrieve project-configs.
-        # Merge the optional user configs into the defaults, then clean as necessary.
+        # Parse the user-provided config file and retrieve project-configs, macros, and parameter defaults.
+        # Merge the optional user configs into the defaults.
         self.params = json.loads(params) if params else {}
 
         project_configs = YamlEnvironmentJinjaLoader.load_project_configs(self.config_file, params=self.params)
-        self.macros = project_configs.get("macros", "")
+        self.macros = project_configs.get("macros", "").strip()
 
         for key, val in project_configs.get("parameter_defaults", {}).items():
             if isinstance(val, str):
@@ -71,7 +71,9 @@ class Earthmover:
                 self.error_handler.throw(
                     f"YAML config.parameter_defaults.{key} must be a string"
                 )
-                raise
+
+        # Complete a full-parse of the user config file.
+        self.user_configs = YamlEnvironmentJinjaLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
 
         self.state_configs = {
             **self.config_defaults,
@@ -92,9 +94,6 @@ class Earthmover:
                 f"creating output directory {self.state_configs['output_dir']}"
             )
             os.makedirs(self.state_configs['output_dir'], exist_ok=True)
-
-        # Complete a full-parse of the user config file.
-        self.user_configs = YamlEnvironmentJinjaLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
 
         # Initialize the NetworkX DiGraph
         self.graph = Graph(error_handler=self.error_handler)
