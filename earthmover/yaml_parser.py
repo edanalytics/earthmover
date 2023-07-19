@@ -87,6 +87,25 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
     def load_project_configs(cls, filepath: str, params: dict):
         """
         Helper method to retrieve user-provided macros and environment vars to apply at full parsing.
+        Events are returned element-by-element, so we can rely on certain keywords and datatypes.
+
+        For example:
+        ```
+        while True:
+            node = loader.compose_node(None, None)
+            value = loader.construct_object(node, True)
+        ```
+
+        yields:
+        ```
+        version
+        2
+        config
+        {...}
+        sources
+        {...}
+        ...
+        ```
 
         :param filepath:
         :param params:
