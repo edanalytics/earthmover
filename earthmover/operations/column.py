@@ -46,10 +46,7 @@ class AddColumnsOperation(Operation):
 
             else:
                 try:
-                    template = jinja2.Environment(
-                        loader=jinja2.FileSystemLoader(os.path.dirname('./'))
-                    ).from_string(self.earthmover.state_configs['macros'] + val)
-                    template.globals['md5'] = util.jinja_md5
+                    template = util.build_jinja_template(val, macros=self.earthmover.macros)
 
                 except Exception as err:
                     self.error_handler.ctx.remove('line')
@@ -105,10 +102,7 @@ class ModifyColumnsOperation(Operation):
 
             else:
                 try:
-                    template = jinja2.Environment(
-                        loader=jinja2.FileSystemLoader(os.path.dirname('./'))
-                    ).from_string(self.earthmover.state_configs['macros'] + val)
-                    template.globals['md5'] = util.jinja_md5
+                    template = util.build_jinja_template(val, macros=self.earthmover.macros)
 
                 except Exception as err:
                     self.error_handler.ctx.remove('line')
