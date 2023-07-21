@@ -1,3 +1,5 @@
+version: 2
+
 config:
   output_dir: ./outputs/
   log_level: INFO
@@ -9,6 +11,7 @@ config:
     {%- endmacro %}
   parameter_defaults:
     DO_LINEARIZE: "True"
+
 
 sources:
   incidents:

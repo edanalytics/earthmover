@@ -16,7 +16,7 @@ from earthmover.runs_file import RunsFile
 from earthmover.nodes.destination import Destination
 from earthmover.nodes.source import Source
 from earthmover.nodes.transformation import Transformation
-from earthmover.yaml_parser import SafeLineEnvVarLoader
+from earthmover.yaml_parser import YamlEnvironmentJinjaLoader
 from earthmover import util
 
 
@@ -56,14 +56,27 @@ class Earthmover:
         self.config_file = config_file
         self.error_handler = ErrorHandler(file=self.config_file)
 
-        # Parse the user-provided config file and retrieve state-configs.
-        # Merge the optional user state configs into the defaults, then clean as necessary.
+        # Parse the user-provided config file and retrieve project-configs, macros, and parameter defaults.
+        # Merge the optional user configs into the defaults.
         self.params = json.loads(params) if params else {}
-        self.user_configs, self.macros = SafeLineEnvVarLoader.load_config_file(self.config_file, params=self.params)
+
+        project_configs = YamlEnvironmentJinjaLoader.load_project_configs(self.config_file, params=self.params)
+        self.macros = project_configs.get("macros", "").strip()
+
+        for key, val in project_configs.get("parameter_defaults", {}).items():
+            if isinstance(val, str):
+                self.params.setdefault(key, val)  # set defaults, if any
+            else:
+                self.error_handler.throw(
+                    f"YAML config.parameter_defaults.{key} must be a string"
+                )
+
+        # Complete a full-parse of the user config file.
+        self.user_configs = YamlEnvironmentJinjaLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
 
         self.state_configs = {
             **self.config_defaults,
-            **self.user_configs.get('config', {}),
+            **project_configs,
             **(cli_state_configs or {})
         }
 

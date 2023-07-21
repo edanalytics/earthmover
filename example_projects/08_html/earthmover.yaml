@@ -1,8 +1,11 @@
+version: 2
+
 config:
   # log_level: DEBUG
   output_dir: ./output/
   # show_stacktrace: True
   # show_graph: True
+
 
 sources:
   big-cats:

@@ -1,8 +1,11 @@
+version: 2
+
 config:
   output_dir: ./output/
   # log_level: DEBUG
   # show_stacktrace: True
   # show_graph: True
+
 
 sources:
   school_directory_no_grades:

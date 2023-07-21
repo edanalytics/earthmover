@@ -74,7 +74,7 @@ class FileDestination(Destination):
         #
         if self.config.get('linearize', True):
             template_string = self.EXP.sub(" ", template_string)  # Replace multiple spaces with a single space.
-        
+
         if 'header' in self.config:
             self.header = self.config["header"]
 
@@ -83,17 +83,13 @@ class FileDestination(Destination):
 
         #
         try:
-            self.jinja_template = jinja2.Environment(
-                    loader=jinja2.FileSystemLoader(os.path.dirname('./'))
-                ).from_string(self.earthmover.state_configs['macros'] + template_string)
+            self.jinja_template = util.build_jinja_template(template_string, macros=self.earthmover.macros)
 
         except Exception as err:
             self.earthmover.error_handler.throw(
                 f"syntax error in Jinja template in `template` file {self.template} ({err})"
             )
             raise
-
-        self.jinja_template.globals['md5'] = util.jinja_md5
 
     def execute(self):
         """
