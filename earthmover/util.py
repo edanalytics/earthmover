@@ -116,9 +116,6 @@ def jinja2_template_error_lineno():
         if tb.tb_frame.f_code.co_filename == '<template>':
             return tb.tb_lineno
         tb = tb.tb_next
-    
-def jinja_md5(str):
-    return hashlib.md5(str.encode('utf-8')).hexdigest()
 
 
 def build_jinja_template(template_string: str, macros: str = ""):
@@ -129,7 +126,7 @@ def build_jinja_template(template_string: str, macros: str = ""):
         loader=jinja2.FileSystemLoader(os.path.dirname('./'))
     ).from_string(macros + template_string)
 
-    template.globals['md5'] = hashlib.md5(str.encode('utf-8')).hexdigest()
+    template.globals['md5'] = lambda x: hashlib.md5(x.encode('utf-8')).hexdigest()
 
     return template
 
