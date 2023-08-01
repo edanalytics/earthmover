@@ -11,6 +11,7 @@ class Destination(Node):
     """
     type: str = 'destination'
     mode: str = None  # Documents which class was chosen.
+    allowed_configs: tuple = ('debug', 'expect', 'source',)
 
     def __new__(cls, *args, **kwargs):
         return object.__new__(FileDestination)

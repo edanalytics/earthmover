@@ -56,8 +56,6 @@ class Source(Node):
         # dataframe which is passed through to downstream transformations and destinations.)
         self.optional = self.config.get('optional', False)
 
-        self.is_remote: bool = False  # False only for local files.
-
 
     def ensure_dask_dataframe(self):
         """
