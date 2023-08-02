@@ -71,8 +71,9 @@ class LoggingMixin:
     logger: Optional[logging.Logger] = None
 
     @classmethod
-    def set_logger(cls, level: str = "INFO"):
-        level = level.upper()
+    def set_logger(cls):
+        if cls.logger:
+            return cls.logger
 
         handler = ExitOnExceptionHandler()
 
@@ -85,12 +86,18 @@ class LoggingMixin:
         filter = ContextFilter()
         handler.addFilter(filter)
 
-        logger = logging.getLogger()
-        logger.setLevel(level)
+        logger = logging.getLogger('earthmover')
         logger.addHandler(handler)
 
         LoggingMixin.logger = logger
         return logger
+
+    @classmethod
+    def set_logging_level(cls, level: str = "INFO"):
+        if not cls.logger:
+            cls.set_logger()
+
+        LoggingMixin.logger.setLevel(logging.getLevelName(level.upper()))
 
     @classmethod
     def update_ctx(cls, **kwargs):

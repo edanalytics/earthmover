@@ -1,6 +1,5 @@
 import dask
 import json
-import logging
 import tempfile
 import networkx as nx
 import os
@@ -41,7 +40,6 @@ class Earthmover(LoggingMixin):
 
     def __init__(self,
         config_file: str,
-        logger: logging.Logger,
         params: str = "",
         force: bool = False,
         skip_hashing: bool = False,
@@ -80,7 +78,7 @@ class Earthmover(LoggingMixin):
         }
 
         # Set up the logger
-        self.set_logger(level=self.state_configs['log_level'])
+        self.set_logging_level(self.state_configs['log_level'])
 
         # Prepare the output directory for destinations.
         self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])

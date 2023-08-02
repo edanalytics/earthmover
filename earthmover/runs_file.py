@@ -6,13 +6,15 @@ import time
 
 from typing import Dict, List, Optional
 
+from earthmover.logging_mixin import LoggingMixin
+
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from earthmover.earthmover import Earthmover
     from earthmover.nodes import Node
 
 
-class RunsFile:
+class RunsFile(LoggingMixin):
     """
 
     """
@@ -34,7 +36,6 @@ class RunsFile:
         self.file = file
 
         self.earthmover = earthmover
-        self.logger = self.earthmover.logger
         self.hashes = self._build_hashes()
 
         # Force the existence of the runs file.

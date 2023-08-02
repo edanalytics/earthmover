@@ -4,29 +4,13 @@ import os
 import sys
 
 from earthmover.earthmover import Earthmover
+from earthmover.logging_mixin import LoggingMixin
 
-
-class ExitOnExceptionHandler(logging.StreamHandler):
-    """
-
-    """
-    def emit(self, record):
-        super().emit(record)
-        if record.levelno in (logging.ERROR, logging.CRITICAL):
-            raise SystemExit(-1)
 
 DEFAULT_CONFIG_FILES = ['earthmover.yaml', 'earthmover.yml']
 
-# Set up logging
-handler = ExitOnExceptionHandler()
-
-_formatter = logging.Formatter("%(asctime)s.%(msecs)03d %(name)s %(levelname)s %(message)s", "%Y-%m-%d %H:%M:%S")
-handler.setFormatter(_formatter)
-
-logger = logging.getLogger("earthmover")
-logger.setLevel(logging.getLevelName('INFO'))
-logger.addHandler(handler)
-
+root_logger = LoggingMixin.set_logger()
+LoggingMixin.set_logging_level("INFO")
 
 def main(argv=None):
     """
@@ -115,14 +99,13 @@ def main(argv=None):
         
         em = Earthmover(
             config_file=os.path.join(tests_dir, "earthmover.yaml"),
-            logger=logger,
             params='{"BASE_DIR": "' + tests_dir + '"}',
             force=True,
             skip_hashing=True
         )
-        em.logger.info("running tests...")
+        root_logger.info("running tests...")
         em.test(tests_dir)
-        em.logger.info('tests passed successfully.')
+        root_logger.info('tests passed successfully.')
         exit(0)
 
     if not args.config_file:
@@ -130,11 +113,11 @@ def main(argv=None):
             test_file = os.path.join(".", file)
             if os.path.isfile(test_file):
                 args.config_file = test_file
-                logger.info(f"config file not specified with `-c` flag... but found and using ./{file}")
+                root_logger.info(f"config file not specified with `-c` flag... but found and using ./{file}")
                 break
 
     if not args.config_file:
-        logger.error("config file not specified with `-c` flag, and no default {" + ", ".join(DEFAULT_CONFIG_FILES) + "} found")
+        root_logger.error("config file not specified with `-c` flag, and no default {" + ", ".join(DEFAULT_CONFIG_FILES) + "} found")
 
     # Update state configs with those forced via the command line.
     cli_state_configs = {}
@@ -151,7 +134,6 @@ def main(argv=None):
     try:
         em = Earthmover(
             config_file=args.config_file,
-            logger=logger,
             params=args.params,
             force=args.force,
             skip_hashing=args.skip_hashing,
@@ -159,35 +141,35 @@ def main(argv=None):
             results_file=args.results_file
         )
     except Exception as err:
-        logger.exception(err, exc_info=True)
+        root_logger.exception(err, exc_info=True)
         raise  # Avoids linting error
 
     if args.command == 'compile':
-        em.logger.info(f"compiling project...")
+        root_logger.info(f"compiling project...")
         try:
             if args.selector != '*':
-                em.logger.info("selector is ignored for compile-only run.")
+                root_logger.info("selector is ignored for compile-only run.")
 
             em.build_graph()
             em.compile()
-            em.logger.info("looks ok")
+            root_logger.info("looks ok")
         except Exception as e:
-            logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
+            root_logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
             raise
 
     elif args.command == 'run' or not args.command:
         if not args.command:
-            em.logger.warning("[no command specified; proceeding with `run` but we recommend explicitly giving a command]")
+            root_logger.warning("[no command specified; proceeding with `run` but we recommend explicitly giving a command]")
         try:
-            em.logger.info("starting...")
+            root_logger.info("starting...")
             em.generate(selector=args.selector)
-            em.logger.info("done!")
+            root_logger.info("done!")
         except Exception as e:
-            logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
+            root_logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
             raise
 
     else:
-        logger.exception("unknown command, use -h flag for help")
+        root_logger.exception("unknown command, use -h flag for help")
         raise
 
 
