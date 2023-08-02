@@ -22,7 +22,6 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
     Add environment variable interpolation
         - See https://stackoverflow.com/questions/52412297
     """
-    macros: str = ""
     num_macros_lines: int = 0
 
     def construct_yaml_map(self, node):
@@ -41,7 +40,7 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
         data.update(value)
 
     @classmethod
-    def load_config_file(cls, filepath: str, params: dict) -> YamlMapping:
+    def load_config_file(cls, filepath: str, params: dict, macros: str) -> YamlMapping:
         """
 
         :param filepath:
@@ -54,7 +53,7 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
 
         # Expand Jinja and complete full parsing
         try:
-            raw_yaml = util.build_jinja_template(raw_yaml, macros=cls.macros).render()
+            raw_yaml = util.build_jinja_template(raw_yaml, macros=macros).render()
             yaml_configs = yaml.load(raw_yaml, Loader=cls)
 
         except yaml.YAMLError as err:
@@ -142,8 +141,7 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
             last_value = value
 
         macros = project_configs.get('macros', "")
-        YamlEnvironmentJinjaLoader.num_macros_lines = len(macros.split("\n"))
-        YamlEnvironmentJinjaLoader.macros = macros.strip()
+        YamlEnvironmentJinjaLoader.num_macros_lines = len(macros.split("\n"))  # Save line count for accurate logging
 
         return project_configs
 

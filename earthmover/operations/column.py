@@ -6,7 +6,6 @@ import pandas as pd
 
 from earthmover import util
 from earthmover.nodes.operation import Operation
-from earthmover.yaml_parser import YamlEnvironmentJinjaLoader
 
 
 class AddColumnsOperation(Operation):
@@ -18,8 +17,10 @@ class AddColumnsOperation(Operation):
         'columns',
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, macros: str, **kwargs):
         super().__init__(*args, **kwargs)
+        self.macros = macros
+
         self.columns_dict: dict = None
 
     def compile(self):
@@ -45,7 +46,7 @@ class AddColumnsOperation(Operation):
 
             else:
                 try:
-                    template = util.build_jinja_template(val, macros=YamlEnvironmentJinjaLoader.macros)
+                    template = util.build_jinja_template(val, macros=self.macros)
 
                 except Exception as err:
                     self.logger.critical(
@@ -72,8 +73,10 @@ class ModifyColumnsOperation(Operation):
         'columns',
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, macros: str, **kwargs):
         super().__init__(*args, **kwargs)
+        self.macros = macros
+
         self.columns_dict: dict = None
 
     def compile(self):
@@ -99,7 +102,7 @@ class ModifyColumnsOperation(Operation):
 
             else:
                 try:
-                    template = util.build_jinja_template(val, macros=YamlEnvironmentJinjaLoader.macros)
+                    template = util.build_jinja_template(val, macros=self.macros)
 
                 except Exception as err:
                     self.logger.critical(

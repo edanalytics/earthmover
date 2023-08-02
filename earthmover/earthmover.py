@@ -59,6 +59,7 @@ class Earthmover(LoggingMixin):
         self.params = json.loads(params) if params else {}
 
         project_configs = YamlEnvironmentJinjaLoader.load_project_configs(self.config_file, params=self.params)
+        self.macros = project_configs.get("macros", "").strip()
 
         for key, val in project_configs.get("parameter_defaults", {}).items():
             if isinstance(val, str):
@@ -69,7 +70,7 @@ class Earthmover(LoggingMixin):
                 )
 
         # Complete a full-parse of the user config file.
-        self.user_configs = YamlEnvironmentJinjaLoader.load_config_file(self.config_file, params=self.params)
+        self.user_configs = YamlEnvironmentJinjaLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
 
         self.state_configs = {
             **self.config_defaults,
@@ -120,7 +121,11 @@ class Earthmover(LoggingMixin):
 
             # Place the nodes
             for name, config in nodes.items():
-                node = node_class(name, config, output_dir=self.state_configs["output_dir"])  # Pass `output_dir` kwarg for destinations
+                node = node_class(
+                    name, config,
+                    output_dir=self.state_configs["output_dir"],
+                    macros=self.macros
+                )  # Pass `output_dir` kwarg for destinations; `macros` kwarg for operations and destinations
                 self.graph.add_node(f"${node_type}.{name}", data=node)
 
                 # Place edges for transformations and destinations

@@ -56,9 +56,9 @@ class Operation(Node):
 
         return object.__new__(operation_class)
 
-    def __init__(self, name: str, config: dict):
+    def __init__(self, name: str, config: dict, **kwargs):
         full_name = f"{name}.operations:{config.get('operation')}"
-        super().__init__(full_name, config)
+        super().__init__(full_name, config, **kwargs)
 
         self.source_data_mapping: dict = None
 

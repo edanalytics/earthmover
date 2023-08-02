@@ -3,7 +3,6 @@ import re
 
 from earthmover import util
 from earthmover.node import Node
-from earthmover.yaml_parser import YamlEnvironmentJinjaLoader
 
 class Destination(Node):
     """
@@ -35,9 +34,11 @@ class FileDestination(Destination):
     EXP = re.compile(r"\s+")
     TEMPLATED_COL = "____OUTPUT____"
 
-    def __init__(self, *args, output_dir: str, **kwargs):
+    def __init__(self, *args, output_dir: str, macros: str, **kwargs):
         super().__init__(*args, **kwargs)
         self.output_dir: str = output_dir
+        self.macros: str = macros
+
         self.file: str = None
         self.template: str = None
         self.jinja_template: str = None
@@ -77,7 +78,7 @@ class FileDestination(Destination):
 
         #
         try:
-            self.jinja_template = util.build_jinja_template(template_string, macros=YamlEnvironmentJinjaLoader.macros)
+            self.jinja_template = util.build_jinja_template(template_string, macros=self.macros)
 
         except Exception as err:
             self.logger.critical(

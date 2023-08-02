@@ -20,7 +20,7 @@ class Transformation(Node):
 
         for operation_config in self.get_config('operations', dtype=list):
 
-            operation = Operation(self.name, operation_config)
+            operation = Operation(self.name, operation_config, **kwargs)
             self.operations.append(operation)
 
             if hasattr(operation, 'sources'):
