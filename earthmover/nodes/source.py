@@ -10,10 +10,6 @@ from typing import Callable
 from earthmover.node import Node
 from earthmover import util
 
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from earthmover.earthmover import Earthmover
-
 
 class Source(Node):
     """
@@ -24,13 +20,12 @@ class Source(Node):
     is_remote: bool = None
     allowed_configs: tuple = ('debug', 'expect', 'optional',)
 
-    def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
+    def __new__(cls, name: str, config: dict, **kwargs):
         """
         Logic for assigning sources to their respective classes.
 
         :param name:
         :param config:
-        :param earthmover:
         """
         if 'connection' in config and 'query' not in config:
             return object.__new__(FtpSource)

@@ -23,15 +23,13 @@ class Node(LoggingMixin):
 
     CHUNKSIZE = 1024 * 1024 * 100  # 100 MB
 
-    def __init__(self, name: str, config: YamlMapping, *, earthmover: 'Earthmover'):
+    def __init__(self, name: str, config: YamlMapping, **kwargs):
         self.name = name
         self.config = config
 
         self.update_ctx(
             line=self.config.__line__, node=self, operation=None
         )
-
-        self.earthmover = earthmover
 
         self.upstream_sources: dict = {}
 

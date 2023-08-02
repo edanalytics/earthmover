@@ -35,8 +35,9 @@ class FileDestination(Destination):
     EXP = re.compile(r"\s+")
     TEMPLATED_COL = "____OUTPUT____"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, output_dir: str, **kwargs):
         super().__init__(*args, **kwargs)
+        self.output_dir: str = output_dir
         self.file: str = None
         self.template: str = None
         self.jinja_template: str = None
@@ -58,7 +59,7 @@ class FileDestination(Destination):
         self.linearize = self.get_config('linearize', True, dtype=bool)
 
         filename = f"{self.name}.{self.extension}" if self.extension else self.name
-        self.file = os.path.join(self.earthmover.state_configs['output_dir'], filename)
+        self.file = os.path.join(self.output_dir, filename)
 
         #
         try:

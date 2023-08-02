@@ -12,10 +12,10 @@ class Operation(Node):
     type: str = "operation"
     allowed_configs: tuple = ('debug', 'expect', 'operation',)
 
-    def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
+    def __new__(cls, name: str, config: dict, **kwargs):
         """
+        :param name:
         :param config:
-        :param earthmover:
         """
         from earthmover.operations import groupby as groupby_operations
         from earthmover.operations import dataframe as dataframe_operations
@@ -56,9 +56,9 @@ class Operation(Node):
 
         return object.__new__(operation_class)
 
-    def __init__(self, name: str, config: dict, *, earthmover: 'Earthmover'):
+    def __init__(self, name: str, config: dict):
         full_name = f"{name}.operations:{config.get('operation')}"
-        super().__init__(full_name, config, earthmover=earthmover)
+        super().__init__(full_name, config)
 
         self.source_data_mapping: dict = None
 

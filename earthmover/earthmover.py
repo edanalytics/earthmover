@@ -122,7 +122,7 @@ class Earthmover(LoggingMixin):
 
             # Place the nodes
             for name, config in nodes.items():
-                node = node_class(name, config, earthmover=self)
+                node = node_class(name, config, output_dir=self.state_configs["output_dir"])  # Pass `output_dir` kwarg for destinations
                 self.graph.add_node(f"${node_type}.{name}", data=node)
 
                 # Place edges for transformations and destinations
