@@ -15,10 +15,10 @@ class Transformation(Node):
 
         # Load in the operation configs and save each under operations.
         # Verify all specified sources exist in the global config.
-        self.source = self.assert_get_key(self.config, 'source', dtype=str)
+        self.source = self.get_config('source', dtype=str)
         self.upstream_sources[self.source] = None
 
-        for operation_config in self.assert_get_key(self.config, 'operations', dtype=list):
+        for operation_config in self.get_config('operations', dtype=list):
 
             operation = Operation(self.name, operation_config, earthmover=self.earthmover)
             self.operations.append(operation)

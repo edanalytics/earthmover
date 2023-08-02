@@ -29,8 +29,8 @@ class GroupByWithCountOperation(Operation):
         :return:
         """
         super().compile()
-        self.group_by_columns = self.assert_get_key(self.config, 'group_by_columns', dtype=list)
-        self.count_column     = self.assert_get_key(self.config, 'count_column', dtype=str)
+        self.group_by_columns = self.get_config('group_by_columns', dtype=list)
+        self.count_column     = self.get_config('count_column', dtype=str)
 
     def execute(self):
         """
@@ -89,13 +89,10 @@ class GroupByWithAggOperation(Operation):
         :return:
         """
         super().compile()
-        self.group_by_columns = self.assert_get_key(self.config, 'group_by_columns', dtype=list)
-        self.agg_column       = self.assert_get_key(self.config, 'agg_column', dtype=str)
+        self.group_by_columns = self.get_config('group_by_columns', dtype=list)
+        self.agg_column       = self.get_config('agg_column', dtype=str)
 
-        self.separator = self.assert_get_key(
-            self.config, 'separator', dtype=str,
-            required=False, default=self.DEFAULT_AGG_SEP
-        )
+        self.separator = self.get_config('separator', self.DEFAULT_AGG_SEP, dtype=str)
 
     def execute(self):
         """
@@ -159,8 +156,8 @@ class GroupByOperation(Operation):
         :return:
         """
         super().compile()
-        self.group_by_columns    = self.assert_get_key(self.config, 'group_by_columns', dtype=list)
-        self.create_columns_dict = self.assert_get_key(self.config, 'create_columns', dtype=dict)
+        self.group_by_columns    = self.get_config('group_by_columns', dtype=list)
+        self.create_columns_dict = self.get_config('create_columns', dtype=dict)
 
     def execute(self):
         """

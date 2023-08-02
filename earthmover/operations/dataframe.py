@@ -20,7 +20,7 @@ class JoinOperation(Operation):
         super().__init__(*args, **kwargs)
 
         # Check joined node
-        self.sources = self.assert_get_key(self.config, 'sources', dtype=list)
+        self.sources = self.get_config('sources', dtype=list)
         self.source_data_mapping = None
 
         self.join_type: str = None
@@ -43,8 +43,8 @@ class JoinOperation(Operation):
         super().compile()
 
         # Check left keys
-        _key  = self.assert_get_key(self.config, 'left_key', dtype=str, required=False)
-        _keys = self.assert_get_key(self.config, 'left_keys', dtype=list, required=False)
+        _key  = self.get_config('left_key', None, dtype=str)
+        _keys = self.get_config('left_keys', [], dtype=list)
 
         if bool(_key) == bool(_keys):  # Fail if both or neither are populated.
             self.logger.critical("must define `left_key` or `left_keys`")
@@ -53,8 +53,8 @@ class JoinOperation(Operation):
         self.left_keys = _keys or [_key]  # `[None]` evaluates to True
 
         # Check right keys
-        _key  = self.assert_get_key(self.config, 'right_key', dtype=str, required=False)
-        _keys = self.assert_get_key(self.config, 'right_keys', dtype=list, required=False)
+        _key  = self.get_config('right_key', None, dtype=str)
+        _keys = self.get_config('right_keys', [], dtype=list)
 
         if bool(_key) == bool(_keys):  # Fail if both or neither are populated.
             self.logger.critical("must define `right_key` or `right_keys`")
@@ -76,10 +76,10 @@ class JoinOperation(Operation):
 
         # Collect columns
         #   - There is a "if keep - elif drop" block in verify, so doesn't matter if both are populated.
-        self.left_keep_cols  = self.assert_get_key(self.config, 'left_keep_columns', dtype=list, required=False)
-        self.left_drop_cols  = self.assert_get_key(self.config, 'left_drop_columns', dtype=list, required=False)
-        self.right_keep_cols = self.assert_get_key(self.config, 'right_keep_columns', dtype=list, required=False)
-        self.right_drop_cols = self.assert_get_key(self.config, 'right_drop_columns', dtype=list, required=False)
+        self.left_keep_cols  = self.get_config('left_keep_columns' , [], dtype=list)
+        self.left_drop_cols  = self.get_config('left_drop_columns' , [], dtype=list)
+        self.right_keep_cols = self.get_config('right_keep_columns', [], dtype=list)
+        self.right_drop_cols = self.get_config('right_drop_columns', [], dtype=list)
 
     def execute(self):
         """
@@ -162,7 +162,7 @@ class UnionOperation(Operation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.sources = self.assert_get_key(self.config, 'sources', dtype=list)
+        self.sources = self.get_config('sources', dtype=list)
         self.source_data_mapping = None
 
     def execute(self):

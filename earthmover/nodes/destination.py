@@ -18,7 +18,7 @@ class Destination(Node):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.source = self.assert_get_key(self.config, 'source', dtype=str)
+        self.source = self.get_config('source', dtype=str)
         self.upstream_sources[self.source] = None
 
 
@@ -49,7 +49,7 @@ class FileDestination(Destination):
         :return:
         """
         super().compile()
-        self.template = self.assert_get_key(self.config, 'template', dtype=str)
+        self.template = self.get_config('template', dtype=str)
 
         #config->extension is optional: if not present, we assume the destination name has an extension
         extension = ""

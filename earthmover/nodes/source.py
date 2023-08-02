@@ -96,18 +96,14 @@ class FileSource(Source):
         :return:
         """
         super().compile()
-        self.file = self.assert_get_key(self.config, 'file', dtype=str, required=False)
+        self.file = self.get_config('file', '', dtype=str)
 
         #
         if not self.file:
-            self.file = ''
             self.file_type = ''
         #
         else:
-            self.file_type = self.assert_get_key(
-                self.config, 'type', dtype=str, required=False,
-                default=self._get_filetype(self.file)
-            )
+            self.file_type = self.get_config('type', self._get_filetype(self.file), dtype=str)
 
             if not self.file_type:
                 self.logger.critical(
@@ -134,7 +130,7 @@ class FileSource(Source):
             raise
 
         #
-        self.columns_list = self.assert_get_key(self.config, 'columns', dtype=list, required=False)
+        self.columns_list = self.get_config('columns', [], dtype=list)
 
         #
         if "://" in self.file:
@@ -288,7 +284,7 @@ class FtpSource(Source):
         :return:
         """
         super().compile()
-        self.connection = self.assert_get_key(self.config, 'connection', dtype=str)
+        self.connection = self.get_config('connection', dtype=str)
 
         # There's probably a network builtin to simplify this.
         user, passwd, host, port, self.file = re.match(
@@ -360,8 +356,8 @@ class SqlSource(Source):
         :return:
         """
         super().compile()
-        self.connection = self.assert_get_key(self.config, 'connection', dtype=str)
-        self.query = self.assert_get_key(self.config, 'query', dtype=str)
+        self.connection = self.get_config('connection', dtype=str)
+        self.query = self.get_config('query', dtype=str)
 
         # JK: I turned this off in the Dask refactor. Should it be turned back on?
         # # replace columns from outer query with count(*), to measure the size of the datasource (and determine is_chunked):

@@ -61,7 +61,7 @@ class Node(LoggingMixin):
 
         # Always check for debug and expectations
         self.debug = self.config.get('debug', False)
-        self.expectations = self.assert_get_key(self.config, 'expect', dtype=list, required=False)
+        self.expectations = self.get_config('expect', [], dtype=list)
 
         pass
 
@@ -97,37 +97,6 @@ class Node(LoggingMixin):
                 f"Header: {self.data.columns}"
             )
 
-    def assert_get_key(self, obj: dict, key: str,
-                       dtype: Optional[type] = None,
-                       required: bool = True,
-                       default: Optional[object] = None
-                       ) -> Optional[object]:
-        """
-
-        :param obj:
-        :param key:
-        :param dtype:
-        :param required:
-        :param default:
-        :return:
-        """
-        value = obj.get(key)
-
-        if value is None:
-            if required:
-                self.logger.critical(
-                    f"must define `{key}`"
-                )
-            else:
-                return default
-
-        if dtype and not isinstance(value, dtype):
-            self.logger.critical(
-                f"`{key}` is defined, but wrong type (should be {dtype}, is {type(value)})"
-            )
-
-        return value
-
     def get_config(self, key: str, default: Optional[Any] = "[[UNDEFINED]]", *, dtype: Any = object):
         value = self.config.get(key, default)
 
@@ -136,7 +105,7 @@ class Node(LoggingMixin):
                 f"YAML parse error: Field not defined: {key}."
             )
 
-        if not isinstance(value, dtype):
+        if value and not isinstance(value, dtype):
             self.logger.critical(
                 f"YAML parse error: Field does not match expected datatype: {key}\n"
                 f"    Expected: {dtype}\n"

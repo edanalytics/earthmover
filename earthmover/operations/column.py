@@ -29,7 +29,7 @@ class AddColumnsOperation(Operation):
         :return:
         """
         super().compile()
-        self.columns_dict = self.assert_get_key(self.config, 'columns', dtype=dict)
+        self.columns_dict = self.get_config('columns', dtype=dict)
 
     def execute(self):
         """
@@ -83,7 +83,7 @@ class ModifyColumnsOperation(Operation):
         :return:
         """
         super().compile()
-        self.columns_dict = self.assert_get_key(self.config, 'columns', dtype=dict)
+        self.columns_dict = self.get_config('columns', dtype=dict)
 
     def execute(self):
         """
@@ -142,7 +142,7 @@ class DuplicateColumnsOperation(Operation):
         :return:
         """
         super().compile()
-        self.columns_dict = self.assert_get_key(self.config, 'columns', dtype=dict)
+        self.columns_dict = self.get_config('columns', dtype=dict)
 
     def execute(self):
         """
@@ -187,7 +187,7 @@ class RenameColumnsOperation(Operation):
         :return:
         """
         super().compile()
-        self.columns_dict = self.assert_get_key(self.config, 'columns', dtype=dict)
+        self.columns_dict = self.get_config('columns', dtype=dict)
 
     def execute(self):
         """
@@ -230,7 +230,7 @@ class DropColumnsOperation(Operation):
         :return:
         """
         super().compile()
-        self.columns_to_drop = self.assert_get_key(self.config, 'columns', dtype=list)
+        self.columns_to_drop = self.get_config('columns', dtype=list)
 
     def execute(self):
         """
@@ -270,7 +270,7 @@ class KeepColumnsOperation(Operation):
         """
         super().compile()
 
-        self.header = self.assert_get_key(self.config, 'columns', dtype=list)
+        self.header = self.get_config('columns', dtype=list)
 
     def execute(self):
         """
@@ -312,8 +312,8 @@ class CombineColumnsOperation(Operation):
         """
         super().compile()
 
-        self.columns_list = self.assert_get_key(self.config, 'columns', dtype=list)
-        self.new_column   = self.assert_get_key(self.config, 'new_column', dtype=str)
+        self.columns_list = self.get_config('columns', dtype=list)
+        self.new_column   = self.get_config('new_column', dtype=str)
 
         self.separator = self.config.get('separator', "")
 
@@ -363,8 +363,8 @@ class MapValuesOperation(Operation):
         super().compile()
 
         # Only 'column' or 'columns' can be populated
-        _column  = self.assert_get_key(self.config, 'column', dtype=str, required=False)
-        _columns = self.assert_get_key(self.config, 'columns', dtype=list, required=False)
+        _column  = self.get_config('column', None, dtype=str)
+        _columns = self.get_config('columns', [], dtype=list)
 
         if bool(_column) == bool(_columns):  # Fail if both or neither are populated.
             self.logger.critical(
@@ -375,8 +375,8 @@ class MapValuesOperation(Operation):
         self.columns_list = _columns or [_column]  # `[None]` evaluates to True
 
         #
-        _mapping  = self.assert_get_key(self.config, 'mapping', dtype=dict, required=False)
-        _map_file = self.assert_get_key(self.config, 'map_file', dtype=str, required=False)
+        _mapping  = self.get_config('mapping', {}, dtype=dict)
+        _map_file = self.get_config('map_file', None, dtype=str)
 
         if _mapping:
             self.mapping = _mapping
@@ -455,12 +455,12 @@ class DateFormatOperation(Operation):
         """
         super().compile()
 
-        self.from_format = self.assert_get_key(self.config, 'from_format', dtype=str)
-        self.to_format   = self.assert_get_key(self.config, 'to_format', dtype=str)
+        self.from_format = self.get_config('from_format', dtype=str)
+        self.to_format   = self.get_config('to_format', dtype=str)
 
         # Only 'column' or 'columns' can be populated
-        _column  = self.assert_get_key(self.config, 'column', dtype=str, required=False)
-        _columns = self.assert_get_key(self.config, 'columns', dtype=list, required=False)
+        _column  = self.get_config('column', None, dtype=str)
+        _columns = self.get_config('columns', [], dtype=list)
 
         if bool(_column) == bool(_columns):  # Fail if both or neither are populated.
             self.logger.critical(
