@@ -1,9 +1,9 @@
 import os
-import jinja2
 import re
 
-from earthmover.node import Node
 from earthmover import util
+from earthmover.node import Node
+from earthmover.yaml_parser import YamlEnvironmentJinjaLoader
 
 class Destination(Node):
     """
@@ -76,7 +76,7 @@ class FileDestination(Destination):
 
         #
         try:
-            self.jinja_template = util.build_jinja_template(template_string, macros=self.earthmover.macros)
+            self.jinja_template = util.build_jinja_template(template_string, macros=YamlEnvironmentJinjaLoader.macros)
 
         except Exception as err:
             self.logger.critical(

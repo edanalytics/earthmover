@@ -56,12 +56,11 @@ class Earthmover(LoggingMixin):
         self.config_file = config_file
         self.update_ctx(file=self.config_file)
 
-        # Parse the user-provided config file and retrieve project-configs, macros, and parameter defaults.
+        # Parse the user-provided config file and retrieve project-configs, and parameter defaults.
         # Merge the optional user configs into the defaults.
         self.params = json.loads(params) if params else {}
 
         project_configs = YamlEnvironmentJinjaLoader.load_project_configs(self.config_file, params=self.params)
-        self.macros = project_configs.get("macros", "").strip()
 
         for key, val in project_configs.get("parameter_defaults", {}).items():
             if isinstance(val, str):
@@ -72,7 +71,7 @@ class Earthmover(LoggingMixin):
                 )
 
         # Complete a full-parse of the user config file.
-        self.user_configs = YamlEnvironmentJinjaLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
+        self.user_configs = YamlEnvironmentJinjaLoader.load_config_file(self.config_file, params=self.params)
 
         self.state_configs = {
             **self.config_defaults,

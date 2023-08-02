@@ -1,13 +1,12 @@
 import csv
 import dask.dataframe as dd
-import jinja2
 import re
 import string
-import os
 import pandas as pd
 
-from earthmover.nodes.operation import Operation
 from earthmover import util
+from earthmover.nodes.operation import Operation
+from earthmover.yaml_parser import YamlEnvironmentJinjaLoader
 
 
 class AddColumnsOperation(Operation):
@@ -46,7 +45,7 @@ class AddColumnsOperation(Operation):
 
             else:
                 try:
-                    template = util.build_jinja_template(val, macros=self.earthmover.macros)
+                    template = util.build_jinja_template(val, macros=YamlEnvironmentJinjaLoader.macros)
 
                 except Exception as err:
                     self.logger.critical(
@@ -100,7 +99,7 @@ class ModifyColumnsOperation(Operation):
 
             else:
                 try:
-                    template = util.build_jinja_template(val, macros=self.earthmover.macros)
+                    template = util.build_jinja_template(val, macros=YamlEnvironmentJinjaLoader.macros)
 
                 except Exception as err:
                     self.logger.critical(
