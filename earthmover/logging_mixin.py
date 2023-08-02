@@ -11,10 +11,10 @@ class ContextFilter(logging.Filter):
     Warning: `file` and `line` are similar to built-ins `filename` and `lineno`.
     """
     def filter(self, record: logging.LogRecord):
-        record.file = LoggingMixin.ctx_file
-        record.line = LoggingMixin.ctx_line
-        record.node = LoggingMixin.ctx_node
-        record.operation = LoggingMixin.ctx_operation
+        record.file = LoggingMixin.ctx.get('file')
+        record.line = LoggingMixin.ctx.get('line')
+        record.node = LoggingMixin.ctx.get('node')
+        record.operation = LoggingMixin.ctx.get('operation')
         return record
 
 
@@ -51,7 +51,7 @@ class YamlParserFormatter(logging.Formatter):
         if record.operation:
             log += f"operation `{record.operation.type}` "
 
-        if log and record.levelname in (logging.ERROR, logging.CRITICAL):
+        if log and record.levelno in (logging.ERROR, logging.CRITICAL):
             return f"({log.strip()})\n{super().format(record)}"
         else:
             return super().format(record)
@@ -61,10 +61,12 @@ class LoggingMixin:
     """
 
     """
-    ctx_file     : Optional[str ]        = None
-    ctx_line     : Optional[int ]        = None
-    ctx_node     : Optional['Node']      = None
-    ctx_operation: Optional['Operation'] = None
+    ctx: dict = {
+        'file': None,
+        'line': None,
+        'node': None,
+        'operation': None,
+    }
 
     logger: Optional[logging.Logger] = None
 
@@ -87,27 +89,17 @@ class LoggingMixin:
         logger.setLevel(level)
         logger.addHandler(handler)
 
-        cls.logger = logger
+        LoggingMixin.logger = logger
         return logger
 
     @classmethod
-    def update_ctx(cls,
-        file: Optional[str] = None,
-        line: Optional[int] = None,
-        node: Optional['Node'] = None,
-        operation: Optional['Operation'] = None,
-    ):
-        cls.ctx_file = file or cls.ctx_file
-        cls.ctx_line = line or cls.ctx_line
-        cls.ctx_node = node or cls.ctx_node
-        cls.ctx_operation = operation or cls.ctx_operation
+    def update_ctx(cls, **kwargs):
+        LoggingMixin.ctx.update(kwargs)
 
     @classmethod
-    def reset_ctx(cls, removes: Optional[list] = None):
-        if not removes:
-            removes = ['file', 'line', 'node', 'operation']
+    def reset_ctx(cls, *args):
+        if not args:
+            args = cls.ctx.keys()
 
-        if 'file' in removes: cls.ctx_file = None
-        if 'line' in removes: cls.ctx_line = None
-        if 'node' in removes: cls.ctx_node = None
-        if 'operation' in removes: cls.ctx_operation = None
+        for arg in args:
+            LoggingMixin.ctx[arg] = None

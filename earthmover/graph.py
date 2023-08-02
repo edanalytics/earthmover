@@ -109,7 +109,7 @@ class Graph(nx.DiGraph, LoggingMixin):
             import matplotlib.pyplot as plt
             _ = plt.figure(figsize=(image_width, image_height))
         except ImportError:
-            self.reset_ctx(['node', 'line', 'file'])
+            self.reset_ctx('node', 'line', 'file')
             self.logger.critical(
                 "drawing the graph requires the matplotlib library... please install it with `pip install matplotlib` or similar"
             )
@@ -145,7 +145,7 @@ class Graph(nx.DiGraph, LoggingMixin):
         try:
             node_positions = nx.drawing.nx_agraph.graphviz_layout(self, prog='dot', args='-Grankdir=LR')
         except ImportError:
-            self.reset_ctx(['node', 'line', 'file'])
+            self.reset_ctx('node', 'line', 'file')
             self.logger.critical(
                 "drawing the graph requires the PyGraphViz library... please install it with `sudo apt-get install graphviz graphviz-dev && pip install pygraphviz` or similar"
             )

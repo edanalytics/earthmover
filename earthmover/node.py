@@ -128,27 +128,22 @@ class Node(LoggingMixin):
 
         return value
 
-    def throw(self, message: str):
-        raise Exception(
-            f"{self.ctx} {message})"
-        )
+    def get_config(self, key: str, default: Optional[Any] = "[[UNDEFINED]]", *, dtype: Any = object):
+        value = self.config.get(key, default)
 
-    # def assert_get_key(self, obj: dict, key: str, *, default: Optional[Any] = "[[UNDEFINED]]", dtype: Any = object):
-    #     value = obj.get(key, default)
-    #
-    #     if value == "[[UNDEFINED]]":
-    #         self.logger.critical(
-    #             f"YAML parse error: Field not defined: {key}."
-    #         )
-    #
-    #     if not isinstance(value, dtype):
-    #         self.logger.critical(
-    #             f"YAML parse error: Field does not match expected datatype: {key}\n"
-    #             f"    Expected: {dtype}\n"
-    #             f"    Received: {value}"
-    #         )
-    #
-    #     return value
+        if value == "[[UNDEFINED]]":
+            self.logger.critical(
+                f"YAML parse error: Field not defined: {key}."
+            )
+
+        if not isinstance(value, dtype):
+            self.logger.critical(
+                f"YAML parse error: Field does not match expected datatype: {key}\n"
+                f"    Expected: {dtype}\n"
+                f"    Received: {value}"
+            )
+
+        return value
 
     def check_expectations(self, expectations: List[str]):
         """

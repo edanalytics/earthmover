@@ -80,8 +80,6 @@ def render_jinja_template(row, template: jinja2.Template, template_str: str) -> 
 
     except Exception as err:
 
-        LoggingMixin.reset_ctx(['line'])
-
         if dict(row):
             _joined_keys = "`, `".join(dict(row).keys())
             variables = f"\n(available variables are `{_joined_keys}`)"

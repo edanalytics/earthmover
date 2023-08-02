@@ -49,7 +49,6 @@ class AddColumnsOperation(Operation):
                     template = util.build_jinja_template(val, macros=self.earthmover.macros)
 
                 except Exception as err:
-                    self.reset_ctx(['line'])
                     self.logger.critical(
                         f"syntax error in Jinja template for column `{col}` of `add_columns` operation ({err}):\n===> {val}"
                     )
@@ -104,7 +103,6 @@ class ModifyColumnsOperation(Operation):
                     template = util.build_jinja_template(val, macros=self.earthmover.macros)
 
                 except Exception as err:
-                    self.reset_ctx(['line'])
                     self.logger.critical(
                         f"syntax error in Jinja template for column `{col}` of `modify_columns` operation ({err}):\n===> {val}"
                     )
