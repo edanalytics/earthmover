@@ -42,7 +42,7 @@ class Source(Node):
             return object.__new__(FileSource)
 
         else:
-            earthmover.error_handler.throw(
+            cls.logger.critical(
                 "sources must specify either a `file` and/or `connection` string and `query`"
             )
             raise
@@ -96,7 +96,7 @@ class FileSource(Source):
         :return:
         """
         super().compile()
-        self.file = self.error_handler.assert_get_key(self.config, 'file', dtype=str, required=False)
+        self.file = self.assert_get_key(self.config, 'file', dtype=str, required=False)
 
         #
         if not self.file:
@@ -104,20 +104,20 @@ class FileSource(Source):
             self.file_type = ''
         #
         else:
-            self.file_type = self.error_handler.assert_get_key(
+            self.file_type = self.assert_get_key(
                 self.config, 'type', dtype=str, required=False,
                 default=self._get_filetype(self.file)
             )
 
             if not self.file_type:
-                self.error_handler.throw(
+                self.logger.critical(
                     f"file `{self.file}` is of unrecognized file format - specify the `type` manually or see documentation for supported file types"
                 )
                 raise
 
         #
         if not self.file and self.optional and ('columns' not in self.config or not isinstance(self.config['columns'], list)):
-            self.error_handler.throw(
+            self.logger.critical(
                 f"source `{self.name}` is optional and missing, but does not specify `columns` (which are required in this case)"
             )
             raise
@@ -128,13 +128,13 @@ class FileSource(Source):
             self.read_lambda = self._get_read_lambda(self.file_type, sep=_sep)
 
         except Exception as _:
-            self.error_handler.throw(
+            self.logger.critical(
                 f"no lambda defined for file type `{self.file_type}`"
             )
             raise
 
         #
-        self.columns_list = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
+        self.columns_list = self.assert_get_key(self.config, 'columns', dtype=list, required=False)
 
         #
         if "://" in self.file:
@@ -144,7 +144,7 @@ class FileSource(Source):
             try:
                 self.size = os.path.getsize(self.file)
             except FileNotFoundError:
-                self.error_handler.throw(
+                self.logger.critical(
                     f"Source file {self.file} not found"
                 )
                 raise
@@ -168,7 +168,7 @@ class FileSource(Source):
                 _num_data_cols = len(self.data.columns)
                 _num_list_cols = len(self.columns_list)
                 if _num_data_cols != _num_list_cols:
-                    self.error_handler.throw(
+                    self.logger.critical(
                         f"source file {self.file} specified {_num_list_cols} `columns` but has {_num_data_cols} columns"
                     )
                     raise
@@ -182,15 +182,15 @@ class FileSource(Source):
 
         # error handling:
         except ImportError:
-            self.error_handler.throw(
+            self.logger.critical(
                 f"processing .{self.file_type} file {self.file} requires the pyarrow library... please `pip install pyarrow`"
             )
         except FileNotFoundError:
-            self.error_handler.throw(
+            self.logger.critical(
                 f"source file {self.file} not found"
             )
         except Exception as err:
-            self.error_handler.throw(
+            self.logger.critical(
                 f"error with source file {self.file} ({err})"
             )
 
@@ -288,7 +288,7 @@ class FtpSource(Source):
         :return:
         """
         super().compile()
-        self.connection = self.error_handler.assert_get_key(self.config, 'connection', dtype=str)
+        self.connection = self.assert_get_key(self.config, 'connection', dtype=str)
 
         # There's probably a network builtin to simplify this.
         user, passwd, host, port, self.file = re.match(
@@ -307,7 +307,7 @@ class FtpSource(Source):
             self.size = self.ftp.size(self.file)
 
         except Exception as err:
-            self.error_handler.throw(
+            self.logger.critical(
                 f"source file {self.connection} could not be accessed: {err}"
             )
 
@@ -328,7 +328,7 @@ class FtpSource(Source):
             self.ensure_dask_dataframe()
 
         except Exception as err:
-            self.error_handler.throw(
+            self.logger.critical(
                 f"error with source file {self.file} ({err})"
             )
             raise
@@ -360,8 +360,8 @@ class SqlSource(Source):
         :return:
         """
         super().compile()
-        self.connection = self.error_handler.assert_get_key(self.config, 'connection', dtype=str)
-        self.query = self.error_handler.assert_get_key(self.config, 'query', dtype=str)
+        self.connection = self.assert_get_key(self.config, 'connection', dtype=str)
+        self.query = self.assert_get_key(self.config, 'query', dtype=str)
 
         # JK: I turned this off in the Dask refactor. Should it be turned back on?
         # # replace columns from outer query with count(*), to measure the size of the datasource (and determine is_chunked):
@@ -390,7 +390,7 @@ class SqlSource(Source):
             )
 
         except Exception as err:
-            self.error_handler.throw(
+            self.logger.critical(
                 f"source {self.name} error ({err}); check `connection` and `query`"
             )
             raise

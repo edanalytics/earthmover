@@ -3,8 +3,9 @@ import dask
 import jinja2
 import pandas as pd
 
-from typing import List
+from typing import Any, List, Optional
 
+from earthmover.logging_mixin import LoggingMixin
 from earthmover.yaml_parser import YamlMapping
 from earthmover import util
 
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
     from earthmover.earthmover import Earthmover
 
 
-class Node:
+class Node(LoggingMixin):
     """
 
     """
@@ -28,7 +29,6 @@ class Node:
 
         self.earthmover = earthmover
         self.logger = earthmover.logger
-        self.error_handler = earthmover.error_handler
 
         self.upstream_sources: dict = {}
 
@@ -47,8 +47,8 @@ class Node:
 
         :return:
         """
-        self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
+        self.update_ctx(
+           file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
         )
 
         # Verify all configs provided by the user are specified for the node.
@@ -61,7 +61,7 @@ class Node:
 
         # Always check for debug and expectations
         self.debug = self.config.get('debug', False)
-        self.expectations = self.error_handler.assert_get_key(self.config, 'expect', dtype=list, required=False)
+        self.expectations = self.assert_get_key(self.config, 'expect', dtype=list, required=False)
 
         pass
 
@@ -71,7 +71,7 @@ class Node:
 
         :return:
         """
-        self.error_handler.ctx.update(
+        self.update_ctx(
             file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
         )
 
@@ -97,6 +97,59 @@ class Node:
                 f"Header: {self.data.columns}"
             )
 
+    def assert_get_key(self, obj: dict, key: str,
+                       dtype: Optional[type] = None,
+                       required: bool = True,
+                       default: Optional[object] = None
+                       ) -> Optional[object]:
+        """
+
+        :param obj:
+        :param key:
+        :param dtype:
+        :param required:
+        :param default:
+        :return:
+        """
+        value = obj.get(key)
+
+        if value is None:
+            if required:
+                self.logger.critical(
+                    f"must define `{key}`"
+                )
+            else:
+                return default
+
+        if dtype and not isinstance(value, dtype):
+            self.logger.critical(
+                f"`{key}` is defined, but wrong type (should be {dtype}, is {type(value)})"
+            )
+
+        return value
+
+    def throw(self, message: str):
+        raise Exception(
+            f"{self.ctx} {message})"
+        )
+
+    # def assert_get_key(self, obj: dict, key: str, *, default: Optional[Any] = "[[UNDEFINED]]", dtype: Any = object):
+    #     value = obj.get(key, default)
+    #
+    #     if value == "[[UNDEFINED]]":
+    #         self.logger.critical(
+    #             f"YAML parse error: Field not defined: {key}."
+    #         )
+    #
+    #     if not isinstance(value, dtype):
+    #         self.logger.critical(
+    #             f"YAML parse error: Field does not match expected datatype: {key}\n"
+    #             f"    Expected: {dtype}\n"
+    #             f"    Received: {value}"
+    #         )
+    #
+    #     return value
+
     def check_expectations(self, expectations: List[str]):
         """
 
@@ -114,13 +167,12 @@ class Node:
                     util.render_jinja_template, axis=1,
                     meta=pd.Series(dtype='str', name=expectation_result_col),
                     template=template,
-                    template_str="{{" + expectation + "}}",
-                    error_handler = self.error_handler
+                    template_str="{{" + expectation + "}}"
                 )
 
                 num_failed = len(result.query(f"{expectation_result_col}=='False'").index)
                 if num_failed > 0:
-                    self.error_handler.throw(
+                    self.logger.critical(
                         f"Source `${self.type}s.{self.name}` failed expectation `{expectation}` ({num_failed} rows fail)"
                     )
                 else:

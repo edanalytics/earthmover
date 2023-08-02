@@ -29,7 +29,7 @@ class AddColumnsOperation(Operation):
         :return:
         """
         super().compile()
-        self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
+        self.columns_dict = self.assert_get_key(self.config, 'columns', dtype=dict)
 
     def execute(self):
         """
@@ -49,8 +49,8 @@ class AddColumnsOperation(Operation):
                     template = util.build_jinja_template(val, macros=self.earthmover.macros)
 
                 except Exception as err:
-                    self.error_handler.ctx.remove('line')
-                    self.error_handler.throw(
+                    self.reset_ctx(['line'])
+                    self.logger.critical(
                         f"syntax error in Jinja template for column `{col}` of `add_columns` operation ({err}):\n===> {val}"
                     )
                     raise
@@ -59,8 +59,7 @@ class AddColumnsOperation(Operation):
                     util.render_jinja_template, axis=1,
                     meta=pd.Series(dtype='str', name=col),
                     template=template,
-                    template_str=val,
-                    error_handler=self.error_handler
+                    template_str=val
                 )
 
         return self.data
@@ -85,7 +84,7 @@ class ModifyColumnsOperation(Operation):
         :return:
         """
         super().compile()
-        self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
+        self.columns_dict = self.assert_get_key(self.config, 'columns', dtype=dict)
 
     def execute(self):
         """
@@ -105,8 +104,8 @@ class ModifyColumnsOperation(Operation):
                     template = util.build_jinja_template(val, macros=self.earthmover.macros)
 
                 except Exception as err:
-                    self.error_handler.ctx.remove('line')
-                    self.error_handler.throw(
+                    self.reset_ctx(['line'])
+                    self.logger.critical(
                         f"syntax error in Jinja template for column `{col}` of `modify_columns` operation ({err}):\n===> {val}"
                     )
                     raise
@@ -118,8 +117,7 @@ class ModifyColumnsOperation(Operation):
                     util.render_jinja_template, axis=1,
                     meta=pd.Series(dtype='str', name=col),
                     template=template,
-                    template_str=val,
-                    error_handler=self.error_handler
+                    template_str=val
                 )
 
                 del self.data["value"]
@@ -146,7 +144,7 @@ class DuplicateColumnsOperation(Operation):
         :return:
         """
         super().compile()
-        self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
+        self.columns_dict = self.assert_get_key(self.config, 'columns', dtype=dict)
 
     def execute(self):
         """
@@ -163,7 +161,7 @@ class DuplicateColumnsOperation(Operation):
                 )
 
             if old_col not in self.data.columns:
-                self.error_handler.throw(
+                self.logger.critical(
                     f"column {old_col} not present in the dataset"
                 )
 
@@ -191,7 +189,7 @@ class RenameColumnsOperation(Operation):
         :return:
         """
         super().compile()
-        self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
+        self.columns_dict = self.assert_get_key(self.config, 'columns', dtype=dict)
 
     def execute(self):
         """
@@ -206,7 +204,7 @@ class RenameColumnsOperation(Operation):
                     f"Rename column operation overwrites existing column `{new_col}`."
                 )
             if old_col not in self.data.columns:
-                self.error_handler.throw(
+                self.logger.critical(
                     f"column {old_col} not present in the dataset"
                 )
 
@@ -234,7 +232,7 @@ class DropColumnsOperation(Operation):
         :return:
         """
         super().compile()
-        self.columns_to_drop = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
+        self.columns_to_drop = self.assert_get_key(self.config, 'columns', dtype=list)
 
     def execute(self):
         """
@@ -244,7 +242,7 @@ class DropColumnsOperation(Operation):
         super().execute()
 
         if not set(self.columns_to_drop).issubset(self.data.columns):
-            self.error_handler.throw(
+            self.logger.critical(
                 "one or more columns specified to drop are not present in the dataset"
             )
             raise
@@ -274,7 +272,7 @@ class KeepColumnsOperation(Operation):
         """
         super().compile()
 
-        self.header = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
+        self.header = self.assert_get_key(self.config, 'columns', dtype=list)
 
     def execute(self):
         """
@@ -284,7 +282,7 @@ class KeepColumnsOperation(Operation):
         super().execute()
 
         if not set(self.header).issubset(self.data.columns):
-            self.error_handler.throw(
+            self.logger.critical(
                 "one or more columns specified to keep are not present in the dataset"
             )
             raise
@@ -316,8 +314,8 @@ class CombineColumnsOperation(Operation):
         """
         super().compile()
 
-        self.columns_list = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
-        self.new_column   = self.error_handler.assert_get_key(self.config, 'new_column', dtype=str)
+        self.columns_list = self.assert_get_key(self.config, 'columns', dtype=list)
+        self.new_column   = self.assert_get_key(self.config, 'new_column', dtype=str)
 
         self.separator = self.config.get('separator', "")
 
@@ -329,7 +327,7 @@ class CombineColumnsOperation(Operation):
         super().execute()
 
         if not set(self.columns_list).issubset(self.data.columns):
-            self.error_handler.throw(
+            self.logger.critical(
                 f"one or more defined columns is not present in the dataset"
             )
             raise
@@ -367,11 +365,11 @@ class MapValuesOperation(Operation):
         super().compile()
 
         # Only 'column' or 'columns' can be populated
-        _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
-        _columns = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
+        _column  = self.assert_get_key(self.config, 'column', dtype=str, required=False)
+        _columns = self.assert_get_key(self.config, 'columns', dtype=list, required=False)
 
         if bool(_column) == bool(_columns):  # Fail if both or neither are populated.
-            self.error_handler.throw(
+            self.logger.critical(
                 "a `map_values` operation must specify either one `column` or several `columns` to convert"
             )
             raise
@@ -379,15 +377,15 @@ class MapValuesOperation(Operation):
         self.columns_list = _columns or [_column]  # `[None]` evaluates to True
 
         #
-        _mapping  = self.error_handler.assert_get_key(self.config, 'mapping', dtype=dict, required=False)
-        _map_file = self.error_handler.assert_get_key(self.config, 'map_file', dtype=str, required=False)
+        _mapping  = self.assert_get_key(self.config, 'mapping', dtype=dict, required=False)
+        _map_file = self.assert_get_key(self.config, 'map_file', dtype=str, required=False)
 
         if _mapping:
             self.mapping = _mapping
         elif _map_file:
             self.mapping = self._read_map_file(_map_file)
         else:
-            self.error_handler.throw(
+            self.logger.critical(
                 "must define either `mapping` (list of old_value: new_value) or a `map_file` (two-column CSV or TSV)"
             )
             raise
@@ -400,7 +398,7 @@ class MapValuesOperation(Operation):
         super().execute()
 
         if not set(self.columns_list).issubset(self.data.columns):
-            self.error_handler.throw(
+            self.logger.critical(
                 "one or more columns to map are undefined in the dataset"
             )
 
@@ -409,7 +407,7 @@ class MapValuesOperation(Operation):
                 self.data[_column] = self.data[_column].replace(self.mapping)
 
         except Exception as _:
-            self.error_handler.throw(
+            self.logger.critical(
                 "error during `map_values` operation... check mapping shape and `column(s)`?"
             )
 
@@ -430,7 +428,7 @@ class MapValuesOperation(Operation):
                 return dict(_translations_list[1:])
         
         except Exception as err:
-            self.error_handler.throw(
+            self.logger.critical(
                 f"error reading `map_file` {file}: {err}"
             )
             raise
@@ -459,15 +457,15 @@ class DateFormatOperation(Operation):
         """
         super().compile()
 
-        self.from_format = self.error_handler.assert_get_key(self.config, 'from_format', dtype=str)
-        self.to_format   = self.error_handler.assert_get_key(self.config, 'to_format', dtype=str)
+        self.from_format = self.assert_get_key(self.config, 'from_format', dtype=str)
+        self.to_format   = self.assert_get_key(self.config, 'to_format', dtype=str)
 
         # Only 'column' or 'columns' can be populated
-        _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
-        _columns = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
+        _column  = self.assert_get_key(self.config, 'column', dtype=str, required=False)
+        _columns = self.assert_get_key(self.config, 'columns', dtype=list, required=False)
 
         if bool(_column) == bool(_columns):  # Fail if both or neither are populated.
-            self.error_handler.throw(
+            self.logger.critical(
                 "a `date_format` operation must specify either one `column` or several `columns` to convert"
             )
             raise
@@ -482,7 +480,7 @@ class DateFormatOperation(Operation):
         super().execute()
 
         if not set(self.columns_list).issubset(self.data.columns):
-            self.error_handler.throw(
+            self.logger.critical(
                 "one or more columns to map are undefined in the dataset"
             )
             raise
@@ -495,7 +493,7 @@ class DateFormatOperation(Operation):
                 )
 
             except Exception as err:
-                self.error_handler.throw(
+                self.logger.critical(
                     f"error during `date_format` operation, `{_column}` column... check format strings? ({err})"
                 )
 
@@ -522,7 +520,7 @@ class SnakeCaseColumnsOperation(Operation):
         snake_columns = list(map(self.to_snake_case, data_columns))
 
         if len(set(data_columns)) != len(set(snake_columns)):
-            self.error_handler.throw(
+            self.logger.critical(
                 f"Snake case operation creates duplicate columns!\n"
                 f"Columns before: {len(set(data_columns))}\n"
                 f"Columns after : {len(set(snake_columns))}"

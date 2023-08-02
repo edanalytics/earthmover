@@ -20,7 +20,7 @@ class JoinOperation(Operation):
         super().__init__(*args, **kwargs)
 
         # Check joined node
-        self.sources = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
+        self.sources = self.assert_get_key(self.config, 'sources', dtype=list)
         self.source_data_mapping = None
 
         self.join_type: str = None
@@ -43,21 +43,21 @@ class JoinOperation(Operation):
         super().compile()
 
         # Check left keys
-        _key  = self.error_handler.assert_get_key(self.config, 'left_key', dtype=str, required=False)
-        _keys = self.error_handler.assert_get_key(self.config, 'left_keys', dtype=list, required=False)
+        _key  = self.assert_get_key(self.config, 'left_key', dtype=str, required=False)
+        _keys = self.assert_get_key(self.config, 'left_keys', dtype=list, required=False)
 
         if bool(_key) == bool(_keys):  # Fail if both or neither are populated.
-            self.error_handler.throw("must define `left_key` or `left_keys`")
+            self.logger.critical("must define `left_key` or `left_keys`")
             raise
 
         self.left_keys = _keys or [_key]  # `[None]` evaluates to True
 
         # Check right keys
-        _key  = self.error_handler.assert_get_key(self.config, 'right_key', dtype=str, required=False)
-        _keys = self.error_handler.assert_get_key(self.config, 'right_keys', dtype=list, required=False)
+        _key  = self.assert_get_key(self.config, 'right_key', dtype=str, required=False)
+        _keys = self.assert_get_key(self.config, 'right_keys', dtype=list, required=False)
 
         if bool(_key) == bool(_keys):  # Fail if both or neither are populated.
-            self.error_handler.throw("must define `right_key` or `right_keys`")
+            self.logger.critical("must define `right_key` or `right_keys`")
             raise
 
         self.right_keys = _keys or [_key]  # `[None]` evaluates to True
@@ -65,21 +65,21 @@ class JoinOperation(Operation):
         # Check join type
         self.join_type = self.config.get('join_type')
         if not self.join_type:
-            self.error_handler.throw("must define `join_type`")
+            self.logger.critical("must define `join_type`")
             raise
 
         if self.join_type not in self.JOIN_TYPES:
-            self.error_handler.throw(
+            self.logger.critical(
                 f"`join_type` must be one of [inner, left, right, outer], not `{self.join_type}`"
             )
             raise
 
         # Collect columns
         #   - There is a "if keep - elif drop" block in verify, so doesn't matter if both are populated.
-        self.left_keep_cols  = self.error_handler.assert_get_key(self.config, 'left_keep_columns', dtype=list, required=False)
-        self.left_drop_cols  = self.error_handler.assert_get_key(self.config, 'left_drop_columns', dtype=list, required=False)
-        self.right_keep_cols = self.error_handler.assert_get_key(self.config, 'right_keep_columns', dtype=list, required=False)
-        self.right_drop_cols = self.error_handler.assert_get_key(self.config, 'right_drop_columns', dtype=list, required=False)
+        self.left_keep_cols  = self.assert_get_key(self.config, 'left_keep_columns', dtype=list, required=False)
+        self.left_drop_cols  = self.assert_get_key(self.config, 'left_drop_columns', dtype=list, required=False)
+        self.right_keep_cols = self.assert_get_key(self.config, 'right_keep_columns', dtype=list, required=False)
+        self.right_drop_cols = self.assert_get_key(self.config, 'right_drop_columns', dtype=list, required=False)
 
     def execute(self):
         """
@@ -93,7 +93,7 @@ class JoinOperation(Operation):
 
         if self.left_keep_cols:
             if not set(self.left_keep_cols).issubset(self.left_cols):
-                self.error_handler.throw(
+                self.logger.critical(
                     "columns in `left_keep_columns` are not defined in the dataset"
                 )
                 raise
@@ -102,7 +102,7 @@ class JoinOperation(Operation):
 
         elif self.left_drop_cols:
             if any(col in self.left_keys for col in self.left_drop_cols):
-                self.error_handler.throw(
+                self.logger.critical(
                     "you may not `left_drop_columns` that are part of the `left_key(s)`"
                 )
                 raise
@@ -118,7 +118,7 @@ class JoinOperation(Operation):
 
             if self.right_keep_cols:
                 if not set(self.right_keep_cols).issubset(self.right_cols):
-                    self.error_handler.throw(
+                    self.logger.critical(
                         "columns in `right_keep_columns` are not defined in the dataset"
                     )
                     raise
@@ -127,7 +127,7 @@ class JoinOperation(Operation):
 
             elif self.right_drop_cols:
                 if any(col in self.right_keys for col in self.right_drop_cols):
-                    self.error_handler.throw(
+                    self.logger.critical(
                         "you may not `right_drop_columns` that are part of the `right_key(s)`"
                     )
                     raise
@@ -143,7 +143,7 @@ class JoinOperation(Operation):
                 )
 
             except Exception as _:
-                self.error_handler.throw(
+                self.logger.critical(
                     "error during `join` operation. Check your join keys?"
                 )
                 raise
@@ -162,7 +162,7 @@ class UnionOperation(Operation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.sources = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
+        self.sources = self.assert_get_key(self.config, 'sources', dtype=list)
         self.source_data_mapping = None
 
     def execute(self):
@@ -176,14 +176,14 @@ class UnionOperation(Operation):
             source_data = self.source_data_mapping[source]
 
             if set(source_data.columns) != set(self.data.columns):
-                self.error_handler.throw('dataframes to union do not share identical columns')
+                self.logger.critical('dataframes to union do not share identical columns')
                 raise
 
             try:
                 self.data = dd.concat([self.data, source_data], ignore_index=True)
             
             except Exception as _:
-                self.error_handler.throw(
+                self.logger.critical(
                     "error during `union` operation... are sources same shape?"
                 )
                 raise

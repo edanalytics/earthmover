@@ -29,8 +29,8 @@ class GroupByWithCountOperation(Operation):
         :return:
         """
         super().compile()
-        self.group_by_columns = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
-        self.count_column     = self.error_handler.assert_get_key(self.config, 'count_column', dtype=str)
+        self.group_by_columns = self.assert_get_key(self.config, 'group_by_columns', dtype=list)
+        self.count_column     = self.assert_get_key(self.config, 'count_column', dtype=str)
 
     def execute(self):
         """
@@ -40,7 +40,7 @@ class GroupByWithCountOperation(Operation):
         super().execute()
 
         if not set(self.group_by_columns).issubset(self.data.columns):
-            self.error_handler.throw(
+            self.logger.critical(
                 "one or more specified group-by columns not in the dataset"
             )
             raise
@@ -89,10 +89,10 @@ class GroupByWithAggOperation(Operation):
         :return:
         """
         super().compile()
-        self.group_by_columns = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
-        self.agg_column       = self.error_handler.assert_get_key(self.config, 'agg_column', dtype=str)
+        self.group_by_columns = self.assert_get_key(self.config, 'group_by_columns', dtype=list)
+        self.agg_column       = self.assert_get_key(self.config, 'agg_column', dtype=str)
 
-        self.separator = self.error_handler.assert_get_key(
+        self.separator = self.assert_get_key(
             self.config, 'separator', dtype=str,
             required=False, default=self.DEFAULT_AGG_SEP
         )
@@ -105,7 +105,7 @@ class GroupByWithAggOperation(Operation):
         super().execute()
 
         if not set(self.group_by_columns).issubset(self.data.columns):
-            self.error_handler.throw(
+            self.logger.critical(
                 "one or more specified group-by columns not in the dataset"
             )
             raise
@@ -159,8 +159,8 @@ class GroupByOperation(Operation):
         :return:
         """
         super().compile()
-        self.group_by_columns    = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
-        self.create_columns_dict = self.error_handler.assert_get_key(self.config, 'create_columns', dtype=dict)
+        self.group_by_columns    = self.assert_get_key(self.config, 'group_by_columns', dtype=list)
+        self.create_columns_dict = self.assert_get_key(self.config, 'create_columns', dtype=dict)
 
     def execute(self):
         """
@@ -172,7 +172,7 @@ class GroupByOperation(Operation):
         super().execute()
 
         if not set(self.group_by_columns).issubset(self.data.columns):
-            self.error_handler.throw(
+            self.logger.critical(
                 "one or more specified group-by columns not in the dataset"
             )
             raise
@@ -198,18 +198,18 @@ class GroupByOperation(Operation):
             if _agg_type in self.COLUMN_REQ_AGG_TYPES:
 
                 if _col == "":
-                    self.error_handler.throw(
+                    self.logger.critical(
                         f"aggregation function `{_agg_type}`(column) missing required column"
                     )
 
                 if _col not in self.data.columns:
-                    self.error_handler.throw(
+                    self.logger.critical(
                         f"aggregation function `{_agg_type}`({_col}) refers to a column {_col} which does not exist"
                     )
 
             agg_lambda = self._get_agg_lambda(_agg_type, _col, _sep)
             if not agg_lambda:
-                self.error_handler.throw(
+                self.logger.critical(
                     f"invalid aggregation function `{_agg_type}` in `group_by` operation"
                 )
 

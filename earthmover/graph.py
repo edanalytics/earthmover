@@ -4,12 +4,12 @@ import networkx as nx
 
 from typing import Dict, Iterable, Optional
 
-from earthmover.error_handler import ErrorHandler
+from earthmover.logging_mixin import LoggingMixin
 from earthmover.node import Node
 from earthmover import util
 
 
-class Graph(nx.DiGraph):
+class Graph(nx.DiGraph, LoggingMixin):
     """
 
     """
@@ -17,12 +17,9 @@ class Graph(nx.DiGraph):
     LABEL_OPTIONS = {"font_size": 12, "font_color": "whitesmoke"}
     SIZE_OPTIONS  = {"font_size": 8 , "font_color": "black"}
 
-    def __init__(self, error_handler: Optional[ErrorHandler] = None, graph: Optional['Graph'] = None):
+    def __init__(self, graph: Optional['Graph'] = None):
         """
-        Note: Defining `error_handler` as optional is a hack
-        to allow networkx methods to still act on `Graph`.
 
-        :param error_handler:
         :param graph:
         """
         # Logic to convert subgraphs into Earthmover `Graph`s.
@@ -30,8 +27,6 @@ class Graph(nx.DiGraph):
             super().__init__(graph)
         else:
             super().__init__()  # Empty init for an empty graph
-
-        self.error_handler: ErrorHandler = error_handler
 
 
     def get_node_data(self) -> Dict[str, Node]:
@@ -99,7 +94,7 @@ class Graph(nx.DiGraph):
                 all_selected_nodes += selected_nodes
 
             _graph = nx.subgraph(self, all_selected_nodes)
-            return Graph(graph=_graph, error_handler=self.error_handler)
+            return Graph(graph=_graph)
 
 
     def draw(self, image_width=20, image_height=14):
@@ -114,8 +109,8 @@ class Graph(nx.DiGraph):
             import matplotlib.pyplot as plt
             _ = plt.figure(figsize=(image_width, image_height))
         except ImportError:
-            self.error_handler.ctx.remove('node', 'line', 'file')
-            self.error_handler.throw(
+            self.reset_ctx(['node', 'line', 'file'])
+            self.logger.critical(
                 "drawing the graph requires the matplotlib library... please install it with `pip install matplotlib` or similar"
             )
             raise  # Never called; avoids linting errors
@@ -150,8 +145,8 @@ class Graph(nx.DiGraph):
         try:
             node_positions = nx.drawing.nx_agraph.graphviz_layout(self, prog='dot', args='-Grankdir=LR')
         except ImportError:
-            self.error_handler.ctx.remove('node', 'line', 'file')
-            self.error_handler.throw(
+            self.reset_ctx(['node', 'line', 'file'])
+            self.logger.critical(
                 "drawing the graph requires the PyGraphViz library... please install it with `sudo apt-get install graphviz graphviz-dev && pip install pygraphviz` or similar"
             )
             raise  # Never called; avoids linting errors

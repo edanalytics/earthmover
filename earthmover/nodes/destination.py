@@ -18,7 +18,7 @@ class Destination(Node):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.source = self.error_handler.assert_get_key(self.config, 'source', dtype=str)
+        self.source = self.assert_get_key(self.config, 'source', dtype=str)
         self.upstream_sources[self.source] = None
 
 
@@ -49,7 +49,7 @@ class FileDestination(Destination):
         :return:
         """
         super().compile()
-        self.template = self.error_handler.assert_get_key(self.config, 'template', dtype=str)
+        self.template = self.assert_get_key(self.config, 'template', dtype=str)
 
         #config->extension is optional: if not present, we assume the destination name has an extension
         extension = ""
@@ -67,7 +67,7 @@ class FileDestination(Destination):
                 template_string = fp.read()
 
         except Exception as err:
-            self.error_handler.throw(
+            self.logger.critical(
                 f"`template` file {self.template} cannot be opened ({err})"
             )
             raise
@@ -87,7 +87,7 @@ class FileDestination(Destination):
             self.jinja_template = util.build_jinja_template(template_string, macros=self.earthmover.macros)
 
         except Exception as err:
-            self.earthmover.error_handler.throw(
+            self.logger.critical(
                 f"syntax error in Jinja template in `template` file {self.template} ({err})"
             )
             raise
@@ -115,7 +115,7 @@ class FileDestination(Destination):
                     json_string = self.jinja_template.render(_data_tuple)
 
                 except Exception as err:
-                    self.error_handler.throw(
+                    self.logger.critical(
                         f"error rendering Jinja template in `template` file {self.template} ({err})"
                     )
                     raise

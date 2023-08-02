@@ -22,8 +22,8 @@ class DistinctRowsOperation(Operation):
         super().compile()
 
         # Only 'column' or 'columns' can be populated
-        _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
-        _columns = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
+        _column  = self.assert_get_key(self.config, 'column', dtype=str, required=False)
+        _columns = self.assert_get_key(self.config, 'columns', dtype=list, required=False)
 
         if _column:
             self.columns_list = [_column]
@@ -40,7 +40,7 @@ class DistinctRowsOperation(Operation):
         super().execute()
 
         if not set(self.columns_list).issubset(self.data.columns):
-            self.error_handler.throw(
+            self.logger.critical(
                 "one or more columns for checking for distinctness are undefined in the dataset"
             )
             raise
@@ -76,11 +76,11 @@ class FilterRowsOperation(Operation):
         """
         super().compile()
 
-        self.query    = self.error_handler.assert_get_key(self.config, 'query', dtype=str)
-        self.behavior = self.error_handler.assert_get_key(self.config, 'behavior', dtype=str)
+        self.query    = self.assert_get_key(self.config, 'query', dtype=str)
+        self.behavior = self.assert_get_key(self.config, 'behavior', dtype=str)
 
         if self.behavior not in self.BEHAVIORS:
-            self.error_handler.throw(
+            self.logger.critical(
                 "`behavior` must be one of [include, exclude]"
             )
             raise
@@ -102,7 +102,7 @@ class FilterRowsOperation(Operation):
             self.data = self.data.query(_query, engine='python')  #`numexpr` is used by default if installed.
 
         except Exception as _:
-            self.error_handler.throw(
+            self.logger.critical(
                 "error during `filter_rows` operation... check query format?"
             )
             raise

@@ -3,10 +3,10 @@ import hashlib
 import logging
 import os
 
+from earthmover.logging_mixin import LoggingMixin
+
 from typing import Any, Optional
 from sys import exc_info
-
-from earthmover.error_handler import ErrorHandler
 
 
 def human_time(seconds: int) -> str:
@@ -67,20 +67,20 @@ def contains_jinja(string: str) -> bool:
         return False
 
 
-def render_jinja_template(row, template: jinja2.Template, template_str: str, *, error_handler: ErrorHandler) -> str:
+def render_jinja_template(row, template: jinja2.Template, template_str: str) -> str:
     """
 
     :param row:
     :param template:
     :param template_str:
-    :param error_handler:
     :return:
     """
     try:
         return template.render(row)
 
     except Exception as err:
-        error_handler.ctx.remove('line')
+
+        LoggingMixin.reset_ctx(['line'])
 
         if dict(row):
             _joined_keys = "`, `".join(dict(row).keys())
@@ -88,7 +88,7 @@ def render_jinja_template(row, template: jinja2.Template, template_str: str, *, 
         else:
             variables = f"\n(no available variables)"
 
-        error_handler.throw(
+        LoggingMixin.logger.critical(
             f"Error rendering Jinja template: ({err}):\n===> {template_str}{variables}"
         )
         raise
@@ -129,24 +129,3 @@ def build_jinja_template(template_string: str, macros: str = ""):
     template.globals['md5'] = lambda x: hashlib.md5(x.encode('utf-8')).hexdigest()
 
     return template
-
-
-# TODO: This has to be a NULL variable, without being None!
-__UNDEFINED = "[[UNDEFINED]]"
-
-def assert_get_key(obj: dict, key: str, *, default: Optional[Any] = __UNDEFINED, dtype: Any = object):
-    value = obj.get(key, default)
-
-    if value == __UNDEFINED:
-        logging.critical(
-            f"YAML parse error: Field not defined: {key}."
-        )
-
-    if not isinstance(value, dtype):
-        logging.critical(
-            f"YAML parse error: Field does not match expected datatype: {key}\n"
-            f"    Expected: {dtype}\n"
-            f"    Received: {value}"
-        )
-
-    return value
