@@ -42,6 +42,8 @@ class FileDestination(Destination):
         self.jinja_template: str = None
         self.header: str = None
         self.footer: str = None
+        self.extension: str = None
+        self.linearize: bool = None
 
     def compile(self):
         """
@@ -50,16 +52,13 @@ class FileDestination(Destination):
         """
         super().compile()
         self.template = self.get_config('template', dtype=str)
+        self.header = self.get_config('header', None, dtype=str)
+        self.footer = self.get_config('footer', None, dtype=str)
+        self.extension = self.get_config('extension', None, dtype=str)  # otherwise, assume filename has extension
+        self.linearize = self.get_config('linearize', True, dtype=bool)
 
-        #config->extension is optional: if not present, we assume the destination name has an extension
-        extension = ""
-        if "extension" in self.config:
-            extension = f".{self.config['extension']}"
-            
-        self.file = os.path.join(
-            self.earthmover.state_configs['output_dir'],
-            f"{self.name}{extension}"
-        )
+        filename = f"{self.name}.{self.extension}" if self.extension else self.name
+        self.file = os.path.join(self.earthmover.state_configs['output_dir'], filename)
 
         #
         try:
@@ -72,15 +71,8 @@ class FileDestination(Destination):
             )
             raise
 
-        #
-        if self.config.get('linearize', True):
+        if self.linearize:
             template_string = self.EXP.sub(" ", template_string)  # Replace multiple spaces with a single space.
-
-        if 'header' in self.config:
-            self.header = self.config["header"]
-
-        if 'footer' in self.config:
-            self.footer = self.config["footer"]
 
         #
         try:
