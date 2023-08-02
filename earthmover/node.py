@@ -27,8 +27,11 @@ class Node(LoggingMixin):
         self.name = name
         self.config = config
 
+        self.update_ctx(
+            line=self.config.__line__, node=self, operation=None
+        )
+
         self.earthmover = earthmover
-        self.logger = earthmover.logger
 
         self.upstream_sources: dict = {}
 
@@ -48,7 +51,7 @@ class Node(LoggingMixin):
         :return:
         """
         self.update_ctx(
-           file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
+           line=self.config.__line__, node=self, operation=None
         )
 
         # Verify all configs provided by the user are specified for the node.
@@ -72,7 +75,7 @@ class Node(LoggingMixin):
         :return:
         """
         self.update_ctx(
-            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
+            line=self.config.__line__, node=self, operation=None
         )
 
         pass
