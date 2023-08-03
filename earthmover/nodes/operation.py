@@ -10,7 +10,7 @@ class Operation(Node):
 
     """
     type: str = "operation"
-    allowed_configs: tuple = ('debug', 'expect', 'operation',)
+    allowed_configs: tuple = ('operation',)
 
     def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
         """
@@ -62,13 +62,10 @@ class Operation(Node):
 
         self.source_data_mapping: dict = None
 
-    def run(self, data: 'DataFrame', data_mapping: dict):
-        self.data = data
+    def run(self, data: 'DataFrame', *, data_mapping: dict, **kwargs):
 
-        if hasattr(self, 'sources'):
-            self.source_data_mapping = {
-                source: data_mapping[source].data
-                for source in self.sources
-            }
+        self.error_handler.ctx.update(
+            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
+        )
 
-        return self.execute()
+        pass
