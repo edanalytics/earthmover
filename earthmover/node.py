@@ -99,7 +99,7 @@ class Node(LoggingMixin):
             self.logger.critical(
                 f"YAML parse error: Field does not match expected datatype: {key}\n"
                 f"    Expected: {dtype.__name__}\n"
-                f"    Received: {value.__name__ if value is not None else 'None'}"
+                f"    Received: {type(value).__name__ if value is not None else 'None'}"
             )
 
         return value
