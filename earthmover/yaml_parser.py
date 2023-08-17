@@ -33,7 +33,7 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
         :return:
         """
         data = YamlMapping()  # Originally `data = {}`
-        data.__line__ = node.start_mark.line + self.num_macros_lines + 1  # Start line numbering at 1
+        data.__line__ = node.start_mark.line + self.num_macros_lines
         yield data
 
         value = self.construct_mapping(node)
