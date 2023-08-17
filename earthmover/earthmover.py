@@ -78,7 +78,10 @@ class Earthmover(LoggingMixin):
         }
 
         # Set up the logger
-        self.set_logging_level(self.state_configs['log_level'])
+        self.set_logging_level(
+            level=self.state_configs['log_level'],
+            show_stacktrace=self.state_configs['show_stacktrace']
+        )
 
         # Prepare the output directory for destinations.
         self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])

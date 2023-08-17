@@ -64,12 +64,22 @@ class ClassConsciousLogger(logging.Logger):
     """
 
     """
+    show_stacktrace: bool = False
+
     def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1):
+        """
+        Override Logger._log() to apply `show_stacktrace` and to automatically infer calling-class.
+        """
+        # Automatically add the 'calling_class' attribute to the extra dictionary
         if extra is None:
             extra = {}
-        # Automatically add the 'calling_class' attribute to the extra dictionary
         extra['calling_class'] = self._get_calling_class()
-        super()._log(level, msg, args, exc_info, extra, stack_info, stacklevel)
+
+        super()._log(
+            level, msg, args,
+            exc_info=(exc_info or self.show_stacktrace),
+            extra=extra, stack_info=stack_info, stacklevel=stacklevel
+        )
 
     @classmethod
     def _get_calling_class(cls):
@@ -108,8 +118,9 @@ class LoggingMixin:
         return logger
 
     @classmethod
-    def set_logging_level(cls, level: str = "INFO"):
+    def set_logging_level(cls, level: str = "INFO", show_stacktrace: bool = False):
         if not cls.logger:
             cls.set_logger()
 
         LoggingMixin.logger.setLevel(logging.getLevelName(level.upper()))
+        LoggingMixin.logger.show_stacktrace = show_stacktrace
