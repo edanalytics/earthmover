@@ -93,7 +93,7 @@ transformations:
           - $transformations.bird_species
           - $transformations.fish_species
           - $transformations.reptile_species
-        debug: True
+    debug: True
 
   joined_inventories:
     source: $sources.zoo_inventories

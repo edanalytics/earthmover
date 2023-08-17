@@ -32,12 +32,12 @@ class GroupByWithCountOperation(Operation):
         self.group_by_columns = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
         self.count_column     = self.error_handler.assert_get_key(self.config, 'count_column', dtype=str)
 
-    def run(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().run(data, **kwargs)
+        super().execute(data, **kwargs)
 
         if not set(self.group_by_columns).issubset(data.columns):
             self.error_handler.throw(
@@ -97,12 +97,12 @@ class GroupByWithAggOperation(Operation):
             required=False, default=self.DEFAULT_AGG_SEP
         )
 
-    def run(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().run(data, **kwargs)
+        super().execute(data, **kwargs)
 
         if not set(self.group_by_columns).issubset(data.columns):
             self.error_handler.throw(
@@ -162,14 +162,14 @@ class GroupByOperation(Operation):
         self.group_by_columns    = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
         self.create_columns_dict = self.error_handler.assert_get_key(self.config, 'create_columns', dtype=dict)
 
-    def run(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
         Note: There is a bug in Dask Groupby operations.
         Index columns are overwritten by 'index' after index reset.
 
         :return:
         """
-        super().run(data, **kwargs)
+        super().execute(data, **kwargs)
 
         if not set(self.group_by_columns).issubset(data.columns):
             self.error_handler.throw(

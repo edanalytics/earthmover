@@ -31,12 +31,12 @@ class AddColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-    def run(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().run(data, **kwargs)
+        super().execute(data, **kwargs)
 
         for col, val in self.columns_dict.items():
 
@@ -87,12 +87,12 @@ class ModifyColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-    def run(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().run(data, **kwargs)
+        super().execute(data, **kwargs)
 
         for col, val in self.columns_dict.items():
 
@@ -148,12 +148,12 @@ class DuplicateColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-    def run(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().run(data, **kwargs)
+        super().execute(data, **kwargs)
 
         for old_col, new_col in self.columns_dict.items():
 
@@ -193,12 +193,12 @@ class RenameColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-    def run(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().run(data, **kwargs)
+        super().execute(data, **kwargs)
 
         for old_col, new_col in self.columns_dict.items():
             if new_col in data.columns:
@@ -236,12 +236,12 @@ class DropColumnsOperation(Operation):
         super().compile()
         self.columns_to_drop = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
 
-    def run(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().run(data, **kwargs)
+        super().execute(data, **kwargs)
 
         if not set(self.columns_to_drop).issubset(data.columns):
             self.error_handler.throw(
@@ -276,12 +276,12 @@ class KeepColumnsOperation(Operation):
 
         self.header = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
 
-    def run(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().run(data, **kwargs)
+        super().execute(data, **kwargs)
 
         if not set(self.header).issubset(data.columns):
             self.error_handler.throw(
@@ -321,12 +321,12 @@ class CombineColumnsOperation(Operation):
 
         self.separator = self.config.get('separator', "")
 
-    def run(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().run(data, **kwargs)
+        super().execute(data, **kwargs)
 
         if not set(self.columns_list).issubset(data.columns):
             self.error_handler.throw(
@@ -392,12 +392,12 @@ class MapValuesOperation(Operation):
             )
             raise
 
-    def run(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().run(data, **kwargs)
+        super().execute(data, **kwargs)
 
         if not set(self.columns_list).issubset(data.columns):
             self.error_handler.throw(
@@ -474,12 +474,12 @@ class DateFormatOperation(Operation):
 
         self.columns_list = _columns or [_column]  # `[None]` evaluates to True
 
-    def run(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().run(data, **kwargs)
+        super().execute(data, **kwargs)
 
         if not set(self.columns_list).issubset(data.columns):
             self.error_handler.throw(
@@ -511,12 +511,12 @@ class SnakeCaseColumnsOperation(Operation):
         'operation',
     )
 
-    def run(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:
         """
-        super().run(data, **kwargs)
+        super().execute(data, **kwargs)
 
         data_columns  = list(data.columns)
         snake_columns = list(map(self.to_snake_case, data_columns))

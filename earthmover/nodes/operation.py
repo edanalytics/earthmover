@@ -1,3 +1,5 @@
+import abc
+
 from earthmover.node import Node
 
 from typing import TYPE_CHECKING
@@ -62,10 +64,18 @@ class Operation(Node):
 
         self.source_data_mapping: dict = None
 
-    def run(self, data: 'DataFrame', *, data_mapping: dict, **kwargs):
+    @abc.abstractmethod
+    def execute(self, data: 'DataFrame', *, data_mapping: dict, **kwargs) -> 'DataFrame':
+        """
+        Operation.execute() takes a DataFrame as input and outputs a DataFrame.
+        Operation.execute() uses different arguments than Node.execute().
 
-        self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
-        )
+        In operations, `self.data` should NEVER be called, as this unnecessarily persists data in Operation nodes.
 
+        :param data:
+        :param data_mapping:
+        :param kwargs:
+        :return:
+        """
+        super().execute()
         pass

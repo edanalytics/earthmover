@@ -81,12 +81,12 @@ class JoinOperation(Operation):
         self.right_keep_cols = self.error_handler.assert_get_key(self.config, 'right_keep_columns', dtype=list, required=False)
         self.right_drop_cols = self.error_handler.assert_get_key(self.config, 'right_drop_columns', dtype=list, required=False)
 
-    def run(self, data: 'DataFrame', data_mapping: dict, **kwargs):
+    def execute(self, data: 'DataFrame', data_mapping: dict, **kwargs):
         """
 
         :return:
         """
-        super().run(data, data_mapping=data_mapping, **kwargs)
+        super().execute(data, data_mapping=data_mapping, **kwargs)
 
         self.source_data_mapping = {
             source: data_mapping[source].data
@@ -170,12 +170,12 @@ class UnionOperation(Operation):
         self.sources = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
         self.source_data_mapping = None
 
-    def run(self, data: 'DataFrame', data_mapping: dict, **kwargs):
+    def execute(self, data: 'DataFrame', data_mapping: dict, **kwargs):
         """
 
         :return:
         """
-        super().run(data, data_mapping=data_mapping, **kwargs)
+        super().execute(data, data_mapping=data_mapping, **kwargs)
 
         self.source_data_mapping = {
             source: data_mapping[source].data

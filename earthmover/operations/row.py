@@ -32,12 +32,12 @@ class DistinctRowsOperation(Operation):
         else:
             self.columns_list = []
 
-    def run(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().run(data, **kwargs)
+        super().execute(data, **kwargs)
 
         if not set(self.columns_list).issubset(data.columns):
             self.error_handler.throw(
@@ -85,12 +85,12 @@ class FilterRowsOperation(Operation):
             )
             raise
 
-    def run(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().run(data, **kwargs)
+        super().execute(data, **kwargs)
 
         #
         if self.behavior == 'exclude':
