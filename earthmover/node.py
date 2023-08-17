@@ -95,11 +95,11 @@ class Node(LoggingMixin):
                 f"YAML parse error: Field not defined: {key}."
             )
 
-        if value and not isinstance(value, dtype):
+        if not isinstance(value, dtype):
             self.logger.critical(
                 f"YAML parse error: Field does not match expected datatype: {key}\n"
-                f"    Expected: {dtype}\n"
-                f"    Received: {value}"
+                f"    Expected: {dtype.__name__}\n"
+                f"    Received: {value.__name__ if value is not None else 'None'}"
             )
 
         return value
