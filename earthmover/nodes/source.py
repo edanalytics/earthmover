@@ -91,7 +91,7 @@ class FileSource(Source):
         :return:
         """
         super().compile()
-        self.file = self.get_config('file', "", dtype=str)  # Files can be NULL if optional.
+        self.file = self.get_config('file', "", dtype=(str, type(None)))  # Files can be NULL if optional.
 
         #
         if not self.file:
