@@ -49,11 +49,12 @@ class Graph(nx.DiGraph, LoggingMixin):
         :param ref:
         :return:
         """
-        _node = self.nodes.get(ref)
-        if _node:
-            return _node['data']
-        else:
-            return None
+        node = self.nodes.get(ref)
+        if not node:
+            raise KeyError(
+                f"Node not found in the graph: {ref}"
+            )
+        return node['data']
 
 
     def select_subgraph(self, selector: str) -> 'Graph':
