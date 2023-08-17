@@ -11,12 +11,12 @@ class ExitOnExceptionHandler(logging.StreamHandler):
     """
     def emit(self, record: logging.LogRecord):
         super().emit(record)
-        if record.levelno in (logging.ERROR, logging.CRITICAL):
+        if record.levelno >= logging.ERROR:
             raise SystemExit(-1)
 
 
 ###
-class YamlParserFormatter(logging.Formatter):
+class DynamicLoggingFormatter(logging.Formatter):
     """
     Warning: `line` is similar to built-in `lineno`.
     """
@@ -38,7 +38,7 @@ class YamlParserFormatter(logging.Formatter):
         log_string = self.to_formatted_string(record)
 
         if log_string and record.levelno >= logging.ERROR:
-            return f"({log_string})\n{super().format(record)}"
+            return f"{super().format(record)} ({log_string})"
         else:
             return super().format(record)
 
@@ -91,6 +91,7 @@ class ClassConsciousLogger(logging.Logger):
                 return calling_class
         return None
 
+
 class LoggingMixin:
     """
 
@@ -105,7 +106,7 @@ class LoggingMixin:
 
         handler = ExitOnExceptionHandler()
 
-        formatter = YamlParserFormatter(
+        formatter = DynamicLoggingFormatter(
             "[%(asctime)s.%(msecs)03d] %(levelname)-8s :: %(message)s",
             "%Y-%m-%d %H:%M:%S"
         )

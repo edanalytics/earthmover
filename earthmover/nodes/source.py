@@ -38,7 +38,7 @@ class Source(Node):
 
         else:
             cls.logger.critical(
-                "sources must specify either a `file` and/or `connection` string and `query`"
+                "all sources must specify either a `file` and/or `connection` string and `query`"
             )
             raise
 

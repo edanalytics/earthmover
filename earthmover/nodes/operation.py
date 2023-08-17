@@ -11,7 +11,7 @@ class Operation(Node):
     """
 
     """
-    type: str = "operation"
+    type: str = "transformation"
     allowed_configs: tuple = ('operation',)
 
     def __new__(cls, name: str, config: dict, **kwargs):
