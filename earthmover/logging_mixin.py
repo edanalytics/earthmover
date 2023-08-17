@@ -7,7 +7,7 @@ from typing import Optional
 ###
 class ExitOnExceptionHandler(logging.StreamHandler):
     """
-
+    Automatically exit Earthmover if an error or higher event is passed.
     """
     def emit(self, record: logging.LogRecord):
         super().emit(record)
@@ -18,12 +18,14 @@ class ExitOnExceptionHandler(logging.StreamHandler):
 ###
 class DynamicLoggingFormatter(logging.Formatter):
     """
+    Override Formatter to retrieve the calling_class extra from LogRecord.
+    Check for extended-logging attributes, and add them to the record.
+    Dynamically build out an error-location message from the attributes.
+
     Warning: `line` is similar to built-in `lineno`.
     """
-
     def format(self, record: logging.LogRecord):
         # Retrieve the calling-class (i.e., Node, Graph, Operation, etc.) and dynamically-infer context.
-        # calling_class = record.__dict__.get('name', None)
         calling_class = getattr(record, 'calling_class')
         if calling_class:
 
@@ -45,6 +47,7 @@ class DynamicLoggingFormatter(logging.Formatter):
     @staticmethod
     def to_formatted_string(record: logging.LogRecord):
         """
+        e.g. (near line 257 in `$transformations.total_of_each_species.operations:add_columns`)
 
         :param record:
         :return:
@@ -64,11 +67,11 @@ class ClassConsciousLogger(logging.Logger):
     """
 
     """
-    show_stacktrace: bool = False
+    show_stacktrace: bool = False  # Default to False, and turn on using `LoggingMixin.set_logging_level()`
 
     def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1):
         """
-        Override Logger._log() to apply `show_stacktrace` and to automatically infer calling-class.
+        Override Logger._log() to automatically infer calling-class.
         """
         # Automatically add the 'calling_class' attribute to the extra dictionary
         if extra is None:
@@ -84,12 +87,12 @@ class ClassConsciousLogger(logging.Logger):
     @classmethod
     def _get_calling_class(cls):
         # Iterate the stack until the first object that is not the logger is found.
-        stack = inspect.stack()
-        for frame_info in stack:
+        for frame_info in inspect.stack():
             calling_class = frame_info[0].f_locals.get('self', None)
             if calling_class and not isinstance(calling_class, cls):
                 return calling_class
-        return None
+        else:
+            return None
 
 
 class LoggingMixin:
