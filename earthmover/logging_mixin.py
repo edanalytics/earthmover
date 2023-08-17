@@ -78,7 +78,7 @@ class LoggingMixin:
         handler = ExitOnExceptionHandler()
 
         formatter = YamlParserFormatter(
-            "[%(asctime)s.%(msecs)03d] %(levelname)s :: %(message)s",
+            "[%(asctime)s.%(msecs)03d] %(levelname)-8s :: %(message)s",
             "%Y-%m-%d %H:%M:%S"
         )
         handler.setFormatter(formatter)
