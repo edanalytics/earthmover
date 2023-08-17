@@ -1,21 +1,7 @@
+import inspect
 import logging
 
 from typing import Optional
-
-
-###
-class ContextFilter(logging.Filter):
-    """
-    This filter injects contextual information while parsing a YAML file into the log.
-
-    Warning: `file` and `line` are similar to built-ins `filename` and `lineno`.
-    """
-    def filter(self, record: logging.LogRecord):
-        record.file = LoggingMixin.ctx.get('file')
-        record.line = LoggingMixin.ctx.get('line')
-        record.node = LoggingMixin.ctx.get('node')
-        record.operation = LoggingMixin.ctx.get('operation')
-        return record
 
 
 ###
@@ -32,41 +18,73 @@ class ExitOnExceptionHandler(logging.StreamHandler):
 ###
 class YamlParserFormatter(logging.Formatter):
     """
-
+    Warning: `line` is similar to built-in `lineno`.
     """
+
     def format(self, record: logging.LogRecord):
-        if record.line:
-            log = f"near line {record.line} of "
-        elif record.file:
-            log = "at "
-        else:
-            log = ""
+        # Retrieve the calling-class (i.e., Node, Graph, Operation, etc.) and dynamically-infer context.
+        # calling_class = record.__dict__.get('name', None)
+        calling_class = getattr(record, 'calling_class')
+        if calling_class:
 
-        if record.file:
-            log += f"`{record.file}` "
+            # Use duck-typing to check whether the calling class is a Node (or Node child-class).
+            if hasattr(calling_class, 'name') and hasattr(calling_class, 'type'):
+                record.node = calling_class
 
-        if record.node:
-            log += f"in `${record.node.type}s.{record.node.name}` "
+            if hasattr(calling_class, 'config'):
+                record.line = calling_class.config.__line__
 
-        if record.operation:
-            log += f"operation `{record.operation.type}` "
+        # Format the record into a location-string to make debugging errors easier.
+        log_string = self.to_formatted_string(record)
 
-        if log and record.levelno in (logging.ERROR, logging.CRITICAL):
-            return f"({log.strip()})\n{super().format(record)}"
+        if log_string and record.levelno >= logging.ERROR:
+            return f"({log_string})\n{super().format(record)}"
         else:
             return super().format(record)
 
+    @staticmethod
+    def to_formatted_string(record: logging.LogRecord):
+        """
+
+        :param record:
+        :return:
+        """
+        log_string = ""
+
+        if hasattr(record, 'line'):
+            log_string += f"near line {record.line} "
+
+        if hasattr(record, 'node'):
+            log_string += f"in `${record.node.type}s.{record.node.name}` "
+
+        return log_string.strip()
+
+
+class ClassConsciousLogger(logging.Logger):
+    """
+
+    """
+    def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1):
+        if extra is None:
+            extra = {}
+        # Automatically add the 'calling_class' attribute to the extra dictionary
+        extra['calling_class'] = self._get_calling_class()
+        super()._log(level, msg, args, exc_info, extra, stack_info, stacklevel)
+
+    @classmethod
+    def _get_calling_class(cls):
+        # Iterate the stack until the first object that is not the logger is found.
+        stack = inspect.stack()
+        for frame_info in stack:
+            calling_class = frame_info[0].f_locals.get('self', None)
+            if calling_class and not isinstance(calling_class, cls):
+                return calling_class
+        return None
 
 class LoggingMixin:
     """
 
     """
-    ctx: dict = {
-        'file': None,
-        'line': None,
-        'node': None,
-        'operation': None,
-    }
 
     logger: Optional[logging.Logger] = None
 
@@ -83,10 +101,7 @@ class LoggingMixin:
         )
         handler.setFormatter(formatter)
 
-        filter = ContextFilter()
-        handler.addFilter(filter)
-
-        logger = logging.getLogger('earthmover')
+        logger = ClassConsciousLogger('earthmover')
         logger.addHandler(handler)
 
         LoggingMixin.logger = logger
@@ -98,15 +113,3 @@ class LoggingMixin:
             cls.set_logger()
 
         LoggingMixin.logger.setLevel(logging.getLevelName(level.upper()))
-
-    @classmethod
-    def update_ctx(cls, **kwargs):
-        LoggingMixin.ctx.update(kwargs)
-
-    @classmethod
-    def reset_ctx(cls, *args):
-        if not args:
-            args = cls.ctx.keys()
-
-        for arg in args:
-            LoggingMixin.ctx[arg] = None
