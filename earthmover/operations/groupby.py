@@ -9,7 +9,7 @@ class GroupByWithCountOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'debug', 'expect', 'operation',
+        'operation',
         'group_by_columns', 'count_column',
     )
 
@@ -32,36 +32,36 @@ class GroupByWithCountOperation(Operation):
         self.group_by_columns = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
         self.count_column     = self.error_handler.assert_get_key(self.config, 'count_column', dtype=str)
 
-    def execute(self):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().execute()
+        super().execute(data, **kwargs)
 
-        if not set(self.group_by_columns).issubset(self.data.columns):
+        if not set(self.group_by_columns).issubset(data.columns):
             self.error_handler.throw(
                 "one or more specified group-by columns not in the dataset"
             )
             raise
 
-        self.data[self.GROUPED_COL_NAME] = self.data.apply(
+        data[self.GROUPED_COL_NAME] = data.apply(
             lambda x: self.GROUPED_COL_SEP.join([*self.group_by_columns])
         , axis=1, meta='str')
 
-        self.data = (
-            self.data
+        data = (
+            data
                 .groupby(self.GROUPED_COL_NAME, sort=False)
                 .size()
                 .reset_index()
         )
 
-        self.data[self.group_by_columns] = self.data[self.GROUPED_COL_NAME].str.split(
+        data[self.group_by_columns] = data[self.GROUPED_COL_NAME].str.split(
             self.GROUPED_COL_SEP, n=len(self.group_by_columns), expand=True
         )
-        del self.data[self.GROUPED_COL_NAME]
+        del data[self.GROUPED_COL_NAME]
 
-        return self.data
+        return data
 
 
 class GroupByWithAggOperation(Operation):
@@ -69,7 +69,7 @@ class GroupByWithAggOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'debug', 'expect', 'operation',
+        'operation',
         'group_by_columns', 'agg_column', 'separator',
     )
 
@@ -97,34 +97,34 @@ class GroupByWithAggOperation(Operation):
             required=False, default=self.DEFAULT_AGG_SEP
         )
 
-    def execute(self):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().execute()
+        super().execute(data, **kwargs)
 
-        if not set(self.group_by_columns).issubset(self.data.columns):
+        if not set(self.group_by_columns).issubset(data.columns):
             self.error_handler.throw(
                 "one or more specified group-by columns not in the dataset"
             )
             raise
 
-        self.data[self.GROUPED_COL_NAME] = self.data.apply(
+        data[self.GROUPED_COL_NAME] = data.apply(
             lambda x: self.GROUPED_COL_SEP.join([*self.group_by_columns])
             , axis=1, meta='str')
 
-        _grouped = self.data.groupby(self.GROUPED_COL_NAME, sort=False)
+        _grouped = data.groupby(self.GROUPED_COL_NAME, sort=False)
         _grouped = _grouped[[self.agg_column]].agg(self.separator.join)
 
-        self.data = _grouped.reset_index()
+        data = _grouped.reset_index()
 
-        self.data[self.group_by_columns] = self.data[self.GROUPED_COL_NAME].str.split(
+        data[self.group_by_columns] = data[self.GROUPED_COL_NAME].str.split(
             self.GROUPED_COL_SEP, n=len(self.group_by_columns), expand=True
         )
-        del self.data[self.GROUPED_COL_NAME]
+        del data[self.GROUPED_COL_NAME]
 
-        return self.data
+        return data
 
 
 class GroupByOperation(Operation):
@@ -132,7 +132,7 @@ class GroupByOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'debug', 'expect', 'operation',
+        'operation',
         'group_by_columns', 'create_columns',
     )
 
@@ -162,23 +162,23 @@ class GroupByOperation(Operation):
         self.group_by_columns    = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
         self.create_columns_dict = self.error_handler.assert_get_key(self.config, 'create_columns', dtype=dict)
 
-    def execute(self):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
         Note: There is a bug in Dask Groupby operations.
         Index columns are overwritten by 'index' after index reset.
 
         :return:
         """
-        super().execute()
+        super().execute(data, **kwargs)
 
-        if not set(self.group_by_columns).issubset(self.data.columns):
+        if not set(self.group_by_columns).issubset(data.columns):
             self.error_handler.throw(
                 "one or more specified group-by columns not in the dataset"
             )
             raise
 
         #
-        grouped = self.data.groupby(self.group_by_columns)
+        grouped = data.groupby(self.group_by_columns)
 
         result = grouped.size().reset_index()
         result.columns = self.group_by_columns + [self.GROUP_SIZE_COL]
@@ -202,7 +202,7 @@ class GroupByOperation(Operation):
                         f"aggregation function `{_agg_type}`(column) missing required column"
                     )
 
-                if _col not in self.data.columns:
+                if _col not in data.columns:
                     self.error_handler.throw(
                         f"aggregation function `{_agg_type}`({_col}) refers to a column {_col} which does not exist"
                     )
@@ -227,10 +227,10 @@ class GroupByOperation(Operation):
             _computed = grouped.apply(agg_lambda, meta=meta).reset_index()
             result = result.merge(_computed, how="left", on=self.group_by_columns)
 
-        self.data = result.query(f"{self.GROUP_SIZE_COL} > 0")
-        del self.data[self.GROUP_SIZE_COL]
+        data = result.query(f"{self.GROUP_SIZE_COL} > 0")
+        del data[self.GROUP_SIZE_COL]
 
-        return self.data
+        return data
 
     @staticmethod
     def _get_agg_lambda(agg_type: str, column: str = "", separator: str = ""):

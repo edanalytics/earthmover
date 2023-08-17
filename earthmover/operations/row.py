@@ -6,7 +6,7 @@ class DistinctRowsOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'debug', 'expect', 'operation',
+        'operation',
         'column', 'columns',
     )
 
@@ -32,25 +32,25 @@ class DistinctRowsOperation(Operation):
         else:
             self.columns_list = []
 
-    def execute(self):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().execute()
+        super().execute(data, **kwargs)
 
-        if not set(self.columns_list).issubset(self.data.columns):
+        if not set(self.columns_list).issubset(data.columns):
             self.error_handler.throw(
                 "one or more columns for checking for distinctness are undefined in the dataset"
             )
             raise
 
         if not self.columns_list:
-            self.columns_list = self.data.columns
+            self.columns_list = data.columns
 
-        self.data = self.data.drop_duplicates(subset=self.columns_list)
+        data = data.drop_duplicates(subset=self.columns_list)
 
-        return self.data
+        return data
 
 
 class FilterRowsOperation(Operation):
@@ -58,7 +58,7 @@ class FilterRowsOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'debug', 'expect', 'operation',
+        'operation',
         'query', 'behavior',
     )
 
@@ -85,12 +85,12 @@ class FilterRowsOperation(Operation):
             )
             raise
 
-    def execute(self):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().execute()
+        super().execute(data, **kwargs)
 
         #
         if self.behavior == 'exclude':
@@ -99,7 +99,7 @@ class FilterRowsOperation(Operation):
             _query = self.query
 
         try:
-            self.data = self.data.query(_query, engine='python')  #`numexpr` is used by default if installed.
+            data = data.query(_query, engine='python')  #`numexpr` is used by default if installed.
 
         except Exception as _:
             self.error_handler.throw(
@@ -107,4 +107,4 @@ class FilterRowsOperation(Operation):
             )
             raise
 
-        return self.data
+        return data

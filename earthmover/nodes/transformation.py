@@ -47,6 +47,6 @@ class Transformation(Node):
         self.data = self.upstream_sources[self.source].data.copy()
 
         for operation in self.operations:
-            self.data = operation.run(self.data, self.upstream_sources)
+            self.data = operation.execute(self.data, data_mapping=self.upstream_sources)
 
         self.post_execute()

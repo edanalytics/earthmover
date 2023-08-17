@@ -66,8 +66,10 @@ class Node:
         pass
 
     @abc.abstractmethod
-    def execute(self) -> 'DataFrame':
+    def execute(self, **kwargs) -> 'DataFrame':
         """
+        Node.execute()      :: Saves data into memory
+        Operation.execute() :: Does NOT save data into memory
 
         :return:
         """

@@ -15,7 +15,7 @@ class AddColumnsOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'debug', 'expect', 'operation',
+        'operation',
         'columns',
     )
 
@@ -31,18 +31,18 @@ class AddColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-    def execute(self):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().execute()
+        super().execute(data, **kwargs)
 
         for col, val in self.columns_dict.items():
 
             # Apply the value as a static string if not obviously Jinja.
             if not util.contains_jinja(val):
-                self.data[col] = val
+                data[col] = val
 
             else:
                 try:
@@ -55,7 +55,7 @@ class AddColumnsOperation(Operation):
                     )
                     raise
 
-                self.data[col] = self.data.apply(
+                data[col] = data.apply(
                     util.render_jinja_template, axis=1,
                     meta=pd.Series(dtype='str', name=col),
                     template=template,
@@ -63,7 +63,7 @@ class AddColumnsOperation(Operation):
                     error_handler=self.error_handler
                 )
 
-        return self.data
+        return data
 
 
 class ModifyColumnsOperation(Operation):
@@ -71,7 +71,7 @@ class ModifyColumnsOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'debug', 'expect', 'operation',
+        'operation',
         'columns',
     )
 
@@ -87,18 +87,18 @@ class ModifyColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-    def execute(self):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().execute()
+        super().execute(data, **kwargs)
 
         for col, val in self.columns_dict.items():
 
             # Apply the value as a static string if not obviously Jinja.
             if not util.contains_jinja(val):
-                self.data[col] = val
+                data[col] = val
 
             else:
                 try:
@@ -112,9 +112,9 @@ class ModifyColumnsOperation(Operation):
                     raise
 
                 # TODO: Allow user to specify string that represents current column value.
-                self.data['value'] = self.data[col]
+                data['value'] = data[col]
 
-                self.data[col] = self.data.apply(
+                data[col] = data.apply(
                     util.render_jinja_template, axis=1,
                     meta=pd.Series(dtype='str', name=col),
                     template=template,
@@ -122,9 +122,9 @@ class ModifyColumnsOperation(Operation):
                     error_handler=self.error_handler
                 )
 
-                del self.data["value"]
+                del data["value"]
 
-        return self.data
+        return data
 
 
 class DuplicateColumnsOperation(Operation):
@@ -132,7 +132,7 @@ class DuplicateColumnsOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'debug', 'expect', 'operation',
+        'operation',
         'columns',
     )
 
@@ -148,28 +148,28 @@ class DuplicateColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-    def execute(self):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().execute()
+        super().execute(data, **kwargs)
 
         for old_col, new_col in self.columns_dict.items():
 
-            if new_col in self.data.columns:
+            if new_col in data.columns:
                 self.logger.warning(
                     f"Duplicate column operation overwrites existing column `{new_col}`."
                 )
 
-            if old_col not in self.data.columns:
+            if old_col not in data.columns:
                 self.error_handler.throw(
                     f"column {old_col} not present in the dataset"
                 )
 
-            self.data[new_col] = self.data[old_col]
+            data[new_col] = data[old_col]
 
-        return self.data
+        return data
 
 
 class RenameColumnsOperation(Operation):
@@ -177,7 +177,7 @@ class RenameColumnsOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'debug', 'expect', 'operation',
+        'operation',
         'columns',
     )
 
@@ -193,26 +193,26 @@ class RenameColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-    def execute(self):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().execute()
+        super().execute(data, **kwargs)
 
         for old_col, new_col in self.columns_dict.items():
-            if new_col in self.data.columns:
+            if new_col in data.columns:
                 self.logger.warning(
                     f"Rename column operation overwrites existing column `{new_col}`."
                 )
-            if old_col not in self.data.columns:
+            if old_col not in data.columns:
                 self.error_handler.throw(
                     f"column {old_col} not present in the dataset"
                 )
 
-        self.data = self.data.rename(columns=self.columns_dict)
+        data = data.rename(columns=self.columns_dict)
 
-        return self.data
+        return data
 
 
 class DropColumnsOperation(Operation):
@@ -220,7 +220,7 @@ class DropColumnsOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'debug', 'expect', 'operation',
+        'operation',
         'columns',
     )
 
@@ -236,22 +236,22 @@ class DropColumnsOperation(Operation):
         super().compile()
         self.columns_to_drop = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
 
-    def execute(self):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().execute()
+        super().execute(data, **kwargs)
 
-        if not set(self.columns_to_drop).issubset(self.data.columns):
+        if not set(self.columns_to_drop).issubset(data.columns):
             self.error_handler.throw(
                 "one or more columns specified to drop are not present in the dataset"
             )
             raise
 
-        self.data = self.data.drop(columns=self.columns_to_drop)
+        data = data.drop(columns=self.columns_to_drop)
 
-        return self.data
+        return data
 
 
 class KeepColumnsOperation(Operation):
@@ -259,7 +259,7 @@ class KeepColumnsOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'debug', 'expect', 'operation',
+        'operation',
         'columns',
     )
 
@@ -276,22 +276,22 @@ class KeepColumnsOperation(Operation):
 
         self.header = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
 
-    def execute(self):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().execute()
+        super().execute(data, **kwargs)
 
-        if not set(self.header).issubset(self.data.columns):
+        if not set(self.header).issubset(data.columns):
             self.error_handler.throw(
                 "one or more columns specified to keep are not present in the dataset"
             )
             raise
 
-        self.data = self.data[self.header]
+        data = data[self.header]
 
-        return self.data
+        return data
 
 
 class CombineColumnsOperation(Operation):
@@ -299,7 +299,7 @@ class CombineColumnsOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'debug', 'expect', 'operation',
+        'operation',
         'columns', 'new_column', 'separator',
     )
 
@@ -321,26 +321,26 @@ class CombineColumnsOperation(Operation):
 
         self.separator = self.config.get('separator', "")
 
-    def execute(self):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().execute()
+        super().execute(data, **kwargs)
 
-        if not set(self.columns_list).issubset(self.data.columns):
+        if not set(self.columns_list).issubset(data.columns):
             self.error_handler.throw(
                 f"one or more defined columns is not present in the dataset"
             )
             raise
 
-        self.data[self.new_column] = self.data.apply(
+        data[self.new_column] = data.apply(
             lambda x: self.separator.join(x[col] for col in self.columns_list),
             axis=1,
             meta=pd.Series(dtype='str', name=self.new_column)
         )
 
-        return self.data
+        return data
 
 
 
@@ -349,7 +349,7 @@ class MapValuesOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'debug', 'expect', 'operation',
+        'operation',
         'column', 'columns', 'mapping', 'map_file',
     )
 
@@ -392,28 +392,28 @@ class MapValuesOperation(Operation):
             )
             raise
 
-    def execute(self):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().execute()
+        super().execute(data, **kwargs)
 
-        if not set(self.columns_list).issubset(self.data.columns):
+        if not set(self.columns_list).issubset(data.columns):
             self.error_handler.throw(
                 "one or more columns to map are undefined in the dataset"
             )
 
         try:
             for _column in self.columns_list:
-                self.data[_column] = self.data[_column].replace(self.mapping)
+                data[_column] = data[_column].replace(self.mapping)
 
         except Exception as _:
             self.error_handler.throw(
                 "error during `map_values` operation... check mapping shape and `column(s)`?"
             )
 
-        return self.data
+        return data
 
     def _read_map_file(self, file) -> dict:
         """
@@ -442,7 +442,7 @@ class DateFormatOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'debug', 'expect', 'operation',
+        'operation',
         'column', 'columns', 'from_format', 'to_format',
     )
 
@@ -474,14 +474,14 @@ class DateFormatOperation(Operation):
 
         self.columns_list = _columns or [_column]  # `[None]` evaluates to True
 
-    def execute(self):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().execute()
+        super().execute(data, **kwargs)
 
-        if not set(self.columns_list).issubset(self.data.columns):
+        if not set(self.columns_list).issubset(data.columns):
             self.error_handler.throw(
                 "one or more columns to map are undefined in the dataset"
             )
@@ -489,8 +489,8 @@ class DateFormatOperation(Operation):
 
         for _column in self.columns_list:
             try:
-                self.data[_column] = (
-                    dd.to_datetime(self.data[_column], format=self.from_format)
+                data[_column] = (
+                    dd.to_datetime(data[_column], format=self.from_format)
                         .dt.strftime(self.to_format)
                 )
 
@@ -499,7 +499,7 @@ class DateFormatOperation(Operation):
                     f"error during `date_format` operation, `{_column}` column... check format strings? ({err})"
                 )
 
-        return self.data
+        return data
 
 
 
@@ -508,17 +508,17 @@ class SnakeCaseColumnsOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'debug', 'expect', 'operation',
+        'operation',
     )
 
-    def execute(self) -> 'DataFrame':
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:
         """
-        super().execute()
+        super().execute(data, **kwargs)
 
-        data_columns  = list(self.data.columns)
+        data_columns  = list(data.columns)
         snake_columns = list(map(self.to_snake_case, data_columns))
 
         if len(set(data_columns)) != len(set(snake_columns)):
@@ -528,8 +528,8 @@ class SnakeCaseColumnsOperation(Operation):
                 f"Columns after : {len(set(snake_columns))}"
             )
 
-        self.data = self.data.rename(columns=dict(zip(data_columns, snake_columns)))
-        return self.data
+        data = data.rename(columns=dict(zip(data_columns, snake_columns)))
+        return data
 
     @staticmethod
     def to_snake_case(text: str):
