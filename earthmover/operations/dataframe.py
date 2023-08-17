@@ -8,7 +8,7 @@ class JoinOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'debug', 'expect', 'operation',
+        'operation',
         'sources', 'join_type',
         'left_keys', 'left_key', 'right_keys', 'right_key',
         'left_keep_columns', 'left_drop_columns', 'right_keep_columns', 'right_drop_columns',
@@ -81,15 +81,20 @@ class JoinOperation(Operation):
         self.right_keep_cols = self.get_config('right_keep_columns', [], dtype=list)
         self.right_drop_cols = self.get_config('right_drop_columns', [], dtype=list)
 
-    def execute(self):
+    def execute(self, data: 'DataFrame', data_mapping: dict, **kwargs):
         """
 
         :return:
         """
-        super().execute()
+        super().execute(data, data_mapping=data_mapping, **kwargs)
+
+        self.source_data_mapping = {
+            source: data_mapping[source].data
+            for source in self.sources
+        }
 
         # Build left dataset
-        self.left_cols = self.data.columns
+        self.left_cols = data.columns
 
         if self.left_keep_cols:
             if not set(self.left_keep_cols).issubset(self.left_cols):
@@ -109,7 +114,7 @@ class JoinOperation(Operation):
 
             self.left_cols = list(set(self.left_cols).difference(self.left_drop_cols))
 
-        self.data = self.data[self.left_cols]
+        data = data[self.left_cols]
 
         # Iterate each right dataset
         for source in self.sources:
@@ -137,8 +142,8 @@ class JoinOperation(Operation):
             right_data = right_data[self.right_cols]
 
             try:
-                self.data = dd.merge(
-                    self.data, right_data, how=self.join_type,
+                data = dd.merge(
+                    data, right_data, how=self.join_type,
                     left_on=self.left_keys, right_on=self.right_keys
                 )
 
@@ -148,7 +153,7 @@ class JoinOperation(Operation):
                 )
                 raise
 
-        return self.data
+        return data
 
 
 class UnionOperation(Operation):
@@ -156,7 +161,7 @@ class UnionOperation(Operation):
 
     """
     allowed_configs: tuple = (
-        'debug', 'expect', 'operation', 'sources',
+        'operation', 'sources',
     )
 
     def __init__(self, *args, **kwargs):
@@ -165,22 +170,27 @@ class UnionOperation(Operation):
         self.sources = self.get_config('sources', dtype=list)
         self.source_data_mapping = None
 
-    def execute(self):
+    def execute(self, data: 'DataFrame', data_mapping: dict, **kwargs):
         """
 
         :return:
         """
-        super().execute()
+        super().execute(data, data_mapping=data_mapping, **kwargs)
+
+        self.source_data_mapping = {
+            source: data_mapping[source].data
+            for source in self.sources
+        }
 
         for source in self.sources:
             source_data = self.source_data_mapping[source]
 
-            if set(source_data.columns) != set(self.data.columns):
+            if set(source_data.columns) != set(data.columns):
                 self.logger.critical('dataframes to union do not share identical columns')
                 raise
 
             try:
-                self.data = dd.concat([self.data, source_data], ignore_index=True)
+                data = dd.concat([data, source_data], ignore_index=True)
             
             except Exception as _:
                 self.logger.critical(
@@ -188,4 +198,4 @@ class UnionOperation(Operation):
                 )
                 raise
 
-        return self.data
+        return data
