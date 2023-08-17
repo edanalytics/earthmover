@@ -43,7 +43,7 @@ class JoinOperation(Operation):
         super().compile()
 
         # Check left keys
-        _key  = self.get_config('left_key', None, dtype=str)
+        _key  = self.get_config('left_key', "", dtype=str)
         _keys = self.get_config('left_keys', [], dtype=list)
 
         if bool(_key) == bool(_keys):  # Fail if both or neither are populated.
@@ -53,7 +53,7 @@ class JoinOperation(Operation):
         self.left_keys = _keys or [_key]  # `[None]` evaluates to True
 
         # Check right keys
-        _key  = self.get_config('right_key', None, dtype=str)
+        _key  = self.get_config('right_key', "", dtype=str)
         _keys = self.get_config('right_keys', [], dtype=list)
 
         if bool(_key) == bool(_keys):  # Fail if both or neither are populated.

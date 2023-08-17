@@ -22,8 +22,8 @@ class DistinctRowsOperation(Operation):
         super().compile()
 
         # Only 'column' or 'columns' can be populated
-        _column  = self.get_config('column' , None, dtype=str)
-        _columns = self.get_config('columns', None, dtype=list)
+        _column  = self.get_config('column' , "", dtype=str)
+        _columns = self.get_config('columns', [], dtype=list)
 
         if _column:
             self.columns_list = [_column]

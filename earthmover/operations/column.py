@@ -363,7 +363,7 @@ class MapValuesOperation(Operation):
         super().compile()
 
         # Only 'column' or 'columns' can be populated
-        _column  = self.get_config('column', None, dtype=str)
+        _column  = self.get_config('column', "", dtype=str)
         _columns = self.get_config('columns', [], dtype=list)
 
         if bool(_column) == bool(_columns):  # Fail if both or neither are populated.
@@ -376,7 +376,7 @@ class MapValuesOperation(Operation):
 
         #
         _mapping  = self.get_config('mapping', {}, dtype=dict)
-        _map_file = self.get_config('map_file', None, dtype=str)
+        _map_file = self.get_config('map_file', "", dtype=str)
 
         if _mapping:
             self.mapping = _mapping
@@ -459,7 +459,7 @@ class DateFormatOperation(Operation):
         self.to_format   = self.get_config('to_format', dtype=str)
 
         # Only 'column' or 'columns' can be populated
-        _column  = self.get_config('column', None, dtype=str)
+        _column  = self.get_config('column', "", dtype=str)
         _columns = self.get_config('columns', [], dtype=list)
 
         if bool(_column) == bool(_columns):  # Fail if both or neither are populated.

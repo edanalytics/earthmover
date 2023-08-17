@@ -54,9 +54,9 @@ class FileDestination(Destination):
         """
         super().compile()
         self.template = self.get_config('template', dtype=str)
-        self.header = self.get_config('header', None, dtype=str)
-        self.footer = self.get_config('footer', None, dtype=str)
-        self.extension = self.get_config('extension', None, dtype=str)  # otherwise, assume filename has extension
+        self.header = self.get_config('header', "", dtype=str)
+        self.footer = self.get_config('footer', "", dtype=str)
+        self.extension = self.get_config('extension', "", dtype=str)  # otherwise, assume filename has extension
         self.linearize = self.get_config('linearize', True, dtype=bool)
 
         filename = f"{self.name}.{self.extension}" if self.extension else self.name
