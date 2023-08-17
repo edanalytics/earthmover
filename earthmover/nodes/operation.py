@@ -77,5 +77,4 @@ class Operation(Node):
         :param kwargs:
         :return:
         """
-        super().execute()
         pass

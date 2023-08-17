@@ -27,13 +27,8 @@ class Node(LoggingMixin):
         self.name = name
         self.config = config
 
-        self.update_ctx(
-            line=self.config.__line__, node=self, operation=None
-        )
-
-        self.upstream_sources: dict = {}
-
         self.data: 'DataFrame' = None
+        self.upstream_sources: dict = {}
 
         self.size: int = None
         self.num_rows: int = None
@@ -48,10 +43,6 @@ class Node(LoggingMixin):
 
         :return:
         """
-        self.update_ctx(
-           line=self.config.__line__, node=self, operation=None
-        )
-
         # Verify all configs provided by the user are specified for the node.
         # (This ensures the user doesn't pass in unexpected or misspelled configs.)
         for _config in self.config:
@@ -74,10 +65,6 @@ class Node(LoggingMixin):
 
         :return:
         """
-        self.update_ctx(
-            line=self.config.__line__, node=self, operation=None
-        )
-
         pass
 
     def post_execute(self):

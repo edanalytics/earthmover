@@ -52,7 +52,6 @@ class Earthmover(LoggingMixin):
 
         self.results_file = results_file
         self.config_file = config_file
-        self.update_ctx(file=self.config_file)
 
         # Parse the user-provided config file and retrieve project-configs, and parameter defaults.
         # Merge the optional user configs into the defaults.
