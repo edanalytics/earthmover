@@ -150,10 +150,26 @@ class JoinOperation(Operation):
         _right_data = self.right_data[ self.right_cols ]
 
         try:
-            self.data = dd.merge(
-                _left_data, _right_data, how=self.join_type,
-                left_on=self.left_keys, right_on=self.right_keys
-            )
+            # If we're joining on only one key and either the left and right frames have many partitions, then we do a fancy thing:
+            if len(self.left_keys)==1 and len(self.right_keys)==1 and (self.left_data.npartitions>1 or self.right_data.npartitions>1):
+                self.logger.debug(f"data at {self.type} `{self.name}` has {self.left_data.npartitions} (left) and {self.right_data.npartitions} (right) partitions...")
+                # set the key column as the index in multi-partition frames, which enables merging by partition on the index.
+                self.logger.debug(f"... indexing left dataframe by first join column `{self.left_keys[0]}` ...")
+                self.left_data.set_index(self.left_keys[0], drop=False)
+                self.logger.debug(f"... indexing right dataframe by first join column `{self.right_keys[0]}` ...")
+                self.right_data.set_index(self.right_keys[0], drop=False)
+                self.logger.debug(f"... joining ...")
+                self.data = dd.merge(
+                    _left_data, _right_data, how=self.join_type,
+                    left_index=True, right_index=True,
+                )
+            # If there are multiple join keys, we must try to join using them directly (can't use an index).
+            # If at least one frame has just one partition, it will fit in memory and the join can be done efficiently.
+            else: 
+                self.data = dd.merge(
+                    _left_data, _right_data, how=self.join_type,
+                    left_on=self.left_keys, right_on=self.right_keys,
+                )
 
         except Exception as _:
             self.error_handler.throw(

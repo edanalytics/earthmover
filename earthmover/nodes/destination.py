@@ -1,7 +1,9 @@
 import abc
 import os
+import json
 import jinja2
 import re
+from dask.diagnostics import ProgressBar
 
 from earthmover.node import Node
 from earthmover import util
@@ -138,10 +140,10 @@ class FileDestination(Destination):
 
             if self.header:
                 fp.write(self.header + "\n")
-
-            for row_data in self.data.itertuples(index=False):
-                _data_tuple = dict(row_data._asdict().items())
-                _data_tuple["__row_data__"] = row_data._asdict()
+            
+            def render(row):
+                _data_tuple = row.to_dict()
+                _data_tuple["__row_data__"] = row
 
                 try:
                     json_string = self.jinja_template.render(_data_tuple)
@@ -153,6 +155,15 @@ class FileDestination(Destination):
                     raise
 
                 fp.write(json_string + "\n")
+                # really we don't need this data anymore, but apply() expects _somthing_ to be returned
+                # so let's return just the first element of the row
+                return row[list(_data_tuple.keys())[0]]
+
+            with ProgressBar():
+                self.logger.debug(f"writing output file `{self.file}`...")
+                # this renders each row without having to itertupes() (which is much slower)
+                # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
+                self.data.map_partitions(lambda x: x.apply(render, axis=1), meta=(self.data.columns[0], str)).compute()
 
             if self.footer:
                 fp.write(self.footer)

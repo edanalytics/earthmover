@@ -1,5 +1,6 @@
 from earthmover.node import Node
 from earthmover.nodes.operation import Operation
+from dask.diagnostics import ProgressBar
 
 
 class Transformation(Node):
@@ -59,7 +60,7 @@ class Transformation(Node):
         :return:
         """
         super().execute()
-
-        for operation in self.operations:
-            self.data = operation.execute()
-            operation.post_execute()
+        with ProgressBar():
+            for operation in self.operations:
+                self.data = operation.execute()
+                operation.post_execute()

@@ -56,7 +56,12 @@ class DistinctRowsOperation(Operation):
         if not self.columns_list:
             self.columns_list = self.data.columns
 
-        self.data = self.data.drop_duplicates(subset=self.columns_list)
+        if self.data.npartitions>1:
+            self.logger.debug(f"data at {self.type} `{self.name}` has {self.data.npartitions} partitions... indexing on first uniqueness column `{self.columns_list[0]}`, then each partition will be deduped")
+            # see https://stackoverflow.com/questions/68019990/dask-dataframe-remove-duplicates-by-columns-a-keeping-the-row-with-the-highest
+            self.data = self.data.set_index(self.columns_list[0], drop=False).map_partitions(lambda x: x.drop_duplicates(self.columns_list))
+        else:
+            self.data = self.data.drop_duplicates(subset=self.columns_list)
 
         return self.data
 
