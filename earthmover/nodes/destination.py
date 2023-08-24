@@ -155,13 +155,13 @@ class FileDestination(Destination):
                     raise
 
                 fp.write(json_string + "\n")
-                # really we don't need this data anymore, but apply() expects _somthing_ to be returned
+                # really we don't need this data anymore, but apply() expects _something_ to be returned
                 # so let's return just the first element of the row
                 return row[list(_data_tuple.keys())[0]]
 
             with ProgressBar():
                 self.logger.debug(f"writing output file `{self.file}`...")
-                # this renders each row without having to itertupes() (which is much slower)
+                # this renders each row without having to itertupels() (which is much slower)
                 # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
                 self.data.map_partitions(lambda x: x.apply(render, axis=1), meta=(self.data.columns[0], str)).compute()
 
