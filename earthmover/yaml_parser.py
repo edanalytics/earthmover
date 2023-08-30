@@ -148,7 +148,7 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
         :param params:
         :return:
         """
-        full_params = {**os.environ.copy(), **params}
+        full_params = {**params, **os.environ.copy()}
 
         with open(filepath, "r", encoding='utf-8') as stream:
             content_string = stream.read()  # Force to a string to apply templating and expand Jinja
