@@ -62,8 +62,6 @@ class Operation(Node):
         full_name = f"{name}.operations:{config.get('operation')}"
         super().__init__(full_name, config, earthmover=earthmover)
 
-        self.source_data_mapping: dict = None
-
     @abc.abstractmethod
     def execute(self, data: 'DataFrame', *, data_mapping: dict, **kwargs) -> 'DataFrame':
         """
