@@ -1,5 +1,7 @@
 import os
+
 import jinja2
+import pandas as pd
 import re
 
 from earthmover.node import Node
@@ -39,7 +41,7 @@ class FileDestination(Destination):
         super().__init__(*args, **kwargs)
         self.file: str = None
         self.template: str = None
-        self.jinja_template: str = None
+        self.jinja_template: jinja2.Template = None
         self.header: str = None
         self.footer: str = None
 
@@ -94,36 +96,45 @@ class FileDestination(Destination):
 
     def execute(self):
         """
-
         :return:
         """
         super().execute()
 
-        self.data = self.upstream_sources[self.source].data.copy().fillna('')
+        # this renders each row without having to itertuples() (which is much slower)
+        # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
+        self.data = (
+            self.upstream_sources[self.source].data
+                .fillna('')
+                .map_partitions(lambda x: x.apply(self.render_row, axis=1), meta=pd.Series('str'))
+        )
 
         os.makedirs(os.path.dirname(self.file), exist_ok=True)
         with open(self.file, 'w', encoding='utf-8') as fp:
+            self.logger.debug(f"writing output file `{self.file}`...")
 
             if self.header:
                 fp.write(self.header + "\n")
 
-            for row_data in self.data.itertuples(index=False):
-                _data_tuple = dict(row_data._asdict().items())
-                _data_tuple["__row_data__"] = row_data._asdict()
-
-                try:
-                    json_string = self.jinja_template.render(_data_tuple)
-
-                except Exception as err:
-                    self.error_handler.throw(
-                        f"error rendering Jinja template in `template` file {self.template} ({err})"
-                    )
-                    raise
-
-                fp.write(json_string + "\n")
+            for row in self.data.compute():
+                fp.write(row + "\n")
 
             if self.footer:
                 fp.write(self.footer)
 
         self.logger.debug(f"output `{self.file}` written")
         self.size = os.path.getsize(self.file)
+
+    def render_row(self, row):
+        _data_tuple = row.to_dict()
+        _data_tuple["__row_data__"] = row
+
+        try:
+            json_string = self.jinja_template.render(_data_tuple)
+
+        except Exception as err:
+            self.error_handler.throw(
+                f"error rendering Jinja template in `template` file {self.template} ({err})"
+            )
+            raise
+
+        return json_string
