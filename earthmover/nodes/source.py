@@ -67,7 +67,7 @@ class Source(Node):
             )
             self.data = dd.from_pandas(
                 self.data,
-                chunksize=self.CHUNKSIZE
+                chunksize=self.chunksize
             )
 
 
