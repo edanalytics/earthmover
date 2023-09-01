@@ -7,7 +7,7 @@ class Transformation(Node):
 
     """
     type: str = 'transformation'
-    allowed_configs: tuple = ('debug', 'expect', 'operations', 'source',)
+    allowed_configs: tuple = ('debug', 'expect', 'show_progress', 'chunksize', 'operations', 'source',)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

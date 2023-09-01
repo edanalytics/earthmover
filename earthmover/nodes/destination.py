@@ -13,7 +13,7 @@ class Destination(Node):
     """
     type: str = 'destination'
     mode: str = None  # Documents which class was chosen.
-    allowed_configs: tuple = ('debug', 'expect', 'source',)
+    allowed_configs: tuple = ('debug', 'expect', 'show_progress', 'chunksize', 'source',)
 
     def __new__(cls, *args, **kwargs):
         return object.__new__(FileDestination)
@@ -30,7 +30,7 @@ class FileDestination(Destination):
     """
     mode: str = 'file'
     allowed_configs: tuple = (
-        'debug', 'expect', 'source',
+        'debug', 'expect', 'show_progress', 'chunksize', 'source',
         'template', 'extension', 'linearize', 'header', 'footer',
     )
 
