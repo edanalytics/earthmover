@@ -22,7 +22,7 @@ class Source(Node):
     type: str = 'source'
     mode: str = None  # Documents which class was chosen.
     is_remote: bool = None
-    allowed_configs: tuple = ('debug', 'expect', 'optional',)
+    allowed_configs: tuple = ('debug', 'expect', 'show_progress', 'chunksize', 'optional',)
 
     def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
         """
@@ -67,7 +67,7 @@ class Source(Node):
             )
             self.data = dd.from_pandas(
                 self.data,
-                chunksize=self.CHUNKSIZE
+                chunksize=self.chunksize
             )
 
 
@@ -78,7 +78,7 @@ class FileSource(Source):
     mode: str = 'file'
     is_remote: bool = False
     allowed_configs: tuple = (
-        'debug', 'expect', 'optional',
+        'debug', 'expect', 'show_progress', 'chunksize', 'optional',
         'file', 'type', 'columns', 'header_rows',
         'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
     )
@@ -272,7 +272,7 @@ class FtpSource(Source):
     mode: str = 'ftp'
     is_remote: bool = True
     allowed_configs: tuple = (
-        'debug', 'expect', 'optional',
+        'debug', 'expect', 'show_progress', 'chunksize', 'optional',
         'connection', 'query',
     )
 
@@ -345,7 +345,7 @@ class SqlSource(Source):
     mode: str = 'sql'
     is_remote: bool = True
     allowed_configs: tuple = (
-        'debug', 'expect', 'optional',
+        'debug', 'expect', 'show_progress', 'chunksize', 'optional',
         'connection', 'query',
     )
 

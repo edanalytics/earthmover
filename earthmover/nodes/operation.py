@@ -62,8 +62,6 @@ class Operation(Node):
         full_name = f"{name}.operations:{config.get('operation')}"
         super().__init__(full_name, config, earthmover=earthmover)
 
-        self.source_data_mapping: dict = None
-
     @abc.abstractmethod
     def execute(self, data: 'DataFrame', *, data_mapping: dict, **kwargs) -> 'DataFrame':
         """
@@ -77,5 +75,13 @@ class Operation(Node):
         :param kwargs:
         :return:
         """
-        super().execute()
+        self.error_handler.ctx.update(
+            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
+        )
+
         pass
+
+    def post_execute(self):
+        raise NotImplementedError(
+            "Operation.post_execute() is not permitted! Data is not persisted within Operations."
+        )

@@ -1,8 +1,10 @@
 import abc
 import dask
+import dask.dataframe as dd
 import jinja2
 import pandas as pd
 
+from dask.diagnostics import ProgressBar
 from typing import List
 
 from earthmover.yaml_parser import YamlMapping
@@ -18,9 +20,7 @@ class Node:
 
     """
     type: str = None
-    allowed_configs: tuple = ('debug', 'expect',)
-
-    CHUNKSIZE = 1024 * 1024 * 100  # 100 MB
+    allowed_configs: tuple = ('debug', 'expect', 'show_progress', 'chunksize')
 
     def __init__(self, name: str, config: YamlMapping, *, earthmover: 'Earthmover'):
         self.name = name
@@ -40,6 +40,13 @@ class Node:
 
         self.expectations: list = None
         self.debug: bool = False
+
+        # Customize internal Dask configs
+        self.chunksize = self.config.get('chunksize', self.earthmover.state_configs["chunksize"])
+
+        # Optional variables for displaying progress and diagnostics.
+        self.show_progress = self.config.get('show_progress', self.earthmover.state_configs["show_progress"])
+        self.progress_bar = None
 
     @abc.abstractmethod
     def compile(self):
@@ -77,6 +84,11 @@ class Node:
             file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
         )
 
+        if self.show_progress:
+            self.logger.info(f"Displaying progress for {self.type} node: {self.name}")
+            self.progress_bar = ProgressBar(dt=1.0)
+            self.progress_bar.__enter__()  # Open context manager manually to avoid with-clause
+
         pass
 
     def post_execute(self):
@@ -88,9 +100,16 @@ class Node:
 
         :return:
         """
+        if self.show_progress:
+            self.progress_bar.__exit__(None, None, None)  # Close context manager manually to avoid with-clause
+
         self.check_expectations(self.expectations)
 
-        self.num_rows, self.num_cols = self.data.shape
+        # Get lazy row and column counts to display in graph.png.
+        if isinstance(self.data, (pd.Series, dd.Series)):
+            self.num_rows, self.num_cols = self.data.size, 1
+        else:
+            self.num_rows, self.num_cols = self.data.shape
 
         if self.debug:
             self.num_rows = dask.compute(self.num_rows)[0]

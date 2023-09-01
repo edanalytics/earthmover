@@ -48,7 +48,20 @@ class DistinctRowsOperation(Operation):
         if not self.columns_list:
             self.columns_list = data.columns
 
-        data = data.drop_duplicates(subset=self.columns_list)
+        if data.npartitions > 1:
+            self.logger.debug(
+                f"data at {self.type} `{self.name}` has {data.npartitions} partitions... indexing on first uniqueness column `{self.columns_list[0]}`, then each partition will be deduped"
+            )
+
+            # see https://stackoverflow.com/questions/68019990
+            data = (
+                data
+                .set_index(self.columns_list[0], drop=False).repartition(partition_size=self.chunksize)
+                .map_partitions(lambda x: x.drop_duplicates(self.columns_list))
+            )
+
+        else:
+            data = data.drop_duplicates(subset=self.columns_list)
 
         return data
 
