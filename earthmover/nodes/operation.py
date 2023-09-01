@@ -62,8 +62,6 @@ class Operation(Node):
         full_name = f"{name}.operations:{config.get('operation')}"
         super().__init__(full_name, config, **kwargs)
 
-        self.source_data_mapping: dict = None
-
     @abc.abstractmethod
     def execute(self, data: 'DataFrame', *, data_mapping: dict, **kwargs) -> 'DataFrame':
         """
@@ -78,3 +76,8 @@ class Operation(Node):
         :return:
         """
         pass
+
+    def post_execute(self):
+        raise NotImplementedError(
+            "Operation.post_execute() is not permitted! Data is not persisted within Operations."
+        )

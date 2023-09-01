@@ -314,8 +314,7 @@ class CombineColumnsOperation(Operation):
 
         self.columns_list = self.get_config('columns', dtype=list)
         self.new_column   = self.get_config('new_column', dtype=str)
-
-        self.separator = self.config.get('separator', "")
+        self.separator = self.get_config('separator', "", dtype=str)
 
     def execute(self, data: 'DataFrame', **kwargs):
         """

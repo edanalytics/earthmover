@@ -1,9 +1,12 @@
 import abc
 import dask
+import dask.dataframe as dd
 import jinja2
 import pandas as pd
 
 from typing import Any, List, Optional
+from dask.diagnostics import ProgressBar
+from typing import List
 
 from earthmover.logging_mixin import LoggingMixin
 from earthmover.yaml_parser import YamlMapping
@@ -19,11 +22,9 @@ class Node(LoggingMixin):
 
     """
     type: str = None
-    allowed_configs: tuple = ('debug', 'expect',)
+    allowed_configs: tuple = ('debug', 'expect', 'show_progress', 'chunksize')
 
-    CHUNKSIZE = 1024 * 1024 * 100  # 100 MB
-
-    def __init__(self, name: str, config: YamlMapping, **kwargs):
+    def __init__(self, name: str, config: YamlMapping, *args, chunksize: int, show_progress: bool, **kwargs):
         self.name = name
         self.config = config
 
@@ -36,6 +37,13 @@ class Node(LoggingMixin):
 
         self.expectations: list = None
         self.debug: bool = False
+
+        # Customize internal Dask configs
+        self.chunksize = self.get_config('chunksize', default=chunksize, dtype=int)
+
+        # Optional variables for displaying progress and diagnostics.
+        self.show_progress = self.get_config('show_progress', default=show_progress, dtype=bool)
+        self.progress_bar = None
 
     @abc.abstractmethod
     def compile(self):
@@ -52,7 +60,7 @@ class Node(LoggingMixin):
                 )
 
         # Always check for debug and expectations
-        self.debug = self.config.get('debug', False)
+        self.debug = self.get_config('debug', False, dtype=bool)
         self.expectations = self.get_config('expect', [], dtype=list)
 
         pass
@@ -65,6 +73,11 @@ class Node(LoggingMixin):
 
         :return:
         """
+        if self.show_progress:
+            self.logger.info(f"Displaying progress for {self.type} node: {self.name}")
+            self.progress_bar = ProgressBar(dt=1.0)
+            self.progress_bar.__enter__()  # Open context manager manually to avoid with-clause
+
         pass
 
     def post_execute(self):
@@ -76,9 +89,16 @@ class Node(LoggingMixin):
 
         :return:
         """
+        if self.show_progress:
+            self.progress_bar.__exit__(None, None, None)  # Close context manager manually to avoid with-clause
+
         self.check_expectations(self.expectations)
 
-        self.num_rows, self.num_cols = self.data.shape
+        # Get lazy row and column counts to display in graph.png.
+        if isinstance(self.data, (pd.Series, dd.Series)):
+            self.num_rows, self.num_cols = self.data.size, 1
+        else:
+            self.num_rows, self.num_cols = self.data.shape
 
         if self.debug:
             self.num_rows = dask.compute(self.num_rows)[0]
