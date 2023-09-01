@@ -1,4 +1,8 @@
 import dask.dataframe as dd
+import numpy as np
+import pandas as pd
+
+from typing import List
 
 from earthmover.nodes.operation import Operation
 
@@ -14,6 +18,7 @@ class JoinOperation(Operation):
         'left_keep_columns', 'left_drop_columns', 'right_keep_columns', 'right_drop_columns',
     )
 
+    INDEX_COL = "__join_index__"
     JOIN_TYPES = ["inner", "left", "right", "outer"]
 
     def __init__(self, *args, **kwargs):
@@ -108,7 +113,7 @@ class JoinOperation(Operation):
 
             self.left_cols = list(set(self.left_cols).difference(self.left_drop_cols))
 
-        data = data[self.left_cols]
+        left_data = data[self.left_cols]
 
         # Iterate each right dataset
         for source in self.sources:
@@ -135,11 +140,30 @@ class JoinOperation(Operation):
 
             right_data = right_data[self.right_cols]
 
+            # Complete the merge, using different logic depending on the partitions of the datasets.
             try:
-                data = dd.merge(
-                    data, right_data, how=self.join_type,
-                    left_on=self.left_keys, right_on=self.right_keys
-                )
+                if left_data.npartitions == 1 or right_data.npartitions == 1:
+                    left_data = dd.merge(
+                        left_data, right_data, how=self.join_type,
+                        left_on=self.left_keys, right_on=self.right_keys
+                    )
+
+                else:
+                    self.logger.debug(
+                        f"data at {self.type} `{self.name}` has {left_data.npartitions} (left) and {right_data.npartitions} (right) partitions..."
+                    )
+
+                    # Concatenate key columns into an index to allow merging by index.
+                    left_data = self.set_concat_index(left_data, self.left_keys)
+                    right_data = self.set_concat_index(right_data, self.right_keys)
+
+                    left_data = dd.merge(
+                        left_data, right_data, how=self.join_type,
+                        left_index=True, right_index=True,
+                    )
+
+                    # Remove the generated index column.
+                    left_data = left_data.reset_index(drop=True).repartition(partition_size=self.chunksize)
 
             except Exception as _:
                 self.error_handler.throw(
@@ -147,7 +171,29 @@ class JoinOperation(Operation):
                 )
                 raise
 
-        return data
+        return left_data
+
+    def set_concat_index(self, data: 'DataFrame', keys: List[str]):
+        """
+        Add a concatenated column to use as an index.
+        Fix the divisions in the case of an empty dataframe.
+        :param data:
+        :param keys:
+        :return:
+        """
+        data[self.INDEX_COL] = data[keys].apply(
+            lambda row: row.str.cat(sep='_', na_rep=''),
+            axis=1,
+            meta=pd.Series(dtype='str', name=self.INDEX_COL)
+        )
+
+        data = data.set_index(self.INDEX_COL, drop=True)
+
+        # Empty dataframes create divisions that cannot be compared.
+        if data.divisions == (np.nan, np.nan):
+            data.divisions = (None, None)
+
+        return data.repartition(partition_size=self.chunksize)
 
 
 class UnionOperation(Operation):
