@@ -256,7 +256,7 @@ class FileSource(Source):
             'json'      : lambda file, config: dd.read_json(file, typ=config.get('object_type', "frame"), orient=config.get('orientation', "columns")),
             'jsonl'     : lambda file, config: dd.read_json(file, lines=True),
             'parquet'   : lambda file, _     : dd.read_parquet(file),
-            'sas'       : lambda file, _     : pd.read_sas(file),
+            'sas'       : lambda file, config: pd.read_sas(file, encoding=config.get('encoding', "utf-8")),
             'spss'      : lambda file, _     : pd.read_spss(file),
             'stata'     : lambda file, _     : pd.read_stata(file),
             'xml'       : lambda file, config: pd.read_xml(file, xpath=config.get('xpath', "./*")),
