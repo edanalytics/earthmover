@@ -107,7 +107,7 @@ class Node:
 
         # Get lazy row and column counts to display in graph.png.
         if isinstance(self.data, (pd.Series, dd.Series)):
-            self.num_rows, self.num_cols = len(self.data), 1
+            self.num_rows, self.num_cols = self.data.size, 1
         else:
             self.num_rows, self.num_cols = self.data.shape
 
