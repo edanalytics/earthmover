@@ -1,3 +1,12 @@
+### v0.1.6
+<details>
+<summary>Released 2023-07-11</summary>
+
+* bugfix: [fixing a bug to create the results_file directory if needed](https://github.com/edanalytics/earthmover/pull/40)
+* bugfix: [process a copy of each nodes data at each step, to avoid modifying original node data which downstreams nodes may rely on](https://github.com/edanalytics/earthmover/pull/41)
+
+</details>
+
 ### v0.1.5
 <details>
 <summary>Released 2023-06-13</summary>
