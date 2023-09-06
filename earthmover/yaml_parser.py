@@ -1,9 +1,9 @@
 import dataclasses
-import logging
 import os
 import yaml
 
 from string import Template
+from typing import Dict
 
 from earthmover import util
 
@@ -41,7 +41,7 @@ class JinjaEnvironmentYamlLoader(yaml.SafeLoader):
         data.update(value)
 
     @classmethod
-    def load_config_file(cls, filepath: str, params: dict, macros: str) -> YamlMapping:
+    def load_config_file(cls, filepath: str, params: Dict[str, str], macros: str) -> YamlMapping:
         """
 
         :param filepath:
@@ -86,7 +86,7 @@ class JinjaEnvironmentYamlLoader(yaml.SafeLoader):
         return yaml_configs
 
     @classmethod
-    def load_project_configs(cls, filepath: str, params: dict):
+    def load_project_configs(cls, filepath: str, params: Dict[str, str]):
         """
         Helper method to retrieve user-provided macros and environment vars to apply at full parsing.
         Events are returned element-by-element, so we can rely on certain keywords and datatypes.
@@ -146,7 +146,7 @@ class JinjaEnvironmentYamlLoader(yaml.SafeLoader):
         return project_configs
 
     @staticmethod
-    def template_open_filepath(filepath: str, params: dict) -> str:
+    def template_open_filepath(filepath: str, params: Dict[str, str]) -> str:
         """
 
         :param filepath:

@@ -8,7 +8,7 @@ import time
 import datetime
 import pandas as pd
 
-from typing import Optional
+from typing import List, Optional
 
 from earthmover.error_handler import ErrorHandler
 from earthmover.graph import Graph
@@ -37,9 +37,9 @@ class Earthmover:
         "chunksize": 1024 * 1024 * 100,
     }
 
-    sources: list = []
-    transformations: list = []
-    destinations: list = []
+    sources: List[Source] = []
+    transformations: List[Transformation] = []
+    destinations: List[Destination] = []
 
     def __init__(self,
         config_file: str,

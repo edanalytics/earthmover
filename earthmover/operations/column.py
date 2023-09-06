@@ -1,10 +1,10 @@
 import csv
 import dask.dataframe as dd
-import jinja2
+import pandas as pd
 import re
 import string
-import os
-import pandas as pd
+
+from typing import Dict, List, Tuple
 
 from earthmover.nodes.operation import Operation
 from earthmover import util
@@ -14,14 +14,14 @@ class AddColumnsOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'operation',
         'columns',
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_dict: dict = None
+        self.columns_dict: Dict[str, str] = None
 
     def compile(self):
         """
@@ -31,7 +31,7 @@ class AddColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-    def execute(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: dd.core.DataFrame, **kwargs):
         """
 
         :return:
@@ -70,14 +70,14 @@ class ModifyColumnsOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'operation',
         'columns',
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_dict: dict = None
+        self.columns_dict: Dict[str, str] = None
 
     def compile(self):
         """
@@ -87,7 +87,7 @@ class ModifyColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-    def execute(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: dd.core.DataFrame, **kwargs):
         """
 
         :return:
@@ -131,14 +131,14 @@ class DuplicateColumnsOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'operation',
         'columns',
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_dict: dict = None
+        self.columns_dict: Dict[str, str] = None
 
     def compile(self):
         """
@@ -148,7 +148,7 @@ class DuplicateColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-    def execute(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: dd.core.DataFrame, **kwargs):
         """
 
         :return:
@@ -176,14 +176,14 @@ class RenameColumnsOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'operation',
         'columns',
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_dict: dict = None
+        self.columns_dict: Dict[str, str] = None
 
     def compile(self):
         """
@@ -193,7 +193,7 @@ class RenameColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-    def execute(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: dd.core.DataFrame, **kwargs):
         """
 
         :return:
@@ -219,14 +219,14 @@ class DropColumnsOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'operation',
         'columns',
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_to_drop: list = None
+        self.columns_to_drop: List[str] = None
 
     def compile(self):
         """
@@ -236,7 +236,7 @@ class DropColumnsOperation(Operation):
         super().compile()
         self.columns_to_drop = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
 
-    def execute(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: dd.core.DataFrame, **kwargs):
         """
 
         :return:
@@ -258,14 +258,14 @@ class KeepColumnsOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'operation',
         'columns',
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.header: list = None
+        self.header: List[str] = None
 
     def compile(self):
         """
@@ -276,7 +276,7 @@ class KeepColumnsOperation(Operation):
 
         self.header = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
 
-    def execute(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: dd.core.DataFrame, **kwargs):
         """
 
         :return:
@@ -298,14 +298,14 @@ class CombineColumnsOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'operation',
         'columns', 'new_column', 'separator',
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_list: list = None
+        self.columns_list: List[str] = None
         self.new_column: str = None
         self.separator: str = None
 
@@ -321,7 +321,7 @@ class CombineColumnsOperation(Operation):
 
         self.separator = self.config.get('separator', "")
 
-    def execute(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: dd.core.DataFrame, **kwargs):
         """
 
         :return:
@@ -348,16 +348,16 @@ class MapValuesOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'operation',
         'column', 'columns', 'mapping', 'map_file',
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_list: list = None
+        self.columns_list: List[str] = None
         self.map_file: str = None
-        self.mapping: dict = None
+        self.mapping: Dict[str, str] = None
 
     def compile(self):
         """
@@ -392,7 +392,7 @@ class MapValuesOperation(Operation):
             )
             raise
 
-    def execute(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: dd.core.DataFrame, **kwargs):
         """
 
         :return:
@@ -441,14 +441,14 @@ class DateFormatOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'operation',
         'column', 'columns', 'from_format', 'to_format',
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_list: list = None
+        self.columns_list: List[str] = None
         self.from_format: str = None
         self.to_format: str = None
 
@@ -474,7 +474,7 @@ class DateFormatOperation(Operation):
 
         self.columns_list = _columns or [_column]  # `[None]` evaluates to True
 
-    def execute(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: dd.core.DataFrame, **kwargs):
         """
 
         :return:
@@ -507,11 +507,11 @@ class SnakeCaseColumnsOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'operation',
     )
 
-    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
+    def execute(self, data: dd.core.DataFrame, **kwargs) -> dd.core.DataFrame:
         """
 
         :return:

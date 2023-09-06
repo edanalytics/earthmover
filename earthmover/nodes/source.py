@@ -5,7 +5,7 @@ import os
 import pandas as pd
 import re
 
-from typing import Callable
+from typing import Callable, List, Tuple
 
 from earthmover.node import Node
 from earthmover import util
@@ -13,6 +13,7 @@ from earthmover import util
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from earthmover.earthmover import Earthmover
+    from earthmover.yaml_parser import YamlMapping
 
 
 class Source(Node):
@@ -22,9 +23,9 @@ class Source(Node):
     type: str = 'source'
     mode: str = None  # Documents which class was chosen.
     is_remote: bool = None
-    allowed_configs: tuple = ('debug', 'expect', 'show_progress', 'chunksize', 'optional',)
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'chunksize', 'optional',)
 
-    def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
+    def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         """
         Logic for assigning sources to their respective classes.
 
@@ -77,7 +78,7 @@ class FileSource(Source):
     """
     mode: str = 'file'
     is_remote: bool = False
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'debug', 'expect', 'show_progress', 'chunksize', 'optional',
         'file', 'type', 'columns', 'header_rows',
         'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
@@ -88,7 +89,7 @@ class FileSource(Source):
         self.file: str = None
         self.file_type: str = None
         self.read_lambda: Callable = None
-        self.columns_list: list = None
+        self.columns_list: List[str] = None
 
     def compile(self):
         """
@@ -239,7 +240,7 @@ class FileSource(Source):
         :return:
         """
         # Define any other helpers that will be used below.
-        def __get_skiprows(config: dict):
+        def __get_skiprows(config: 'YamlMapping'):
             """ Retrieve or set default for header_rows value for CSV reads. """
             _header_rows = config.get('header_rows', 1)
             return int(_header_rows) - 1  # If header_rows = 1, skip none.
@@ -271,7 +272,7 @@ class FtpSource(Source):
     """
     mode: str = 'ftp'
     is_remote: bool = True
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'debug', 'expect', 'show_progress', 'chunksize', 'optional',
         'connection', 'query',
     )
@@ -344,7 +345,7 @@ class SqlSource(Source):
     """
     mode: str = 'sql'
     is_remote: bool = True
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'debug', 'expect', 'show_progress', 'chunksize', 'optional',
         'connection', 'query',
     )

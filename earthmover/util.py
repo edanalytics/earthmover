@@ -133,20 +133,3 @@ def build_jinja_template(template_string: str, macros: str = ""):
 
 # TODO: This has to be a NULL variable, without being None!
 __UNDEFINED = "[[UNDEFINED]]"
-
-def assert_get_key(obj: dict, key: str, *, default: Optional[Any] = __UNDEFINED, dtype: Any = object):
-    value = obj.get(key, default)
-
-    if value == __UNDEFINED:
-        logging.critical(
-            f"YAML parse error: Field not defined: {key}."
-        )
-
-    if not isinstance(value, dtype):
-        logging.critical(
-            f"YAML parse error: Field does not match expected datatype: {key}\n"
-            f"    Expected: {dtype}\n"
-            f"    Received: {value}"
-        )
-
-    return value

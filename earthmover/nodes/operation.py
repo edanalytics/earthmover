@@ -1,10 +1,15 @@
 import abc
+import dask.dataframe as dd
+
+from typing import Dict, Tuple
 
 from earthmover.node import Node
+from earthmover.yaml_parser import YamlMapping
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from earthmover.earthmover import Earthmover
+    from earthmover.yaml_parser import YamlMapping
 
 
 class Operation(Node):
@@ -12,9 +17,9 @@ class Operation(Node):
 
     """
     type: str = "operation"
-    allowed_configs: tuple = ('operation',)
+    allowed_configs: Tuple[str] = ('operation',)
 
-    def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
+    def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         """
         :param config:
         :param earthmover:
@@ -58,12 +63,12 @@ class Operation(Node):
 
         return object.__new__(operation_class)
 
-    def __init__(self, name: str, config: dict, *, earthmover: 'Earthmover'):
+    def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         full_name = f"{name}.operations:{config.get('operation')}"
         super().__init__(full_name, config, earthmover=earthmover)
 
     @abc.abstractmethod
-    def execute(self, data: 'DataFrame', *, data_mapping: dict, **kwargs) -> 'DataFrame':
+    def execute(self, data: dd.core.DataFrame, *, data_mapping: Dict[str, Node], **kwargs) -> dd.core.DataFrame:
         """
         Operation.execute() takes a DataFrame as input and outputs a DataFrame.
         Operation.execute() uses different arguments than Node.execute().

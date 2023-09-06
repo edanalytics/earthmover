@@ -1,3 +1,7 @@
+import dask.dataframe as dd
+
+from typing import List, Tuple
+
 from earthmover.nodes.operation import Operation
 
 
@@ -5,14 +9,14 @@ class DistinctRowsOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'operation',
         'column', 'columns',
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_list: list = None
+        self.columns_list: List[str] = None
 
     def compile(self):
         """
@@ -32,7 +36,7 @@ class DistinctRowsOperation(Operation):
         else:
             self.columns_list = []
 
-    def execute(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: dd.core.DataFrame, **kwargs):
         """
 
         :return:
@@ -70,7 +74,7 @@ class FilterRowsOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'operation',
         'query', 'behavior',
     )
@@ -98,7 +102,7 @@ class FilterRowsOperation(Operation):
             )
             raise
 
-    def execute(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: dd.core.DataFrame, **kwargs):
         """
 
         :return:

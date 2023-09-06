@@ -89,7 +89,7 @@ class RunsFile:
             return None
 
 
-    def find_hash_differences(self, run: dict) -> List[str]:
+    def find_hash_differences(self, run: Dict[str, str]) -> List[str]:
         """
 
         :param run:

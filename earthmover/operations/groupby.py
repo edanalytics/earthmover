@@ -1,5 +1,8 @@
+import dask.dataframe as dd
 import pandas as pd
 import re
+
+from typing import Dict, List, Tuple
 
 from earthmover.nodes.operation import Operation
 
@@ -8,7 +11,7 @@ class GroupByWithCountOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'operation',
         'group_by_columns', 'count_column',
     )
@@ -20,7 +23,7 @@ class GroupByWithCountOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.group_by_columns: list = None
+        self.group_by_columns: List[str] = None
         self.count_column: str = None
 
     def compile(self):
@@ -32,7 +35,7 @@ class GroupByWithCountOperation(Operation):
         self.group_by_columns = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
         self.count_column     = self.error_handler.assert_get_key(self.config, 'count_column', dtype=str)
 
-    def execute(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: dd.core.DataFrame, **kwargs):
         """
 
         :return:
@@ -68,7 +71,7 @@ class GroupByWithAggOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'operation',
         'group_by_columns', 'agg_column', 'separator',
     )
@@ -79,7 +82,7 @@ class GroupByWithAggOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.group_by_columns: list = None
+        self.group_by_columns: List[str] = None
         self.agg_column: str = None
         self.separator: str = None
 
@@ -97,7 +100,7 @@ class GroupByWithAggOperation(Operation):
             required=False, default=self.DEFAULT_AGG_SEP
         )
 
-    def execute(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: dd.core.DataFrame, **kwargs):
         """
 
         :return:
@@ -131,7 +134,7 @@ class GroupByOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'operation',
         'group_by_columns', 'create_columns',
     )
@@ -150,8 +153,8 @@ class GroupByOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.group_by_columns: list = None
-        self.create_columns_dict: dict = None
+        self.group_by_columns: List[str] = None
+        self.create_columns_dict: Dict[str, str] = None
 
     def compile(self):
         """
@@ -162,7 +165,7 @@ class GroupByOperation(Operation):
         self.group_by_columns    = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
         self.create_columns_dict = self.error_handler.assert_get_key(self.config, 'create_columns', dtype=dict)
 
-    def execute(self, data: 'DataFrame', **kwargs):
+    def execute(self, data: dd.core.DataFrame, **kwargs):
         """
         Note: There is a bug in Dask Groupby operations.
         Index columns are overwritten by 'index' after index reset.

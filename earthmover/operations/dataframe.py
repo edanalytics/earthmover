@@ -2,8 +2,9 @@ import dask.dataframe as dd
 import numpy as np
 import pandas as pd
 
-from typing import List
+from typing import Dict, List, Tuple
 
+from earthmover.node import Node
 from earthmover.nodes.operation import Operation
 
 
@@ -11,7 +12,7 @@ class JoinOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'operation',
         'sources', 'join_type',
         'left_keys', 'left_key', 'right_keys', 'right_key',
@@ -29,15 +30,15 @@ class JoinOperation(Operation):
 
         self.join_type: str = None
 
-        self.left_keys: list = None
-        self.left_keep_cols: list = None
-        self.left_drop_cols: list = None
-        self.left_cols: list = None  # The final column list built of cols and keys
+        self.left_keys: List[str] = None
+        self.left_keep_cols: List[str] = None
+        self.left_drop_cols: List[str] = None
+        self.left_cols: List[str] = None  # The final column list built of cols and keys
 
-        self.right_keys: list = None
-        self.right_keep_cols: list = None
-        self.right_drop_cols: list = None
-        self.right_cols: list = None  # The final column list built of cols and keys
+        self.right_keys: List[str] = None
+        self.right_keep_cols: List[str] = None
+        self.right_drop_cols: List[str] = None
+        self.right_cols: List[str] = None  # The final column list built of cols and keys
 
     def compile(self):
         """
@@ -85,7 +86,7 @@ class JoinOperation(Operation):
         self.right_keep_cols = self.error_handler.assert_get_key(self.config, 'right_keep_columns', dtype=list, required=False)
         self.right_drop_cols = self.error_handler.assert_get_key(self.config, 'right_drop_columns', dtype=list, required=False)
 
-    def execute(self, data: 'DataFrame', data_mapping: dict, **kwargs):
+    def execute(self, data: dd.core.DataFrame, data_mapping: Dict[str, Node], **kwargs):
         """
 
         :return:
@@ -173,7 +174,7 @@ class JoinOperation(Operation):
 
         return left_data
 
-    def set_concat_index(self, data: 'DataFrame', keys: List[str]):
+    def set_concat_index(self, data: dd.core.DataFrame, keys: List[str]):
         """
         Add a concatenated column to use as an index.
         Fix the divisions in the case of an empty dataframe.
@@ -200,7 +201,7 @@ class UnionOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'operation', 'sources',
     )
 
@@ -209,7 +210,7 @@ class UnionOperation(Operation):
 
         self.sources = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
 
-    def execute(self, data: 'DataFrame', data_mapping: dict, **kwargs):
+    def execute(self, data: dd.core.DataFrame, data_mapping: Dict[str, Node], **kwargs):
         """
 
         :return:

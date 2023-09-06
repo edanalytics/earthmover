@@ -1,8 +1,9 @@
-import os
-
 import jinja2
+import os
 import pandas as pd
 import re
+
+from typing import Tuple
 
 from earthmover.node import Node
 from earthmover import util
@@ -13,7 +14,7 @@ class Destination(Node):
     """
     type: str = 'destination'
     mode: str = None  # Documents which class was chosen.
-    allowed_configs: tuple = ('debug', 'expect', 'show_progress', 'chunksize', 'source',)
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'chunksize', 'source',)
 
     def __new__(cls, *args, **kwargs):
         return object.__new__(FileDestination)
@@ -29,7 +30,7 @@ class FileDestination(Destination):
 
     """
     mode: str = 'file'
-    allowed_configs: tuple = (
+    allowed_configs: Tuple[str] = (
         'debug', 'expect', 'show_progress', 'chunksize', 'source',
         'template', 'extension', 'linearize', 'header', 'footer',
     )

@@ -1,3 +1,5 @@
+from typing import List, Tuple
+
 from earthmover.node import Node
 from earthmover.nodes.operation import Operation
 
@@ -7,11 +9,11 @@ class Transformation(Node):
 
     """
     type: str = 'transformation'
-    allowed_configs: tuple = ('debug', 'expect', 'show_progress', 'chunksize', 'operations', 'source',)
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'chunksize', 'operations', 'source',)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.operations: list = []
+        self.operations: List[Node] = []
 
         # Load in the operation configs and save each under operations.
         # Verify all specified sources exist in the global config.

@@ -5,14 +5,14 @@ import jinja2
 import pandas as pd
 
 from dask.diagnostics import ProgressBar
-from typing import List
+from typing import Dict, List, Tuple
 
-from earthmover.yaml_parser import YamlMapping
 from earthmover import util
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from earthmover.earthmover import Earthmover
+    from earthmover.yaml_parser import YamlMapping
 
 
 class Node:
@@ -20,9 +20,9 @@ class Node:
 
     """
     type: str = None
-    allowed_configs: tuple = ('debug', 'expect', 'show_progress', 'chunksize')
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'chunksize')
 
-    def __init__(self, name: str, config: YamlMapping, *, earthmover: 'Earthmover'):
+    def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         self.name = name
         self.config = config
 
@@ -30,15 +30,15 @@ class Node:
         self.logger = earthmover.logger
         self.error_handler = earthmover.error_handler
 
-        self.upstream_sources: dict = {}
+        self.upstream_sources: Dict[str, 'Node'] = {}
 
-        self.data: 'DataFrame' = None
+        self.data: dd.core.DataFrame = None
 
         self.size: int = None
         self.num_rows: int = None
         self.num_cols: int = None
 
-        self.expectations: list = None
+        self.expectations: List[str] = None
         self.debug: bool = False
 
         # Customize internal Dask configs
@@ -73,10 +73,10 @@ class Node:
         pass
 
     @abc.abstractmethod
-    def execute(self, **kwargs) -> 'DataFrame':
+    def execute(self, **kwargs) -> dd.core.DataFrame:
         """
-        Node.execute()      :: Saves data into memory
-        Operation.execute() :: Does NOT save data into memory
+        Node.execute()          :: Saves data into memory
+        Operation.execute(data) :: Does NOT save data into memory
 
         :return:
         """
