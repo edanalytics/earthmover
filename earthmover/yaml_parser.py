@@ -154,6 +154,7 @@ class JinjaEnvironmentYamlLoader(yaml.SafeLoader):
         :return:
         """
         full_params = {**params, **os.environ.copy()}
+        full_params = {k: str(v) for k, v in full_params.items()}  # Force values to strings before templating.
 
         with open(filepath, "r", encoding='utf-8') as stream:
             content_string = stream.read()  # Force to a string to apply templating and expand Jinja

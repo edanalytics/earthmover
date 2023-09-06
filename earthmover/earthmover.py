@@ -65,13 +65,9 @@ class Earthmover:
         project_configs = JinjaEnvironmentYamlLoader.load_project_configs(self.config_file, params=self.params)
         self.macros = project_configs.get("macros", "").strip()
 
+        # Update parameter defaults, if any.
         for key, val in project_configs.get("parameter_defaults", {}).items():
-            if isinstance(val, str):
-                self.params.setdefault(key, val)  # set defaults, if any
-            else:
-                self.error_handler.throw(
-                    f"YAML config.parameter_defaults.{key} must be a string"
-                )
+            self.params.setdefault(key, val)
 
         # Complete a full-parse of the user config file.
         self.user_configs = JinjaEnvironmentYamlLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
