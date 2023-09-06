@@ -244,6 +244,10 @@ class Earthmover:
                 elif node.type == 'destination':
                     self.destinations.append(node)
 
+        ### Confirm that at least one source is defined.
+        if not self.sources:
+            self.error_handler.throw("No sources have been defined!")
+
 
     def execute(self, subgraph):
         """
