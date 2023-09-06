@@ -115,7 +115,7 @@ class Node:
             self.num_rows = dask.compute(self.num_rows)[0]
             self.logger.debug(
                 f"Node {self.name}: {self.num_rows} rows; {self.num_cols} columns\n"
-                f"Header: {self.data.columns}"
+                f"Header: {self.data.columns if hasattr(self.data, 'columns') else 'No header'}"
             )
 
     def check_expectations(self, expectations: List[str]):
