@@ -273,7 +273,7 @@ class FtpSource(Source):
     mode: str = 'ftp'
     is_remote: bool = True
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'chunksize', 'optional',
+        'debug', 'expect', 'show_progress', 'optional',
         'connection', 'query',
     )
 
@@ -346,7 +346,7 @@ class SqlSource(Source):
     mode: str = 'sql'
     is_remote: bool = True
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'chunksize', 'optional',
+        'debug', 'expect', 'show_progress', 'optional',
         'connection', 'query',
     )
 

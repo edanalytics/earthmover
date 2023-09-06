@@ -31,7 +31,7 @@ class FileDestination(Destination):
     """
     mode: str = 'file'
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'chunksize', 'source',
+        'debug', 'expect', 'show_progress', 'source',
         'template', 'extension', 'linearize', 'header', 'footer',
     )
 
