@@ -124,12 +124,8 @@ def build_jinja_template(template_string: str, macros: str = ""):
     """
     template = jinja2.Environment(
         loader=jinja2.FileSystemLoader(os.path.dirname('./'))
-    ).from_string(macros + template_string)
+    ).from_string(macros.strip() + template_string)
 
     template.globals['md5'] = lambda x: hashlib.md5(x.encode('utf-8')).hexdigest()
 
     return template
-
-
-# TODO: This has to be a NULL variable, without being None!
-__UNDEFINED = "[[UNDEFINED]]"
