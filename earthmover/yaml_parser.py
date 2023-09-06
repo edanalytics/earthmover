@@ -1,19 +1,19 @@
+import dataclasses
 import logging
 import os
 import yaml
 
-from dataclasses import dataclass
 from string import Template
 
 from earthmover import util
 
 
-@dataclass
+@dataclasses.dataclass
 class YamlMapping(dict):
     __line__: int = None
 
 
-class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
+class JinjaEnvironmentYamlLoader(yaml.SafeLoader):
     """
     Convert the mapping to a YamlMapping in order to store line number internally
         - Allows us to determine the line number for any element loaded from YAML file
@@ -23,6 +23,8 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
     Add environment variable interpolation
         - See https://stackoverflow.com/questions/52412297
     """
+    num_macros_lines: int = 0
+
     def construct_yaml_map(self, node):
         """
         Add line numbers as attribute of pyyaml.Constructor
@@ -32,7 +34,7 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
         :return:
         """
         data = YamlMapping()  # Originally `data = {}`
-        data.__line__ = node.start_mark.line + 1  # Start line numbering at 1
+        data.__line__ = node.start_mark.line + + self.num_macros_lines
         yield data
 
         value = self.construct_mapping(node)
@@ -121,6 +123,7 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
             loader.get_event()
 
         # Parse the file until we hit a dictionary that is not headed by "config".
+        project_configs = {}  # Return empty dict if no configs are found
         last_value = None  # Keep track of previous nodes
 
         while True:
@@ -128,17 +131,19 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
                 node = loader.compose_node(None, None)
                 value = loader.construct_object(node, True)
             except Exception:
-                return {}  # If we run into parsing errors, assume we've hit Jinja (and passed the configs).
+                break  # If we run into parsing errors, assume we've hit Jinja (and passed the configs).
 
-            if isinstance(value, dict):
+            if isinstance(value, dict):  # This prevents immediate return on `version: 2`.
                 if last_value == "config":
-                    return value
-                else:
-                    break  # Presume the first dictionary mapping of the file is the config block
+                    project_configs = value
+                break  # Presume the first dictionary mapping of the file is the config block
 
             last_value = value
 
-        return {}  # Return empty dict if no configs are found
+        macros = project_configs.get('macros', "")
+        JinjaEnvironmentYamlLoader.num_macros_lines = len(macros.split("\n"))  # Save line count for accurate logging
+
+        return project_configs
 
     @staticmethod
     def template_open_filepath(filepath: str, params: dict) -> str:
@@ -156,7 +161,7 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
         return Template(content_string).safe_substitute(full_params)
 
 
-YamlEnvironmentJinjaLoader.add_constructor(
+JinjaEnvironmentYamlLoader.add_constructor(
     'tag:yaml.org,2002:map',
-    YamlEnvironmentJinjaLoader.construct_yaml_map
+    JinjaEnvironmentYamlLoader.construct_yaml_map
 )
