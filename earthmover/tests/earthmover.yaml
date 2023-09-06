@@ -8,6 +8,9 @@ config:
   macros: >
     {% macro test() -%}
       testing!
+    {%- endmacro -%}
+    {% macro test2() -%}
+      testing!
     {%- endmacro %}
   parameter_defaults:
     BASE_DIR: "."
