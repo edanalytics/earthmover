@@ -10,7 +10,7 @@ class DistinctRowsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation',
+        'operation', 'chunksize',
         'column', 'columns',
     )
 
