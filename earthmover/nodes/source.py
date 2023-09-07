@@ -1,3 +1,4 @@
+import dask
 import dask.dataframe as dd
 import ftplib
 import io
@@ -48,7 +49,6 @@ class Source(Node):
             )
             raise
 
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -56,7 +56,6 @@ class Source(Node):
         # (In this case, `columns` must be specified, and are used to construct an empty
         # dataframe which is passed through to downstream transformations and destinations.)
         self.optional = self.config.get('optional', False)
-
 
     def ensure_dask_dataframe(self):
         """
@@ -68,7 +67,7 @@ class Source(Node):
             )
             self.data = dd.from_pandas(
                 self.data,
-                chunksize=self.chunksize
+                chunksize=dask.utils.parse_bytes(self.chunksize)
             )
 
 
