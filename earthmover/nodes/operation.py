@@ -69,7 +69,7 @@ class Operation(Node):
     def execute(self, data: 'DataFrame', *, data_mapping: Dict[str, Node], **kwargs) -> 'DataFrame':
         """
         Operation.execute() takes a DataFrame as input and outputs a DataFrame.
-        Operation.execute() uses different arguments than Node.execute().
+        This differs from Node.execute(), which mutates and returns self.data.
 
         In operations, `self.data` should NEVER be called, as this unnecessarily persists data in Operation nodes.
 
