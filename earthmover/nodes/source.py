@@ -385,7 +385,7 @@ class SqlSource(Source):
         super().execute()
 
         try:
-            self.data = pd.read_sql(sql=self.query, con=self.connection)
+            self.data = self.load_sql_dataframe()
             self.ensure_dask_dataframe()
 
             self.logger.debug(
@@ -397,3 +397,21 @@ class SqlSource(Source):
                 f"source {self.name} error ({err}); check `connection` and `query`"
             )
             raise
+
+    def load_sql_dataframe(self):
+        """
+        SQLAlchemy 2.x breaks our original method of loading a SQL dataframe.
+        Because SQLAlchemy is not a required library, we must account for either version.
+        :return:
+        """
+        try:
+            return pd.read_sql(sql=self.query, con=self.connection)
+
+        except AttributeError:
+            self.logger.debug(
+                "SQLAlchemy 1.x approach failed! Attempting SQLAlchemy 2.x approach..."
+            )
+            import sqlalchemy
+
+            with sqlalchemy.create_engine(self.connection).connect() as engine_cloud:
+                return pd.DataFrame(engine_cloud.execute(sqlalchemy.text(self.query)))
