@@ -184,13 +184,17 @@ class JoinOperation(Operation):
         :param keys:
         :return:
         """
-        data[self.INDEX_COL] = data[keys].apply(
-            lambda row: row.str.cat(sep='_', na_rep=''),
-            axis=1,
-            meta=pd.Series(dtype='str', name=self.INDEX_COL)
-        )
+        if len(keys) == 1:
+            data = data.set_index(keys[0], drop=False)
 
-        data = data.set_index(self.INDEX_COL, drop=True)
+        else:
+            data[self.INDEX_COL] = data[keys].apply(
+                lambda row: row.str.cat(sep='_', na_rep=''),
+                axis=1,
+                meta=pd.Series(dtype='str', name=self.INDEX_COL)
+            )
+
+            data = data.set_index(self.INDEX_COL, drop=True)
 
         # Empty dataframes create divisions that cannot be compared.
         if data.divisions == (pd.np.nan, pd.np.nan):
