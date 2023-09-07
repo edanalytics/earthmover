@@ -1,11 +1,13 @@
 import dask.dataframe as dd
-import numpy as np
 import pandas as pd
-
-from typing import Dict, List, Tuple
 
 from earthmover.node import Node
 from earthmover.nodes.operation import Operation
+
+from typing import Dict, List, Tuple
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from dask.dataframe.core import DataFrame
 
 
 class JoinOperation(Operation):
@@ -26,7 +28,7 @@ class JoinOperation(Operation):
         super().__init__(*args, **kwargs)
 
         # Check joined node
-        self.sources = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
+        self.sources: List[str] = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
 
         self.join_type: str = None
 
@@ -86,7 +88,7 @@ class JoinOperation(Operation):
         self.right_keep_cols = self.error_handler.assert_get_key(self.config, 'right_keep_columns', dtype=list, required=False)
         self.right_drop_cols = self.error_handler.assert_get_key(self.config, 'right_drop_columns', dtype=list, required=False)
 
-    def execute(self, data: dd.core.DataFrame, data_mapping: Dict[str, Node], **kwargs):
+    def execute(self, data: 'DataFrame', data_mapping: Dict[str, Node], **kwargs) -> 'DataFrame':
         """
 
         :return:
@@ -174,7 +176,7 @@ class JoinOperation(Operation):
 
         return left_data
 
-    def set_concat_index(self, data: dd.core.DataFrame, keys: List[str]):
+    def set_concat_index(self, data: 'DataFrame', keys: List[str]) -> 'DataFrame':
         """
         Add a concatenated column to use as an index.
         Fix the divisions in the case of an empty dataframe.
@@ -191,7 +193,7 @@ class JoinOperation(Operation):
         data = data.set_index(self.INDEX_COL, drop=True)
 
         # Empty dataframes create divisions that cannot be compared.
-        if data.divisions == (np.nan, np.nan):
+        if data.divisions == (pd.np.nan, pd.np.nan):
             data.divisions = (None, None)
 
         return data.repartition(partition_size=self.chunksize)
@@ -207,10 +209,9 @@ class UnionOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.sources = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
 
-    def execute(self, data: dd.core.DataFrame, data_mapping: Dict[str, Node], **kwargs):
+    def execute(self, data: 'DataFrame', data_mapping: Dict[str, Node], **kwargs) -> 'DataFrame':
         """
 
         :return:

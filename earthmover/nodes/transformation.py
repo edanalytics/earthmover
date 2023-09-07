@@ -1,7 +1,10 @@
-from typing import List, Tuple
-
 from earthmover.node import Node
 from earthmover.nodes.operation import Operation
+
+from typing import List, Tuple
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from dask.dataframe.core import DataFrame
 
 
 class Transformation(Node):
@@ -17,7 +20,7 @@ class Transformation(Node):
 
         # Load in the operation configs and save each under operations.
         # Verify all specified sources exist in the global config.
-        self.source = self.error_handler.assert_get_key(self.config, 'source', dtype=str)
+        self.source: str = self.error_handler.assert_get_key(self.config, 'source', dtype=str)
         self.upstream_sources[self.source] = None
 
         for operation_config in self.error_handler.assert_get_key(self.config, 'operations', dtype=list):
@@ -39,7 +42,7 @@ class Transformation(Node):
         for operation in self.operations:
             operation.compile()
 
-    def execute(self):
+    def execute(self) -> 'DataFrame':
         """
 
         :return:
@@ -52,3 +55,5 @@ class Transformation(Node):
             self.data = operation.execute(self.data, data_mapping=self.upstream_sources)
 
         self.post_execute()
+
+        return self.data

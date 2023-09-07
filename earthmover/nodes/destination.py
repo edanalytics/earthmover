@@ -3,10 +3,13 @@ import os
 import pandas as pd
 import re
 
-from typing import Tuple
-
 from earthmover.node import Node
 from earthmover import util
+
+from typing import Tuple
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from dask.dataframe.core import DataFrame
 
 class Destination(Node):
     """
@@ -21,7 +24,7 @@ class Destination(Node):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.source = self.error_handler.assert_get_key(self.config, 'source', dtype=str)
+        self.source: str = self.error_handler.assert_get_key(self.config, 'source', dtype=str)
         self.upstream_sources[self.source] = None
 
 
@@ -95,7 +98,7 @@ class FileDestination(Destination):
             )
             raise
 
-    def execute(self):
+    def execute(self) -> 'DataFrame':
         """
         :return:
         """
@@ -125,7 +128,9 @@ class FileDestination(Destination):
         self.logger.debug(f"output `{self.file}` written")
         self.size = os.path.getsize(self.file)
 
-    def render_row(self, row):
+        return self.data
+
+    def render_row(self, row: pd.Series):
         _data_tuple = row.to_dict()
         _data_tuple["__row_data__"] = row
 

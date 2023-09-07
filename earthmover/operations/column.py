@@ -1,13 +1,16 @@
 import csv
-import dask.dataframe as dd
+import dask
 import pandas as pd
 import re
 import string
 
-from typing import Dict, List, Tuple
-
 from earthmover.nodes.operation import Operation
 from earthmover import util
+
+from typing import Dict, List, Tuple
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from dask.dataframe.core import DataFrame
 
 
 class AddColumnsOperation(Operation):
@@ -31,7 +34,7 @@ class AddColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-    def execute(self, data: dd.core.DataFrame, **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:
@@ -87,7 +90,7 @@ class ModifyColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-    def execute(self, data: dd.core.DataFrame, **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:
@@ -148,7 +151,7 @@ class DuplicateColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-    def execute(self, data: dd.core.DataFrame, **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:
@@ -193,7 +196,7 @@ class RenameColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-    def execute(self, data: dd.core.DataFrame, **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:
@@ -236,7 +239,7 @@ class DropColumnsOperation(Operation):
         super().compile()
         self.columns_to_drop = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
 
-    def execute(self, data: dd.core.DataFrame, **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:
@@ -276,7 +279,7 @@ class KeepColumnsOperation(Operation):
 
         self.header = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
 
-    def execute(self, data: dd.core.DataFrame, **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:
@@ -321,7 +324,7 @@ class CombineColumnsOperation(Operation):
 
         self.separator = self.config.get('separator', "")
 
-    def execute(self, data: dd.core.DataFrame, **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:
@@ -392,7 +395,7 @@ class MapValuesOperation(Operation):
             )
             raise
 
-    def execute(self, data: dd.core.DataFrame, **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:
@@ -474,7 +477,7 @@ class DateFormatOperation(Operation):
 
         self.columns_list = _columns or [_column]  # `[None]` evaluates to True
 
-    def execute(self, data: dd.core.DataFrame, **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:
@@ -490,7 +493,7 @@ class DateFormatOperation(Operation):
         for _column in self.columns_list:
             try:
                 data[_column] = (
-                    dd.to_datetime(data[_column], format=self.from_format)
+                    dask.dataframe.to_datetime(data[_column], format=self.from_format)
                         .dt.strftime(self.to_format)
                 )
 
@@ -511,7 +514,7 @@ class SnakeCaseColumnsOperation(Operation):
         'operation',
     )
 
-    def execute(self, data: dd.core.DataFrame, **kwargs) -> dd.core.DataFrame:
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:

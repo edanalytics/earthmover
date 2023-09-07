@@ -1,8 +1,9 @@
-import dask.dataframe as dd
+from earthmover.nodes.operation import Operation
 
 from typing import List, Tuple
-
-from earthmover.nodes.operation import Operation
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from dask.dataframe.core import DataFrame
 
 
 class DistinctRowsOperation(Operation):
@@ -36,7 +37,7 @@ class DistinctRowsOperation(Operation):
         else:
             self.columns_list = []
 
-    def execute(self, data: dd.core.DataFrame, **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
@@ -102,7 +103,7 @@ class FilterRowsOperation(Operation):
             )
             raise
 
-    def execute(self, data: dd.core.DataFrame, **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:

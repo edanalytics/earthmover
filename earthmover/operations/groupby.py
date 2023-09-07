@@ -1,11 +1,12 @@
-import dask.dataframe as dd
 import pandas as pd
 import re
 
-from typing import Dict, List, Tuple
-
 from earthmover.nodes.operation import Operation
 
+from typing import Dict, List, Tuple
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from dask.dataframe.core import DataFrame
 
 class GroupByWithCountOperation(Operation):
     """
@@ -15,8 +16,6 @@ class GroupByWithCountOperation(Operation):
         'operation',
         'group_by_columns', 'count_column',
     )
-
-
 
     GROUPED_COL_NAME = "____grouped_col____"
     GROUPED_COL_SEP = "_____"
@@ -35,7 +34,7 @@ class GroupByWithCountOperation(Operation):
         self.group_by_columns = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
         self.count_column     = self.error_handler.assert_get_key(self.config, 'count_column', dtype=str)
 
-    def execute(self, data: dd.core.DataFrame, **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:
@@ -100,7 +99,7 @@ class GroupByWithAggOperation(Operation):
             required=False, default=self.DEFAULT_AGG_SEP
         )
 
-    def execute(self, data: dd.core.DataFrame, **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:
@@ -165,7 +164,7 @@ class GroupByOperation(Operation):
         self.group_by_columns    = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
         self.create_columns_dict = self.error_handler.assert_get_key(self.config, 'create_columns', dtype=dict)
 
-    def execute(self, data: dd.core.DataFrame, **kwargs):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
         Note: There is a bug in Dask Groupby operations.
         Index columns are overwritten by 'index' after index reset.

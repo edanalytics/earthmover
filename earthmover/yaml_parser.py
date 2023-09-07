@@ -86,7 +86,7 @@ class JinjaEnvironmentYamlLoader(yaml.SafeLoader):
         return yaml_configs
 
     @classmethod
-    def load_project_configs(cls, filepath: str, params: Dict[str, str]):
+    def load_project_configs(cls, filepath: str, params: Dict[str, str]) -> Dict[str, object]:
         """
         Helper method to retrieve user-provided macros and environment vars to apply at full parsing.
         Events are returned element-by-element, so we can rely on certain keywords and datatypes.

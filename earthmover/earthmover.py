@@ -8,8 +8,6 @@ import time
 import datetime
 import pandas as pd
 
-from typing import List, Optional
-
 from earthmover.error_handler import ErrorHandler
 from earthmover.graph import Graph
 from earthmover.runs_file import RunsFile
@@ -19,12 +17,15 @@ from earthmover.nodes.transformation import Transformation
 from earthmover.yaml_parser import JinjaEnvironmentYamlLoader
 from earthmover import util
 
+from typing import List, Optional
+
 
 class Earthmover:
     """
 
     """
-    start_timestamp = datetime.datetime.now()
+    start_timestamp: datetime.datetime  = datetime.datetime.now()
+    end_timestamp: Optional[datetime.datetime] = None
 
     config_defaults = {
         "output_dir": "./",
@@ -132,7 +133,7 @@ class Earthmover:
                     try:
                         node.upstream_sources[source] = self.graph.ref(source)
                         self.graph.add_edge(source, f"${node_type}.{name}")
-                    except:
+                    except KeyError:
                         self.error_handler.throw(f"invalid source {source}")
 
         ### Confirm that the graph is a DAG
@@ -162,7 +163,7 @@ class Earthmover:
                 break
 
 
-    def hash_graph_to_runs_file(self, subgraph):
+    def hash_graph_to_runs_file(self, subgraph: Graph):
         """
 
         :return:
@@ -219,7 +220,7 @@ class Earthmover:
         return runs_file
 
 
-    def compile(self, subgraph = None):
+    def compile(self, subgraph: Optional[Graph] = None):
         """
 
         :param subgraph:
@@ -249,7 +250,7 @@ class Earthmover:
             self.error_handler.throw("No sources have been defined!")
 
 
-    def execute(self, subgraph):
+    def execute(self, subgraph: Graph):
         """
 
         :param subgraph:
@@ -265,7 +266,7 @@ class Earthmover:
                         self.metadata["row_counts"].update({f"${node.type}s.{node.name}": len(node.data)})
 
 
-    def generate(self, selector):
+    def generate(self, selector: str):
         """
         Build DAG from YAML configs
 
@@ -353,7 +354,7 @@ class Earthmover:
                 fp.write(json.dumps(self.metadata, indent=4))
 
 
-    def test(self, tests_dir):
+    def test(self, tests_dir: str):
         # delete files in tests/output/
         output_dir = os.path.join(tests_dir, "outputs")
         for f in os.listdir(output_dir):

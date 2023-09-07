@@ -1,13 +1,11 @@
 import abc
-import dask.dataframe as dd
-
-from typing import Dict, Tuple
 
 from earthmover.node import Node
-from earthmover.yaml_parser import YamlMapping
 
+from typing import Dict, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
+    from dask.dataframe.core import DataFrame
     from earthmover.earthmover import Earthmover
     from earthmover.yaml_parser import YamlMapping
 
@@ -68,7 +66,7 @@ class Operation(Node):
         super().__init__(full_name, config, earthmover=earthmover)
 
     @abc.abstractmethod
-    def execute(self, data: dd.core.DataFrame, *, data_mapping: Dict[str, Node], **kwargs) -> dd.core.DataFrame:
+    def execute(self, data: 'DataFrame', *, data_mapping: Dict[str, Node], **kwargs) -> 'DataFrame':
         """
         Operation.execute() takes a DataFrame as input and outputs a DataFrame.
         Operation.execute() uses different arguments than Node.execute().

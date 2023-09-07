@@ -6,13 +6,13 @@ import os
 import pandas as pd
 import re
 
-from typing import Callable, List, Tuple
-
 from earthmover.node import Node
 from earthmover import util
 
+from typing import Callable, List, Optional, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
+    from dask.dataframe.core import DataFrame
     from earthmover.earthmover import Earthmover
     from earthmover.yaml_parser import YamlMapping
 
@@ -149,7 +149,7 @@ class FileSource(Source):
                 )
                 raise
 
-    def execute(self):
+    def execute(self) -> 'DataFrame':
         """
 
         :return:
@@ -180,6 +180,8 @@ class FileSource(Source):
                 f"source `{self.name}` loaded"
             )
 
+            return self.data
+
         # error handling:
         except ImportError:
             self.error_handler.throw(
@@ -195,7 +197,7 @@ class FileSource(Source):
             )
 
     @staticmethod
-    def _get_filetype(file):
+    def _get_filetype(file: str):
         """
         Determine file type from file extension
 
@@ -231,7 +233,8 @@ class FileSource(Source):
         ext = file.lower().rsplit('.', 1)[-1]
         return ext_mapping.get(ext)
 
-    def _get_read_lambda(self, file_type: str, sep: str = None):
+    @staticmethod
+    def _get_read_lambda(file_type: str, sep: Optional[str] = None):
         """
 
         :param file_type:

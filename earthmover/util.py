@@ -1,12 +1,13 @@
 import jinja2
 import hashlib
-import logging
 import os
 
-from typing import Any, Optional
 from sys import exc_info
 
-from earthmover.error_handler import ErrorHandler
+from typing import Optional
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from earthmover.error_handler import ErrorHandler
 
 
 def human_time(seconds: int) -> str:
@@ -29,8 +30,8 @@ def human_time(seconds: int) -> str:
     return str(round(seconds/86400)) + " days"
 
 
-def human_size(bytes, units=['B','KB','MB','GB','TB', 'PB', 'EB']):
-    return str(bytes) + units[0] if bytes < 1024 else human_size(bytes>>10, units[1:])
+def human_size(bytes_: int, units=('B','KB','MB','GB','TB', 'PB', 'EB')):
+    return str(bytes_) + units[0] if bytes_ < 1024 else human_size(bytes_>>10, units[1:])
 
 def get_sep(file: str) -> Optional[str]:
     """
@@ -67,7 +68,7 @@ def contains_jinja(string: str) -> bool:
         return False
 
 
-def render_jinja_template(row, template: jinja2.Template, template_str: str, *, error_handler: ErrorHandler) -> str:
+def render_jinja_template(row: dict, template: jinja2.Template, template_str: str, *, error_handler: 'ErrorHandler') -> str:
     """
 
     :param row:
@@ -99,10 +100,10 @@ def jinja2_template_error_lineno():
     function based on https://stackoverflow.com/questions/26967433/how-to-get-line-number-causing-an-exception-other-than-templatesyntaxerror-in
     :return: int lineno
     """
-    type, value, tb = exc_info()
+    type_, value, tb = exc_info()
 
     # skip non-Jinja errors
-    if not issubclass(type, jinja2.TemplateError):
+    if not issubclass(type_, jinja2.TemplateError):
         return None
 
     # one particular Exception type has a lineno built in - grab it!

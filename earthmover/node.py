@@ -1,18 +1,20 @@
 import abc
 import dask
-import dask.dataframe as dd
 import jinja2
 import pandas as pd
 
 from dask.diagnostics import ProgressBar
-from typing import Dict, List, Tuple
 
 from earthmover import util
 
+from typing import Dict, List, Tuple, Optional, Union
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
+    from dask.dataframe.core import DataFrame
     from earthmover.earthmover import Earthmover
+    from earthmover.error_handler import ErrorHandler
     from earthmover.yaml_parser import YamlMapping
+    from logging import Logger
 
 
 class Node:
@@ -23,16 +25,16 @@ class Node:
     allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'chunksize')
 
     def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
-        self.name = name
-        self.config = config
+        self.name: str = name
+        self.config: 'YamlMapping' = config
 
-        self.earthmover = earthmover
-        self.logger = earthmover.logger
-        self.error_handler = earthmover.error_handler
+        self.earthmover: 'Earthmover' = earthmover
+        self.logger: 'Logger' = earthmover.logger
+        self.error_handler: 'ErrorHandler' = earthmover.error_handler
 
-        self.upstream_sources: Dict[str, 'Node'] = {}
+        self.upstream_sources: Dict[str, Optional['Node']] = {}
 
-        self.data: dd.core.DataFrame = None
+        self.data: 'DataFrame' = None
 
         self.size: int = None
         self.num_rows: int = None
@@ -42,11 +44,11 @@ class Node:
         self.debug: bool = False
 
         # Customize internal Dask configs
-        self.chunksize = self.config.get('chunksize', self.earthmover.state_configs["chunksize"])
+        self.chunksize: Union[int, str] = self.config.get('chunksize', self.earthmover.state_configs["chunksize"])
 
         # Optional variables for displaying progress and diagnostics.
-        self.show_progress = self.config.get('show_progress', self.earthmover.state_configs["show_progress"])
-        self.progress_bar = None
+        self.show_progress: bool = self.config.get('show_progress', self.earthmover.state_configs["show_progress"])
+        self.progress_bar: Optional[ProgressBar] = None
 
     @abc.abstractmethod
     def compile(self):
@@ -73,7 +75,7 @@ class Node:
         pass
 
     @abc.abstractmethod
-    def execute(self, **kwargs) -> dd.core.DataFrame:
+    def execute(self, **kwargs) -> 'DataFrame':
         """
         Node.execute()          :: Saves data into memory
         Operation.execute(data) :: Does NOT save data into memory
@@ -106,7 +108,7 @@ class Node:
         self.check_expectations(self.expectations)
 
         # Get lazy row and column counts to display in graph.png.
-        if isinstance(self.data, (pd.Series, dd.Series)):
+        if isinstance(self.data, (pd.Series, dask.dataframe.Series)):
             self.num_rows, self.num_cols = self.data.size, 1
         else:
             self.num_rows, self.num_cols = self.data.shape
