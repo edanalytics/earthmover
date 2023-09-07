@@ -118,6 +118,9 @@ class JoinOperation(Operation):
 
         left_data = data[self.left_cols]
 
+        # Keep track of whether a concatted-index was built during any of the merges.
+        use_concat_index = False
+
         # Iterate each right dataset
         for source in self.sources:
             right_data = data_mapping[source].data
@@ -156,8 +159,12 @@ class JoinOperation(Operation):
                         f"data at {self.type} `{self.name}` has {left_data.npartitions} (left) and {right_data.npartitions} (right) partitions..."
                     )
 
+                    # If the left index has not been already set, set it now.
+                    if not use_concat_index:
+                        left_data = self.set_concat_index(left_data, self.left_keys)
+                        use_concat_index = True
+
                     # Concatenate key columns into an index to allow merging by index.
-                    left_data = self.set_concat_index(left_data, self.left_keys)
                     right_data = self.set_concat_index(right_data, self.right_keys)
 
                     left_data = dd.merge(
@@ -165,16 +172,17 @@ class JoinOperation(Operation):
                         left_index=True, right_index=True,
                     )
 
-                    # Remove the generated index column.
-                    left_data = left_data.reset_index(drop=True).repartition(partition_size=self.chunksize)
-
             except Exception as _:
                 self.error_handler.throw(
                     "error during `join` operation. Check your join keys?"
                 )
                 raise
 
-        return left_data
+        # Remove the generated index column.
+        if use_concat_index:
+            left_data = left_data.reset_index(drop=True)
+
+        return left_data.repartition(partition_size=self.chunksize)
 
     def set_concat_index(self, data: 'DataFrame', keys: List[str]) -> 'DataFrame':
         """
