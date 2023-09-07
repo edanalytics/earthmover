@@ -76,7 +76,7 @@ class FilterRowsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation',
+        'operation', 'chunksize',
         'query', 'behavior',
     )
 
@@ -125,4 +125,4 @@ class FilterRowsOperation(Operation):
             )
             raise
 
-        return data
+        return data.repartition(partition_size=self.chunksize)

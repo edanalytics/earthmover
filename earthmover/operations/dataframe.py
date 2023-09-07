@@ -234,4 +234,4 @@ class UnionOperation(Operation):
                 )
                 raise
 
-        return data
+        return data.repartition(partition_size=self.chunksize)
