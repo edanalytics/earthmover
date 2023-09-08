@@ -16,7 +16,7 @@ class Transformation(Node):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.operations: List[Node] = []
+        self.operations: List[Operation] = []
 
         # Load in the operation configs and save each under operations.
         # Verify all specified sources exist in the global config.
