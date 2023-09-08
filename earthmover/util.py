@@ -8,6 +8,7 @@ from typing import Optional
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from earthmover.error_handler import ErrorHandler
+    from pandas import Series
 
 
 def human_time(seconds: int) -> str:
@@ -68,7 +69,7 @@ def contains_jinja(string: str) -> bool:
         return False
 
 
-def render_jinja_template(row: dict, template: jinja2.Template, template_str: str, *, error_handler: 'ErrorHandler') -> str:
+def render_jinja_template(row: 'Series', template: jinja2.Template, template_str: str, *, error_handler: 'ErrorHandler') -> str:
     """
 
     :param row:
