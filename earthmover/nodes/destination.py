@@ -1,3 +1,5 @@
+import csv
+import dask.dataframe as dd
 import jinja2
 import os
 import pandas as pd
@@ -100,6 +102,11 @@ class FileDestination(Destination):
 
     def execute(self, **kwargs) -> 'DataFrame':
         """
+        Note: there is a bug in dask where one cannot append to an existing file:
+        https://docs.dask.org/en/stable/changelog.html#id7
+
+        As a workaround, `header=[self.header]` only when defined.
+
         :return:
         """
         super().execute(**kwargs)
@@ -109,26 +116,34 @@ class FileDestination(Destination):
                 .fillna('')
                 .map_partitions(lambda x: x.apply(self.render_row, axis=1), meta=pd.Series('str'))
         )
-        self.data = self.opt_repartition_data(self.data)
+
+        return self.data
+
+    def post_execute(self, **kwargs):
+        """
+
+        :param kwargs:
+        :return:
+        """
+        super().post_execute(**kwargs)
 
         # Verify the output directory exists.
         os.makedirs(os.path.dirname(self.file), exist_ok=True)
-        with open(self.file, 'w', encoding='utf-8') as fp:
-            self.logger.debug(f"writing output file `{self.file}`...")
 
-            if self.header:
-                fp.write(self.header + "\n")
+        # Write the optional header, the JSON lines as CSV (for performance), and the optional footer.
+        dd.to_csv(
+            self.data, filename=self.file, single_file=True, mode='wt',  # Dask arguments
+            header=[self.header] if self.header else False,
+            # We must write the header directly due to aforementioned bug.
+            index=False, escapechar="\x01", sep="\x02", quoting=csv.QUOTE_NONE  # Pandas arguments (use a fake-CSV sep)
+        )
 
-            for row in self.data.compute():
-                fp.write(row + "\n")
-
-            if self.footer:
+        if self.footer:
+            with open(self.file, 'a', encoding='utf-8') as fp:
                 fp.write(self.footer)
 
         self.logger.debug(f"output `{self.file}` written")
         self.size = os.path.getsize(self.file)
-
-        return self.data
 
     def render_row(self, row: pd.Series):
         _data_tuple = row.to_dict()
