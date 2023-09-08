@@ -100,7 +100,7 @@ class Operation(Node):
         """
         if self.partition_size:
             self.logger.debug(
-                f"Repartitioning `${self.type}s.{self.name}` into partitions of size `{self.partition_size}`"
+                f"Repartitioning `${self.type}s.{self.name}` into partitions of size `{self.partition_size}` (current partition count: {data.npartitions})"
             )
             data = data.repartition(partition_size=self.partition_size)
 

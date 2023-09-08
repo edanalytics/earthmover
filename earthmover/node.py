@@ -48,7 +48,7 @@ class Node:
 
         # Optional variables for displaying progress and diagnostics.
         self.show_progress: bool = self.config.get('show_progress', self.earthmover.state_configs["show_progress"])
-        self.progress_bar: Optional[ProgressBar] = None
+        self.progress_bar: ProgressBar = ProgressBar(minimum=10, dt=5.0)  # Always instantiate, but only use if `show_progress is True`.
 
     @abc.abstractmethod
     def compile(self):
@@ -86,13 +86,11 @@ class Node:
             file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
         )
 
-        if self.show_progress:
-            self.logger.info(f"Displaying progress for {self.type} node: {self.name}")
-            self.progress_bar = ProgressBar(dt=1.0)
-            self.progress_bar.__enter__()  # Open context manager manually to avoid with-clause
+        self.start_progress()  # Turn on the progress bar manually.
 
         pass
 
+    @abc.abstractmethod
     def post_execute(self, **kwargs):
         """
         Function to run generic logic following execute.
@@ -106,13 +104,11 @@ class Node:
         """
         if self.partition_size:
             self.logger.debug(
-                f"Repartitioning `${self.type}s.{self.name}` into partitions of size `{self.partition_size}`"
+                f"Repartitioning `${self.type}s.{self.name}` into partitions of size `{self.partition_size}` (current partition count: {self.data.npartitions})"
             )
             self.data = self.data.repartition(partition_size=self.partition_size)
 
-        # Turn off the progress bar manually.
-        if self.show_progress:
-            self.progress_bar.__exit__(None, None, None)  # Close context manager manually to avoid with-clause
+        self.end_progress()  # Turn off the progress bar manually.
 
         self.check_expectations(self.expectations)
 
@@ -128,6 +124,8 @@ class Node:
                 f"Node {self.name}: {self.num_rows} rows; {self.num_cols} columns\n"
                 f"Header: {self.data.columns if hasattr(self.data, 'columns') else 'No header'}"
             )
+
+        pass
 
     def check_expectations(self, expectations: List[str]):
         """
@@ -159,3 +157,21 @@ class Node:
                     self.logger.info(
                         f"Assertion passed! {self.name}: {expectation}"
                     )
+
+    def start_progress(self):
+        """
+        Helper function to make 
+
+        :return:
+        """
+        if self.show_progress:
+            self.logger.info(f"Displaying progress for {self.type} node: {self.name}")
+            self.progress_bar.__enter__()  # Open context manager manually to avoid with-clause
+
+    def end_progress(self):
+        """
+
+        :return:
+        """
+        if self.show_progress:
+            self.progress_bar.__exit__(None, None, None)  # Close context manager manually to avoid with-clause
