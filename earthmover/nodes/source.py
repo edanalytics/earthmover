@@ -23,7 +23,7 @@ class Source(Node):
     type: str = 'source'
     mode: str = None  # Documents which class was chosen.
     is_remote: bool = None
-    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'optional',)
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'chunksize', 'optional',)
 
     NUM_ROWS_PER_CHUNK: int = 10000
 
@@ -52,11 +52,20 @@ class Source(Node):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.chunksize: int = None
 
         # A source can be blank if `optional=True` is specified in its configs.
         # (In this case, `columns` must be specified, and are used to construct an empty
         # dataframe which is passed through to downstream transformations and destinations.)
         self.optional: bool = self.config.get('optional', False)
+
+    def compile(self):
+        """
+
+        :return:
+        """
+        super().compile()
+        self.chunksize = self.error_handler.assert_get_key(self.config, 'chunksize', dtype=int, required=False, default=self.NUM_ROWS_PER_CHUNK)
 
     def post_execute(self, **kwargs):
         """
@@ -68,7 +77,9 @@ class Source(Node):
             self.logger.debug(
                 f"Casting data in {self.type} node `{self.name}` to a Dask dataframe."
             )
-            self.data = dd.from_pandas(self.data, chunksize=self.NUM_ROWS_PER_CHUNK)
+            self.data = dd.from_pandas(self.data, chunksize=self.chunksize)
+
+        super().post_execute(**kwargs)
 
 
 class FileSource(Source):
@@ -78,7 +89,7 @@ class FileSource(Source):
     mode: str = 'file'
     is_remote: bool = False
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'optional',
+        'debug', 'expect', 'show_progress', 'chunksize', 'optional',
         'file', 'type', 'columns', 'header_rows',
         'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
     )
@@ -272,7 +283,7 @@ class FtpSource(Source):
     mode: str = 'ftp'
     is_remote: bool = True
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'optional',
+        'debug', 'expect', 'show_progress', 'chunksize', 'optional',
         'connection', 'query',
     )
 
@@ -344,7 +355,7 @@ class SqlSource(Source):
     mode: str = 'sql'
     is_remote: bool = True
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'optional',
+        'debug', 'expect', 'show_progress', 'chunksize', 'optional',
         'connection', 'query',
     )
 
