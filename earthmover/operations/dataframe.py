@@ -1,4 +1,5 @@
 import dask.dataframe as dd
+import numpy as np
 import pandas as pd
 
 from earthmover.node import Node
@@ -205,7 +206,7 @@ class JoinOperation(Operation):
             data = data.set_index(self.INDEX_COL, drop=True)
 
         # Empty dataframes create divisions that cannot be compared.
-        if data.divisions == (pd.np.nan, pd.np.nan):
+        if data.divisions == (np.nan, np.nan):
             data.divisions = (None, None)
 
         return data.repartition(partition_size=self.chunksize)
