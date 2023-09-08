@@ -104,6 +104,12 @@ class Node:
 
         :return:
         """
+        if self.chunksize:
+            self.logger.debug(
+                f"Repartitioning `${self.type}s.{self.name}` into chunks of size `{self.chunksize}`"
+            )
+            self.data = self.data.repartition(partition_size=self.chunksize)
+
         # Turn off the progress bar manually.
         if self.show_progress:
             self.progress_bar.__exit__(None, None, None)  # Close context manager manually to avoid with-clause
@@ -122,23 +128,6 @@ class Node:
                 f"Node {self.name}: {self.num_rows} rows; {self.num_cols} columns\n"
                 f"Header: {self.data.columns if hasattr(self.data, 'columns') else 'No header'}"
             )
-
-    def opt_repartition_data(self, data: 'DataFrame'):
-        """
-        Helper method to log when repartitioning takes place.
-
-        :param data:
-        :return:
-        """
-        if self.chunksize:
-            self.logger.debug(
-                f"Repartitioning `${self.type}s.{self.name}` into chunks of size `{self.chunksize}`"
-            )
-            data = data.repartition(partition_size=self.chunksize)
-
-        return data
-
-
 
     def check_expectations(self, expectations: List[str]):
         """

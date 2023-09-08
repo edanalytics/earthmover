@@ -26,7 +26,7 @@ class Source(Node):
     is_remote: bool = None
     allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'chunksize', 'optional',)
 
-    CHUNKSIZE: str = "100MB"
+    NUM_ROWS_PER_CHUNK: int = 10000
 
     def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         """
@@ -58,20 +58,18 @@ class Source(Node):
         # (In this case, `columns` must be specified, and are used to construct an empty
         # dataframe which is passed through to downstream transformations and destinations.)
         self.optional: bool = self.config.get('optional', False)
-        self.chunksize: Union[str, int] = self.chunksize or self.CHUNKSIZE  # Require a chunksize be set for sources.
 
-    def ensure_dask_dataframe(self):
+    def post_execute(self, **kwargs):
         """
-        Converts a Pandas DataFrame to a Dask DataFrame.
+
+        :param kwargs:
+        :return:
         """
         if isinstance(self.data, pd.DataFrame):
             self.logger.debug(
                 f"Casting data in {self.type} node `{self.name}` to a Dask dataframe."
             )
-            self.data = dd.from_pandas(
-                self.data,
-                chunksize=dask.utils.parse_bytes(self.chunksize)
-            )
+            self.data = dd.from_pandas(self.data, chunksize=self.NUM_ROWS_PER_CHUNK)
 
 
 class FileSource(Source):
@@ -164,7 +162,6 @@ class FileSource(Source):
                 self.data = pd.DataFrame(columns = self.columns_list)
             else:
                 self.data = self.read_lambda(self.file, self.config)
-            self.ensure_dask_dataframe()
 
             # Verify the column list provided matches the number of columns in the dataframe.
             if self.columns_list:
@@ -331,7 +328,6 @@ class FtpSource(Source):
             flo.seek(0)
 
             self.data = pd.read_csv(flo)
-            self.ensure_dask_dataframe()
 
         except Exception as err:
             self.error_handler.throw(
@@ -389,7 +385,7 @@ class SqlSource(Source):
 
         try:
             self.data = self.load_sql_dataframe()
-            self.ensure_dask_dataframe()
+
 
             self.logger.debug(
                 f"source `{self.name}` loaded (via SQL)"

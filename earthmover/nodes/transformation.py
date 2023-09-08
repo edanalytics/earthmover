@@ -57,6 +57,4 @@ class Transformation(Node):
 
         self.post_execute()
 
-        self.data = self.opt_repartition_data(self.data)
-
         return self.data

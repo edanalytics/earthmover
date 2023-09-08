@@ -98,6 +98,10 @@ class Operation(Node):
         :param data:
         :return:
         """
-        data = self.opt_repartition_data(data)
+        if self.chunksize:
+            self.logger.debug(
+                f"Repartitioning `${self.type}s.{self.name}` into chunks of size `{self.chunksize}`"
+            )
+            data = data.repartition(partition_size=self.chunksize)
 
         return data
