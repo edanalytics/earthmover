@@ -119,9 +119,6 @@ class JoinOperation(Operation):
 
         left_data = data[self.left_cols]
 
-        # Keep track of whether a concatted-index was built during any of the merges.
-        use_concat_index = False
-
         # Iterate each right dataset
         for source in self.sources:
             right_data = data_mapping[source].data
@@ -149,29 +146,10 @@ class JoinOperation(Operation):
 
             # Complete the merge, using different logic depending on the partitions of the datasets.
             try:
-                if left_data.npartitions == 1 or right_data.npartitions == 1:
-                    left_data = dd.merge(
-                        left_data, right_data, how=self.join_type,
-                        left_on=self.left_keys, right_on=self.right_keys
-                    )
-
-                else:
-                    self.logger.debug(
-                        f"data at {self.type} `{self.name}` has {left_data.npartitions} (left) and {right_data.npartitions} (right) partitions..."
-                    )
-
-                    # If the left index has not been already set, set it now.
-                    if not use_concat_index:
-                        left_data = self.set_concat_index(left_data, self.left_keys)
-                        use_concat_index = True
-
-                    # Concatenate key columns into an index to allow merging by index.
-                    right_data = self.set_concat_index(right_data, self.right_keys)
-
-                    left_data = dd.merge(
-                        left_data, right_data, how=self.join_type,
-                        left_index=True, right_index=True,
-                    )
+                left_data = dd.merge(
+                    left_data, right_data, how=self.join_type,
+                    left_on=self.left_keys, right_on=self.right_keys
+                )
 
             except Exception as _:
                 self.error_handler.throw(
@@ -179,37 +157,7 @@ class JoinOperation(Operation):
                 )
                 raise
 
-        # Remove the generated index column.
-        if use_concat_index:
-            left_data = left_data.reset_index(drop=True)
-
         return left_data
-
-    def set_concat_index(self, data: 'DataFrame', keys: List[str]) -> 'DataFrame':
-        """
-        Add a concatenated column to use as an index.
-        Fix the divisions in the case of an empty dataframe.
-        :param data:
-        :param keys:
-        :return:
-        """
-        if len(keys) == 1:
-            data = data.set_index(keys[0], drop=False)
-
-        else:
-            data[self.INDEX_COL] = data[keys].apply(
-                lambda row: row.str.cat(sep='_', na_rep=''),
-                axis=1,
-                meta=pd.Series(dtype='str', name=self.INDEX_COL)
-            )
-
-            data = data.set_index(self.INDEX_COL, drop=True)
-
-        # Empty dataframes create divisions that cannot be compared.
-        if data.divisions == (np.nan, np.nan):
-            data.divisions = (None, None)
-
-        return data
 
 
 class UnionOperation(Operation):
