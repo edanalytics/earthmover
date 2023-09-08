@@ -93,15 +93,18 @@ class Node:
 
         pass
 
-    def post_execute(self):
+    def post_execute(self, **kwargs):
         """
         Function to run generic logic following execute.
 
-        1. Check the dataframe aligns with expectations
-        2. Prepare row and column counts for graphing
+        1. Complete any post-transformations to self.data (currently unused).
+        2. Check the dataframe aligns with expectations.
+        3. Prepare row and column counts for graphing.
+        4. Display row and column counts if debug is True.
 
         :return:
         """
+        # Turn off the progress bar manually.
         if self.show_progress:
             self.progress_bar.__exit__(None, None, None)  # Close context manager manually to avoid with-clause
 
