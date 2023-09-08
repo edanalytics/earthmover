@@ -2,9 +2,6 @@ from earthmover.node import Node
 from earthmover.nodes.operation import Operation
 
 from typing import List, Tuple
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from dask.dataframe.core import DataFrame
 
 
 class Transformation(Node):
@@ -42,7 +39,7 @@ class Transformation(Node):
         for operation in self.operations:
             operation.compile()
 
-    def execute(self) -> 'DataFrame':
+    def execute(self):
         """
 
         :return:
@@ -56,5 +53,3 @@ class Transformation(Node):
             self.data = operation.post_execute(self.data)
 
         self.post_execute()
-
-        return self.data

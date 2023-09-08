@@ -9,9 +9,7 @@ from earthmover.node import Node
 from earthmover import util
 
 from typing import Tuple
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from dask.dataframe.core import DataFrame
+
 
 class Destination(Node):
     """
@@ -100,7 +98,7 @@ class FileDestination(Destination):
             )
             raise
 
-    def execute(self, **kwargs) -> 'DataFrame':
+    def execute(self, **kwargs):
         """
         Note: there is a bug in dask where one cannot append to an existing file:
         https://docs.dask.org/en/stable/changelog.html#id7
@@ -116,8 +114,6 @@ class FileDestination(Destination):
                 .fillna('')
                 .map_partitions(lambda x: x.apply(self.render_row, axis=1), meta=pd.Series('str'))
         )
-
-        return self.data
 
     def post_execute(self, **kwargs):
         """

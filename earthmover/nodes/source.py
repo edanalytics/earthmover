@@ -149,7 +149,7 @@ class FileSource(Source):
                 )
                 raise
 
-    def execute(self) -> 'DataFrame':
+    def execute(self):
         """
 
         :return:
@@ -178,8 +178,6 @@ class FileSource(Source):
             self.logger.debug(
                 f"source `{self.name}` loaded"
             )
-
-            return self.data
 
         # error handling:
         except ImportError:
