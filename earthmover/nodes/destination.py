@@ -34,7 +34,7 @@ class FileDestination(Destination):
     """
     mode: str = 'file'
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'source',
+        'debug', 'expect', 'show_progress', 'chunksize', 'source',
         'template', 'extension', 'linearize', 'header', 'footer',
     )
 
@@ -98,20 +98,20 @@ class FileDestination(Destination):
             )
             raise
 
-    def execute(self) -> 'DataFrame':
+    def execute(self, **kwargs) -> 'DataFrame':
         """
         :return:
         """
-        super().execute()
+        super().execute(**kwargs)
 
-        # this renders each row without having to itertuples() (which is much slower)
-        # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
         self.data = (
             self.upstream_sources[self.source].data
                 .fillna('')
                 .map_partitions(lambda x: x.apply(self.render_row, axis=1), meta=pd.Series('str'))
         )
+        self.data = self.opt_repartition_data(self.data)
 
+        # Verify the output directory exists.
         os.makedirs(os.path.dirname(self.file), exist_ok=True)
         with open(self.file, 'w', encoding='utf-8') as fp:
             self.logger.debug(f"writing output file `{self.file}`...")

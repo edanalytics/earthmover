@@ -15,7 +15,7 @@ class Operation(Node):
 
     """
     type: str = "operation"
-    allowed_configs: Tuple[str] = ('operation',)
+    allowed_configs: Tuple[str] = ('operation', 'chunksize',)
 
     def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         """
@@ -98,4 +98,6 @@ class Operation(Node):
         :param data:
         :return:
         """
+        data = self.opt_repartition_data(data)
+
         return data

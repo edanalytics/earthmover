@@ -35,7 +35,6 @@ class Earthmover:
         "show_stacktrace": False,
         "tmp_dir": tempfile.gettempdir(),
         "show_progress": False,
-        "chunksize": "100MB",
     }
 
     sources: List[Source] = []

@@ -13,7 +13,7 @@ class GroupByWithCountOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation',
+        'operation', 'chunksize',
         'group_by_columns', 'count_column',
     )
 
@@ -71,7 +71,7 @@ class GroupByWithAggOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation',
+        'operation', 'chunksize',
         'group_by_columns', 'agg_column', 'separator',
     )
 
@@ -134,7 +134,7 @@ class GroupByOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation',
+        'operation', 'chunksize',
         'group_by_columns', 'create_columns',
     )
 

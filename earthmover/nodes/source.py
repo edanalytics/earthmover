@@ -9,7 +9,7 @@ import re
 from earthmover.node import Node
 from earthmover import util
 
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple, Union
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
@@ -25,6 +25,8 @@ class Source(Node):
     mode: str = None  # Documents which class was chosen.
     is_remote: bool = None
     allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'chunksize', 'optional',)
+
+    CHUNKSIZE: str = "100MB"
 
     def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         """
@@ -55,7 +57,8 @@ class Source(Node):
         # A source can be blank if `optional=True` is specified in its configs.
         # (In this case, `columns` must be specified, and are used to construct an empty
         # dataframe which is passed through to downstream transformations and destinations.)
-        self.optional = self.config.get('optional', False)
+        self.optional: bool = self.config.get('optional', False)
+        self.chunksize: Union[str, int] = self.chunksize or self.CHUNKSIZE  # Require a chunksize be set for sources.
 
     def ensure_dask_dataframe(self):
         """
@@ -275,7 +278,7 @@ class FtpSource(Source):
     mode: str = 'ftp'
     is_remote: bool = True
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'optional',
+        'debug', 'expect', 'show_progress', 'chunksize', 'optional',
         'connection', 'query',
     )
 
@@ -348,7 +351,7 @@ class SqlSource(Source):
     mode: str = 'sql'
     is_remote: bool = True
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'optional',
+        'debug', 'expect', 'show_progress', 'chunksize', 'optional',
         'connection', 'query',
     )
 

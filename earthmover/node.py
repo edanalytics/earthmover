@@ -22,7 +22,7 @@ class Node:
 
     """
     type: str = None
-    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'chunksize')
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'chunksize',)
 
     def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         self.name: str = name
@@ -44,7 +44,7 @@ class Node:
         self.debug: bool = False
 
         # Customize internal Dask configs
-        self.chunksize: Union[int, str] = self.config.get('chunksize', self.earthmover.state_configs["chunksize"])
+        self.chunksize: Union[int, str] = self.config.get('chunksize')
 
         # Optional variables for displaying progress and diagnostics.
         self.show_progress: bool = self.config.get('show_progress', self.earthmover.state_configs["show_progress"])
@@ -122,6 +122,23 @@ class Node:
                 f"Node {self.name}: {self.num_rows} rows; {self.num_cols} columns\n"
                 f"Header: {self.data.columns if hasattr(self.data, 'columns') else 'No header'}"
             )
+
+    def opt_repartition_data(self, data: 'DataFrame'):
+        """
+        Helper method to log when repartitioning takes place.
+
+        :param data:
+        :return:
+        """
+        if self.chunksize:
+            self.logger.debug(
+                f"Repartitioning `${self.type}s.{self.name}` into chunks of size `{self.chunksize}`"
+            )
+            data = data.repartition(partition_size=self.chunksize)
+
+        return data
+
+
 
     def check_expectations(self, expectations: List[str]):
         """
