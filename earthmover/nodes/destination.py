@@ -111,20 +111,6 @@ class FileDestination(Destination):
                 .map_partitions(lambda x: x.apply(self.render_row, axis=1), meta=pd.Series('str'))
         )
 
-    def post_execute(self, **kwargs):
-        """
-        Note: there is a bug in dask where one cannot append to an existing file:
-        https://docs.dask.org/en/stable/changelog.html#id7
-
-        As a workaround, `header=[self.header]` only when defined.
-
-        :return:
-        """
-        super().post_execute(**kwargs)
-
-        # Use a second progress bar specifically during writing.
-        self.start_progress(logging_message=f"Writing to disk...")
-
         # Verify the output directory exists.
         os.makedirs(os.path.dirname(self.file), exist_ok=True)
 
@@ -140,12 +126,8 @@ class FileDestination(Destination):
             with open(self.file, 'a', encoding='utf-8') as fp:
                 fp.write(self.footer)
 
-        self.end_progress()  # Exit progress bar context handler.
-
         self.logger.debug(f"output `{self.file}` written")
         self.size = os.path.getsize(self.file)
-
-
 
     def render_row(self, row: pd.Series):
         _data_tuple = row.to_dict()

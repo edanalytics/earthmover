@@ -83,7 +83,10 @@ class Node:
             file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
         )
 
-        self.start_progress()  # Turn on the progress bar manually.
+        # Turn on the progress bar manually.
+        if self.show_progress:
+            self.logger.info(f"Displaying progress for {self.type} node: {self.name}")
+            self.progress_bar.__enter__()  # Open context manager manually to avoid with-clause
 
         pass
 
@@ -99,7 +102,9 @@ class Node:
 
         :return:
         """
-        self.end_progress()  # Turn off the progress bar manually.
+        # Close context manager manually to avoid with-clause.
+        if self.show_progress:
+            self.progress_bar.__exit__(None, None, None)
 
         self.check_expectations(self.expectations)
 
@@ -148,24 +153,3 @@ class Node:
                     self.logger.info(
                         f"Assertion passed! {self.name}: {expectation}"
                     )
-
-    def start_progress(self, logging_message: Optional[str] = None):
-        """
-        Helper function to make 
-
-        :return:
-        """
-        if not logging_message:
-            logging_message = f"Displaying progress for {self.type} node: {self.name}"
-
-        if self.show_progress:
-            self.logger.info(logging_message)
-            self.progress_bar.__enter__()  # Open context manager manually to avoid with-clause
-
-    def end_progress(self):
-        """
-
-        :return:
-        """
-        if self.show_progress:
-            self.progress_bar.__exit__(None, None, None)  # Close context manager manually to avoid with-clause
