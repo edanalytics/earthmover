@@ -183,7 +183,7 @@ class JoinOperation(Operation):
         if use_concat_index:
             left_data = left_data.reset_index(drop=True)
 
-        return left_data.repartition(partition_size=self.chunksize)
+        return left_data
 
     def set_concat_index(self, data: 'DataFrame', keys: List[str]) -> 'DataFrame':
         """
@@ -209,7 +209,7 @@ class JoinOperation(Operation):
         if data.divisions == (np.nan, np.nan):
             data.divisions = (None, None)
 
-        return data.repartition(partition_size=self.chunksize)
+        return data
 
 
 class UnionOperation(Operation):
@@ -247,4 +247,4 @@ class UnionOperation(Operation):
                 )
                 raise
 
-        return data.repartition(partition_size=self.chunksize)
+        return data

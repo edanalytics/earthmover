@@ -80,11 +80,11 @@ class DistinctRowsOperation(Operation):
             # see https://stackoverflow.com/questions/68019990
             data = (
                 data
-                .set_index(max_nunique_col, drop=False).repartition(partition_size=self.chunksize)
+                .set_index(max_nunique_col, drop=False)
                 .map_partitions(lambda x: x.drop_duplicates(self.columns_list))
             )
 
-        return data.repartition(partition_size=self.chunksize)
+        return data
 
 
 class FilterRowsOperation(Operation):
@@ -141,4 +141,4 @@ class FilterRowsOperation(Operation):
             )
             raise
 
-        return data.repartition(partition_size=self.chunksize)
+        return data
