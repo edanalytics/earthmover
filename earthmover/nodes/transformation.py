@@ -9,7 +9,7 @@ class Transformation(Node):
 
     """
     type: str = 'transformation'
-    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'partition_size', 'operations', 'source',)
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'operations', 'source',)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -50,6 +50,5 @@ class Transformation(Node):
 
         for operation in self.operations:
             self.data = operation.execute(self.data, data_mapping=self.upstream_sources)
-            self.data = operation.post_execute(self.data)
 
         self.post_execute()

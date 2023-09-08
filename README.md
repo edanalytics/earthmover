@@ -94,7 +94,6 @@ config:
   parameter_defaults:
     SOURCE_DIR: ./sources/
   show_progress: True
-  partition_size: 100MB
 
 ```
 * (optional) `output_dir` determines where generated JSONL is stored. The default is `./`.
@@ -110,7 +109,6 @@ config:
 * (optional) Specify Jinja `macros` which will be available within any Jinja template content throughout the project. (This can slow performance.)
 * (optional) Specify `parameter_defaults` which will be used if the user fails to specify a particular [parameter](#command-line-parameters) or [environment variable](#environment-variable-references).
 * (optional) Specify whether to `show_progress` while processing, via a Dask progress bar.
-* (optional) Specify the default `partition_size` that Dask should use while processing. (The value chosen will affect performance and runtime.)
 
 
 ### **`definitions`**
@@ -592,11 +590,9 @@ If `linearize` is `True`, all line breaks are removed from the template, resulti
 
 ## Global options
 
-Any source, transformation, or destination may also specify `debug: True` which will output the dataframe shape and columns after the operation. This can be very useful while building and debugging.
+Any source, transformation, or destination may also specify `debug: True` which will output the dataframe shape and columns after the node completes processing. This can be very useful while building and debugging.
 
 Additionally, the `show_progress` boolean flag can be specified on any source, transformation, or destination to display a progress bar while processing.
-
-Finally, `partition_size` can be passed to any node to affect Dask's internal memory usage while processing. This value is only applicable to a handful of node-types at this time, but we are continuing to iterate and improve performance.
 
 
 

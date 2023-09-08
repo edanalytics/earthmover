@@ -22,7 +22,7 @@ class Node:
 
     """
     type: str = None
-    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'partition_size',)
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress',)
 
     def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         self.name: str = name
@@ -42,9 +42,6 @@ class Node:
 
         self.expectations: List[str] = None
         self.debug: bool = False
-
-        # Customize internal Dask configs
-        self.partition_size: Union[int, str] = self.config.get('partition_size')
 
         # Optional variables for displaying progress and diagnostics.
         self.show_progress: bool = self.config.get('show_progress', self.earthmover.state_configs["show_progress"])
@@ -102,12 +99,6 @@ class Node:
 
         :return:
         """
-        if self.partition_size:
-            self.logger.debug(
-                f"Repartitioning `${self.type}s.{self.name}` into partitions of size `{self.partition_size}` (current partition count: {self.data.npartitions})"
-            )
-            self.data = self.data.repartition(partition_size=self.partition_size)
-
         self.end_progress()  # Turn off the progress bar manually.
 
         self.check_expectations(self.expectations)

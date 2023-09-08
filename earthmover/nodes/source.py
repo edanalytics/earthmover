@@ -23,7 +23,7 @@ class Source(Node):
     type: str = 'source'
     mode: str = None  # Documents which class was chosen.
     is_remote: bool = None
-    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'partition_size', 'optional',)
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'optional',)
 
     NUM_ROWS_PER_CHUNK: int = 10000
 
@@ -78,7 +78,7 @@ class FileSource(Source):
     mode: str = 'file'
     is_remote: bool = False
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'partition_size', 'optional',
+        'debug', 'expect', 'show_progress', 'optional',
         'file', 'type', 'columns', 'header_rows',
         'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
     )
@@ -272,7 +272,7 @@ class FtpSource(Source):
     mode: str = 'ftp'
     is_remote: bool = True
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'partition_size', 'optional',
+        'debug', 'expect', 'show_progress', 'optional',
         'connection', 'query',
     )
 
@@ -344,7 +344,7 @@ class SqlSource(Source):
     mode: str = 'sql'
     is_remote: bool = True
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'partition_size', 'optional',
+        'debug', 'expect', 'show_progress', 'optional',
         'connection', 'query',
     )
 

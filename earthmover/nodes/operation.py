@@ -15,7 +15,7 @@ class Operation(Node):
 
     """
     type: str = "operation"
-    allowed_configs: Tuple[str] = ('operation', 'partition_size',)
+    allowed_configs: Tuple[str] = ('operation',)
 
     def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         """
@@ -84,24 +84,7 @@ class Operation(Node):
 
         pass
 
-    def post_execute(self, data: 'DataFrame') -> 'DataFrame':
-        """
-        Function to run generic logic following execute.
-
-        1. Complete any post-transformations to self.data (currently unused).
-
-        Operation.post_execute() takes a DataFrame as input and outputs a DataFrame.
-        This differs from Node.post_execute(), which mutates and returns self.data.
-
-        In operations, `self.data` should NEVER be called, as this unnecessarily persists data in Operation nodes.
-
-        :param data:
-        :return:
-        """
-        if self.partition_size:
-            self.logger.debug(
-                f"Repartitioning `${self.type}s.{self.name}` into partitions of size `{self.partition_size}` (current partition count: {data.npartitions})"
-            )
-            data = data.repartition(partition_size=self.partition_size)
-
-        return data
+    def post_execute(self):
+        raise NotImplementedError(
+            "Operation.post_execute() is not permitted! Data is not persisted within Operations."
+        )
