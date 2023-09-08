@@ -16,7 +16,7 @@ class JoinOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'chunksize',
+        'operation', 'partition_size',
         'sources', 'join_type',
         'left_keys', 'left_key', 'right_keys', 'right_key',
         'left_keep_columns', 'left_drop_columns', 'right_keep_columns', 'right_drop_columns',
@@ -217,7 +217,7 @@ class UnionOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'chunksize', 'sources',
+        'operation', 'partition_size', 'sources',
     )
 
     def __init__(self, *args, **kwargs):

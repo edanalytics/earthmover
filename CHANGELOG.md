@@ -5,7 +5,7 @@
 * breaking change: `version: 2` required in Earthmover YAML files 
 * feature: `SnakeCaseColumnsOperation` converts all columns to snake_case
 * feature: `show_progress` can be turned on globally in `config` or locally in any Source, Transformation, or Destination to display a progress bar
-* feature: `chunksize` can be turned on globally in `config` or locally in any applicable Node to alter Dask partition sizes
+* feature: `partition_size` can be turned on in any applicable Node to alter Dask partition sizes post-execute
 * feature: improve performance in "join_columns" and "distinct_rows" operations
 * feature: improve performance when writing Destination files
 * feature: improved Earthmover YAML-parsing and config-retrieval

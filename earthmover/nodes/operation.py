@@ -15,7 +15,7 @@ class Operation(Node):
 
     """
     type: str = "operation"
-    allowed_configs: Tuple[str] = ('operation', 'chunksize',)
+    allowed_configs: Tuple[str] = ('operation', 'partition_size',)
 
     def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         """
@@ -98,10 +98,10 @@ class Operation(Node):
         :param data:
         :return:
         """
-        if self.chunksize:
+        if self.partition_size:
             self.logger.debug(
-                f"Repartitioning `${self.type}s.{self.name}` into chunks of size `{self.chunksize}`"
+                f"Repartitioning `${self.type}s.{self.name}` into partitions of size `{self.partition_size}`"
             )
-            data = data.repartition(partition_size=self.chunksize)
+            data = data.repartition(partition_size=self.partition_size)
 
         return data

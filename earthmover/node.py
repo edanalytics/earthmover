@@ -22,7 +22,7 @@ class Node:
 
     """
     type: str = None
-    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'chunksize',)
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'partition_size',)
 
     def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         self.name: str = name
@@ -44,7 +44,7 @@ class Node:
         self.debug: bool = False
 
         # Customize internal Dask configs
-        self.chunksize: Union[int, str] = self.config.get('chunksize')
+        self.partition_size: Union[int, str] = self.config.get('partition_size')
 
         # Optional variables for displaying progress and diagnostics.
         self.show_progress: bool = self.config.get('show_progress', self.earthmover.state_configs["show_progress"])
@@ -104,11 +104,11 @@ class Node:
 
         :return:
         """
-        if self.chunksize:
+        if self.partition_size:
             self.logger.debug(
-                f"Repartitioning `${self.type}s.{self.name}` into chunks of size `{self.chunksize}`"
+                f"Repartitioning `${self.type}s.{self.name}` into partitions of size `{self.partition_size}`"
             )
-            self.data = self.data.repartition(partition_size=self.chunksize)
+            self.data = self.data.repartition(partition_size=self.partition_size)
 
         # Turn off the progress bar manually.
         if self.show_progress:

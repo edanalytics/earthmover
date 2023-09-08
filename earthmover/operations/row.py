@@ -13,7 +13,7 @@ class DistinctRowsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'chunksize',
+        'operation', 'partition_size',
         'column', 'columns',
     )
 
@@ -92,7 +92,7 @@ class FilterRowsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'chunksize',
+        'operation', 'partition_size',
         'query', 'behavior',
     )
 

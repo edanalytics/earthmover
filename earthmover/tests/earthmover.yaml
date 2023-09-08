@@ -37,7 +37,7 @@ sources:
   zoos:
     file: ${BASE_DIR}/sources/zoos.csv
     header_rows: 1
-    chunksize: 100MB
+    partition_size: 100MB
 
   zoo_inventories:
     file: ${BASE_DIR}/sources/inventories.csv
@@ -122,7 +122,7 @@ transformations:
         join_type: inner
         left_key: animal
         right_key: id
-        chunksize: 100MB
+        partition_size: 100MB
       - operation: duplicate_columns
         columns:
           name: species_name
@@ -220,7 +220,7 @@ transformations:
         columns:
           entity: year
           count_column: zoos_founded
-        chunksize: 100MB
+        partition_size: 100MB
 
   big_cats:
     source: $transformations.mammal_species
@@ -274,7 +274,7 @@ destinations:
     template: ${BASE_DIR}/templates/animal.jsont
     extension: jsonl
     linearize: True
-    chunksize: 100MB
+    partition_size: 100MB
 
   big_cats:
     source: $transformations.big_cats
