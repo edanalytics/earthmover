@@ -123,7 +123,7 @@ class FileDestination(Destination):
         super().post_execute(**kwargs)
 
         # Use a second progress bar specifically during writing.
-        self.start_progress()
+        self.start_progress(logging_message=f"Writing to disk...")
 
         # Verify the output directory exists.
         os.makedirs(os.path.dirname(self.file), exist_ok=True)

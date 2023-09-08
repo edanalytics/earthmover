@@ -158,14 +158,17 @@ class Node:
                         f"Assertion passed! {self.name}: {expectation}"
                     )
 
-    def start_progress(self):
+    def start_progress(self, logging_message: Optional[str] = None):
         """
         Helper function to make 
 
         :return:
         """
+        if not logging_message:
+            logging_message = f"Displaying progress for {self.type} node: {self.name}"
+
         if self.show_progress:
-            self.logger.info(f"Displaying progress for {self.type} node: {self.name}")
+            self.logger.info(logging_message)
             self.progress_bar.__enter__()  # Open context manager manually to avoid with-clause
 
     def end_progress(self):
