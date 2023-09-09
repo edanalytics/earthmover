@@ -1,5 +1,4 @@
 import csv
-import dask.dataframe as dd
 import jinja2
 import os
 import pandas as pd
@@ -100,11 +99,15 @@ class FileDestination(Destination):
 
     def execute(self, **kwargs):
         """
+        There is a bug in Dask where where `dd.to_csv(mode='a', single_file=True)` fails.
+        This is resolved in 2023.8.1: https://docs.dask.org/en/stable/changelog.html#id7 
 
         :return:
         """
         super().execute(**kwargs)
 
+        # this renders each row without having to itertuples() (which is much slower)
+        # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
         self.data = (
             self.upstream_sources[self.source].data
                 .fillna('')
@@ -115,11 +118,10 @@ class FileDestination(Destination):
         os.makedirs(os.path.dirname(self.file), exist_ok=True)
 
         # Write the optional header, the JSON lines as CSV (for performance), and the optional footer.
-        dd.to_csv(
-            self.data, filename=self.file, single_file=True, mode='wt',  # Dask arguments
-            header=[self.header] if self.header else False,
-            # We must write the header directly due to aforementioned bug.
-            index=False, escapechar="\x01", sep="\x02", quoting=csv.QUOTE_NONE  # Pandas arguments (use a fake-CSV sep)
+        self.data.to_csv(
+            filename=self.file, single_file=True, mode='wt', index=False,
+            header=[self.header] if self.header else False,  # We must write the header directly due to aforementioned bug.
+            escapechar="\x01", sep="\x02", quoting=csv.QUOTE_NONE,  # Pretend to be CSV to improve performance
         )
 
         if self.footer:
