@@ -52,4 +52,6 @@ class Transformation(Node):
             self.data = operation.execute(self.data, data_mapping=self.upstream_sources)
             self.data = operation.post_execute(self.data)
 
+        self.data = self.opt_repartition(self.data)  # Repartition if specified.
+
         self.post_execute()

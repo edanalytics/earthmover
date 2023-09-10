@@ -105,8 +105,6 @@ class Node:
 
         :return:
         """
-        self.data = self.opt_repartition(self.data)
-
         # Close context manager manually to avoid with-clause.
         if self.show_progress:
             self.progress_bar.__exit__(None, None, None)
