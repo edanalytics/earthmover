@@ -114,6 +114,13 @@ class FileDestination(Destination):
                 .map_partitions(lambda x: x.apply(self.render_row, axis=1), meta=pd.Series('str'))
         )
 
+    def post_execute(self, **kwargs):
+        """
+
+        :return:
+        """
+        super().execute(**kwargs)
+
         # Verify the output directory exists.
         os.makedirs(os.path.dirname(self.file), exist_ok=True)
 

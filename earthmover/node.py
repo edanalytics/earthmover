@@ -43,6 +43,9 @@ class Node:
         self.expectations: List[str] = None
         self.debug: bool = False
 
+        # Internal Dask configs
+        self.partition_size: Union[str, int] = self.config.get('partition_size')
+
         # Optional variables for displaying progress and diagnostics.
         self.show_progress: bool = self.config.get('show_progress', self.earthmover.state_configs["show_progress"])
         self.progress_bar: ProgressBar = ProgressBar(minimum=10, dt=5.0)  # Always instantiate, but only use if `show_progress is True`.
@@ -102,6 +105,8 @@ class Node:
 
         :return:
         """
+        self.data = self.opt_repartition(self.data)
+
         # Close context manager manually to avoid with-clause.
         if self.show_progress:
             self.progress_bar.__exit__(None, None, None)
@@ -153,3 +158,8 @@ class Node:
                     self.logger.info(
                         f"Assertion passed! {self.name}: {expectation}"
                     )
+
+    def opt_repartition(self, data: 'DataFrame'):
+        if self.partition_size:
+            data = data.repartition(partition_size=self.partition_size)
+        return data

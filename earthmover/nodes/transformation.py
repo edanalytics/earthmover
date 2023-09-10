@@ -50,5 +50,6 @@ class Transformation(Node):
 
         for operation in self.operations:
             self.data = operation.execute(self.data, data_mapping=self.upstream_sources)
+            self.data = operation.post_execute(self.data)
 
         self.post_execute()
