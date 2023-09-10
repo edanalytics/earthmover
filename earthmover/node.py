@@ -22,7 +22,7 @@ class Node:
 
     """
     type: str = None
-    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress',)
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'partition_size',)
 
     def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         self.name: str = name

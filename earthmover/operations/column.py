@@ -18,7 +18,7 @@ class AddColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation',
+        'operation', 'partition_size', 
         'columns',
     )
 
@@ -74,7 +74,7 @@ class ModifyColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation',
+        'operation', 'partition_size', 
         'columns',
     )
 
@@ -135,7 +135,7 @@ class DuplicateColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation',
+        'operation', 'partition_size', 
         'columns',
     )
 
@@ -180,7 +180,7 @@ class RenameColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation',
+        'operation', 'partition_size', 
         'columns',
     )
 
@@ -223,7 +223,7 @@ class DropColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation',
+        'operation', 'partition_size', 
         'columns',
     )
 
@@ -262,7 +262,7 @@ class KeepColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation',
+        'operation', 'partition_size', 
         'columns',
     )
 
@@ -302,7 +302,7 @@ class CombineColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation',
+        'operation', 'partition_size', 
         'columns', 'new_column', 'separator',
     )
 
@@ -352,7 +352,7 @@ class MapValuesOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation',
+        'operation', 'partition_size', 
         'column', 'columns', 'mapping', 'map_file',
     )
 
@@ -445,7 +445,7 @@ class DateFormatOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation',
+        'operation', 'partition_size', 
         'column', 'columns', 'from_format', 'to_format',
     )
 
@@ -511,7 +511,7 @@ class SnakeCaseColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation',
+        'operation', 'partition_size', 
     )
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
