@@ -16,7 +16,7 @@ class Destination(Node):
     """
     type: str = 'destination'
     mode: str = None  # Documents which class was chosen.
-    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'source',)
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'partition_size', 'source',)
 
     def __new__(cls, *args, **kwargs):
         return object.__new__(FileDestination)
@@ -33,7 +33,7 @@ class FileDestination(Destination):
     """
     mode: str = 'file'
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'source',
+        'debug', 'expect', 'show_progress', 'partition_size', 'source',
         'template', 'extension', 'linearize', 'header', 'footer',
     )
 
@@ -113,6 +113,13 @@ class FileDestination(Destination):
                 .fillna('')
                 .map_partitions(lambda x: x.apply(self.render_row, axis=1), meta=pd.Series('str'))
         )
+
+    def post_execute(self, **kwargs):
+        """
+
+        :return:
+        """
+        super().execute(**kwargs)
 
         # Verify the output directory exists.
         os.makedirs(os.path.dirname(self.file), exist_ok=True)

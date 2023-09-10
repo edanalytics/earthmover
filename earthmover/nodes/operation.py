@@ -15,7 +15,7 @@ class Operation(Node):
 
     """
     type: str = "operation"
-    allowed_configs: Tuple[str] = ('operation',)
+    allowed_configs: Tuple[str] = ('operation', 'partition_size',)
 
     def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         """
@@ -84,7 +84,21 @@ class Operation(Node):
 
         pass
 
-    def post_execute(self):
-        raise NotImplementedError(
-            "Operation.post_execute() is not permitted! Data is not persisted within Operations."
-        )
+    def post_execute(self, data: 'DataFrame'):
+        """
+        Operation.post_execute() takes a DataFrame as input and outputs a DataFrame.
+        This differs from Node.post_execute(), which mutates and returns self.data.
+
+        In operations, `self.data` should NEVER be called, as this unnecessarily persists data in Operation nodes.
+
+        :param data:
+        :return:
+        """
+
+        data = self.opt_repartition(data)
+
+        return data
+
+        # raise NotImplementedError(
+        #     "Operation.post_execute() is not permitted! Data is not persisted within Operations."
+        # )
