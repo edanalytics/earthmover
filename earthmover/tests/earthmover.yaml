@@ -2,7 +2,7 @@ version: 2
 
 config:
   output_dir: ${BASE_DIR}/outputs/
-  log_level: DEBUG
+  log_level: INFO
   show_stacktrace: False
   show_graph: False
   macros: >
