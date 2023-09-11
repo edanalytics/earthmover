@@ -32,6 +32,10 @@ class Node:
         self.logger: 'Logger' = earthmover.logger
         self.error_handler: 'ErrorHandler' = earthmover.error_handler
 
+        self.error_handler.ctx.update(
+            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
+        )
+
         self.upstream_sources: Dict[str, Optional['Node']] = {}
 
         self.data: 'DataFrame' = None
