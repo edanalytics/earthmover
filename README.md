@@ -594,7 +594,9 @@ Any source, transformation, or destination may also specify `debug: True` which 
 
 Additionally, the `show_progress` boolean flag can be specified on any source, transformation, or destination to display a progress bar while processing.
 
-
+Finally, `repartition` can be passed to any node to repartition the node in memory before continuing to the next node.
+Set either the number of bytes, or a text representation (e.g., "100MB") to shuffle data into new partitions of that size.
+(Note: this configuration is advanced, and its use may drastically affect performance.)
 
 # Usage
 Once you have the required [setup](#setup) and your source data, run the transformations with
