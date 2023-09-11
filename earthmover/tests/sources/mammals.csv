@@ -1,4 +1,4 @@
-id,name,genus,species,avg_lifespan_yrs,avg_weight_kg
+ID,Name,Genus,Species,AvgLifespanYrs,AvgWeightKg
 1,Giant Anteater,Myrmecophaga,tridactyla,14,40
 2,Yellow Baboon,Papio,cynocephalus,14,15
 3,Little Brown Bat,Myotis,lucifugus,7,0.008

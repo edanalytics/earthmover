@@ -1,18 +1,25 @@
+import dask
+
 from earthmover.nodes.operation import Operation
+
+from typing import List, Tuple
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from dask.dataframe.core import DataFrame
 
 
 class DistinctRowsOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
-        'operation',
+    allowed_configs: Tuple[str] = (
+        'operation', 'repartition', 
         'column', 'columns',
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_list: list = None
+        self.columns_list: List[str] = None
 
     def compile(self):
         """
@@ -48,30 +55,15 @@ class DistinctRowsOperation(Operation):
         if not self.columns_list:
             self.columns_list = data.columns
 
-        if data.npartitions > 1:
-            self.logger.debug(
-                f"data at {self.type} `{self.name}` has {data.npartitions} partitions... indexing on first uniqueness column `{self.columns_list[0]}`, then each partition will be deduped"
-            )
-
-            # see https://stackoverflow.com/questions/68019990
-            data = (
-                data
-                .set_index(self.columns_list[0], drop=False).repartition(partition_size=self.chunksize)
-                .map_partitions(lambda x: x.drop_duplicates(self.columns_list))
-            )
-
-        else:
-            data = data.drop_duplicates(subset=self.columns_list)
-
-        return data
+        return data.drop_duplicates(subset=self.columns_list)
 
 
 class FilterRowsOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
-        'operation',
+    allowed_configs: Tuple[str] = (
+        'operation', 'repartition', 
         'query', 'behavior',
     )
 

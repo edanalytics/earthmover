@@ -5,11 +5,11 @@ import os
 import time
 
 from typing import Dict, List, Optional
-
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from earthmover.earthmover import Earthmover
-    from earthmover.nodes import Node
+    from earthmover.node import Node
+    from logging import Logger
 
 
 class RunsFile:
@@ -31,17 +31,17 @@ class RunsFile:
     ]
 
     def __init__(self, file: str, *, earthmover: 'Earthmover'):
-        self.file = file
+        self.file: str = file
 
-        self.earthmover = earthmover
-        self.logger = self.earthmover.logger
-        self.hashes = self._build_hashes()
+        self.earthmover: 'Earthmover' = earthmover
+        self.logger: 'Logger' = self.earthmover.logger
+        self.hashes: Dict[str, str] = self._build_hashes()
 
         # Force the existence of the runs file.
         if not os.path.isfile( self.file ):
             self._write_header()
 
-        self.runs = self._read_runs()
+        self.runs: List[Dict[str, str]] = self._read_runs()
 
 
     def write_row(self, selector: Optional[str] = None):
@@ -63,7 +63,7 @@ class RunsFile:
             writer.writerow(row_dict)
 
 
-    def get_newest_compatible_run(self, active_nodes: Dict[str, 'Node']):
+    def get_newest_compatible_run(self, active_nodes: Dict[str, 'Node']) -> Optional[Dict[str, str]]:
         """
         Find most-recent (i.e., last) line where this run’s destinations are a subset of the line’s destinations
 
@@ -89,7 +89,7 @@ class RunsFile:
             return None
 
 
-    def find_hash_differences(self, run: dict) -> List[str]:
+    def find_hash_differences(self, run: Dict[str, str]) -> List[str]:
         """
 
         :param run:
@@ -117,7 +117,7 @@ class RunsFile:
         return differences
 
 
-    def _build_hashes(self) -> dict:
+    def _build_hashes(self) -> Dict[str, str]:
         """
         This tool maintains state about prior runs. If no inputs have changed, there's no need to re-run,
         so for each run, we log hashes of
@@ -210,7 +210,7 @@ class RunsFile:
             writer.writerow(self.HEADER)
 
 
-    def _read_runs(self):
+    def _read_runs(self) -> List[Dict[str, str]]:
         """
 
         :return:
@@ -228,7 +228,7 @@ class RunsFile:
         return runs
 
 
-    def _get_file_hash(self, file: str):
+    def _get_file_hash(self, file: str) -> str:
         """
         Compute the hash of a (potentially large) file by streaming it in from disk
 
@@ -252,7 +252,7 @@ class RunsFile:
         return hashed.hexdigest()
 
 
-    def _get_string_hash(self, string: str):
+    def _get_string_hash(self, string: str) -> str:
         """
         :param string:
         :return:

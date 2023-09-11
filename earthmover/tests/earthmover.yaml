@@ -8,6 +8,9 @@ config:
   macros: >
     {% macro test() -%}
       testing!
+    {%- endmacro -%}
+    {% macro test2() -%}
+      testing!
     {%- endmacro %}
   parameter_defaults:
     BASE_DIR: "."
@@ -46,6 +49,7 @@ transformations:
   mammal_species:
     source: $sources.mammal_species
     operations:
+      - operation: snake_case_columns
       - operation: add_columns
         columns:
           family: mammal

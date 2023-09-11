@@ -2,17 +2,21 @@ import dask.dataframe as dd
 import numpy as np
 import pandas as pd
 
-from typing import List
-
+from earthmover.node import Node
 from earthmover.nodes.operation import Operation
+
+from typing import Dict, List, Tuple
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from dask.dataframe.core import DataFrame
 
 
 class JoinOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
-        'operation',
+    allowed_configs: Tuple[str] = (
+        'operation', 'repartition', 
         'sources', 'join_type',
         'left_keys', 'left_key', 'right_keys', 'right_key',
         'left_keep_columns', 'left_drop_columns', 'right_keep_columns', 'right_drop_columns',
@@ -25,19 +29,19 @@ class JoinOperation(Operation):
         super().__init__(*args, **kwargs)
 
         # Check joined node
-        self.sources = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
+        self.sources: List[str] = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
 
         self.join_type: str = None
 
-        self.left_keys: list = None
-        self.left_keep_cols: list = None
-        self.left_drop_cols: list = None
-        self.left_cols: list = None  # The final column list built of cols and keys
+        self.left_keys: List[str] = None
+        self.left_keep_cols: List[str] = None
+        self.left_drop_cols: List[str] = None
+        self.left_cols: List[str] = None  # The final column list built of cols and keys
 
-        self.right_keys: list = None
-        self.right_keep_cols: list = None
-        self.right_drop_cols: list = None
-        self.right_cols: list = None  # The final column list built of cols and keys
+        self.right_keys: List[str] = None
+        self.right_keep_cols: List[str] = None
+        self.right_drop_cols: List[str] = None
+        self.right_cols: List[str] = None  # The final column list built of cols and keys
 
     def compile(self):
         """
@@ -85,7 +89,7 @@ class JoinOperation(Operation):
         self.right_keep_cols = self.error_handler.assert_get_key(self.config, 'right_keep_columns', dtype=list, required=False)
         self.right_drop_cols = self.error_handler.assert_get_key(self.config, 'right_drop_columns', dtype=list, required=False)
 
-    def execute(self, data: 'DataFrame', data_mapping: dict, **kwargs):
+    def execute(self, data: 'DataFrame', data_mapping: Dict[str, Node], **kwargs) -> 'DataFrame':
         """
 
         :return:
@@ -142,28 +146,10 @@ class JoinOperation(Operation):
 
             # Complete the merge, using different logic depending on the partitions of the datasets.
             try:
-                if left_data.npartitions == 1 or right_data.npartitions == 1:
-                    left_data = dd.merge(
-                        left_data, right_data, how=self.join_type,
-                        left_on=self.left_keys, right_on=self.right_keys
-                    )
-
-                else:
-                    self.logger.debug(
-                        f"data at {self.type} `{self.name}` has {left_data.npartitions} (left) and {right_data.npartitions} (right) partitions..."
-                    )
-
-                    # Concatenate key columns into an index to allow merging by index.
-                    left_data = self.set_concat_index(left_data, self.left_keys)
-                    right_data = self.set_concat_index(right_data, self.right_keys)
-
-                    left_data = dd.merge(
-                        left_data, right_data, how=self.join_type,
-                        left_index=True, right_index=True,
-                    )
-
-                    # Remove the generated index column.
-                    left_data = left_data.reset_index(drop=True).repartition(partition_size=self.chunksize)
+                left_data = dd.merge(
+                    left_data, right_data, how=self.join_type,
+                    left_on=self.left_keys, right_on=self.right_keys
+                )
 
             except Exception as _:
                 self.error_handler.throw(
@@ -173,43 +159,20 @@ class JoinOperation(Operation):
 
         return left_data
 
-    def set_concat_index(self, data: 'DataFrame', keys: List[str]):
-        """
-        Add a concatenated column to use as an index.
-        Fix the divisions in the case of an empty dataframe.
-        :param data:
-        :param keys:
-        :return:
-        """
-        data[self.INDEX_COL] = data[keys].apply(
-            lambda row: row.str.cat(sep='_', na_rep=''),
-            axis=1,
-            meta=pd.Series(dtype='str', name=self.INDEX_COL)
-        )
-
-        data = data.set_index(self.INDEX_COL, drop=True)
-
-        # Empty dataframes create divisions that cannot be compared.
-        if data.divisions == (np.nan, np.nan):
-            data.divisions = (None, None)
-
-        return data.repartition(partition_size=self.chunksize)
-
 
 class UnionOperation(Operation):
     """
 
     """
-    allowed_configs: tuple = (
-        'operation', 'sources',
+    allowed_configs: Tuple[str] = (
+        'operation', 'repartition', 'sources',
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.sources = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
 
-    def execute(self, data: 'DataFrame', data_mapping: dict, **kwargs):
+    def execute(self, data: 'DataFrame', data_mapping: Dict[str, Node], **kwargs) -> 'DataFrame':
         """
 
         :return:

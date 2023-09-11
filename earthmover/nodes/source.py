@@ -5,14 +5,15 @@ import os
 import pandas as pd
 import re
 
-from typing import Callable
-
 from earthmover.node import Node
 from earthmover import util
 
+from typing import Callable, List, Optional, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
+    from dask.dataframe.core import DataFrame
     from earthmover.earthmover import Earthmover
+    from earthmover.yaml_parser import YamlMapping
 
 
 class Source(Node):
@@ -22,9 +23,11 @@ class Source(Node):
     type: str = 'source'
     mode: str = None  # Documents which class was chosen.
     is_remote: bool = None
-    allowed_configs: tuple = ('debug', 'expect', 'show_progress', 'chunksize', 'optional',)
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional',)
 
-    def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
+    NUM_ROWS_PER_CHUNK: int = 10000
+
+    def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         """
         Logic for assigning sources to their respective classes.
 
@@ -47,28 +50,38 @@ class Source(Node):
             )
             raise
 
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.chunksize: int = None
 
         # A source can be blank if `optional=True` is specified in its configs.
         # (In this case, `columns` must be specified, and are used to construct an empty
         # dataframe which is passed through to downstream transformations and destinations.)
-        self.optional = self.config.get('optional', False)
+        self.optional: bool = self.config.get('optional', False)
 
-
-    def ensure_dask_dataframe(self):
+    def compile(self):
         """
-        Converts a Pandas DataFrame to a Dask DataFrame.
+
+        :return:
+        """
+        super().compile()
+        self.chunksize = self.error_handler.assert_get_key(self.config, 'chunksize', dtype=int, required=False, default=self.NUM_ROWS_PER_CHUNK)
+
+    def post_execute(self, **kwargs):
+        """
+
+        :param kwargs:
+        :return:
         """
         if isinstance(self.data, pd.DataFrame):
             self.logger.debug(
                 f"Casting data in {self.type} node `{self.name}` to a Dask dataframe."
             )
-            self.data = dd.from_pandas(
-                self.data,
-                chunksize=self.chunksize
-            )
+            self.data = dd.from_pandas(self.data, chunksize=self.chunksize)
+
+        self.data = self.opt_repartition(self.data)  # Repartition if specified.
+
+        super().post_execute(**kwargs)
 
 
 class FileSource(Source):
@@ -77,8 +90,8 @@ class FileSource(Source):
     """
     mode: str = 'file'
     is_remote: bool = False
-    allowed_configs: tuple = (
-        'debug', 'expect', 'show_progress', 'chunksize', 'optional',
+    allowed_configs: Tuple[str] = (
+        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional',
         'file', 'type', 'columns', 'header_rows',
         'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
     )
@@ -88,7 +101,7 @@ class FileSource(Source):
         self.file: str = None
         self.file_type: str = None
         self.read_lambda: Callable = None
-        self.columns_list: list = None
+        self.columns_list: List[str] = None
 
     def compile(self):
         """
@@ -161,7 +174,6 @@ class FileSource(Source):
                 self.data = pd.DataFrame(columns = self.columns_list)
             else:
                 self.data = self.read_lambda(self.file, self.config)
-            self.ensure_dask_dataframe()
 
             # Verify the column list provided matches the number of columns in the dataframe.
             if self.columns_list:
@@ -195,7 +207,7 @@ class FileSource(Source):
             )
 
     @staticmethod
-    def _get_filetype(file):
+    def _get_filetype(file: str):
         """
         Determine file type from file extension
 
@@ -231,7 +243,8 @@ class FileSource(Source):
         ext = file.lower().rsplit('.', 1)[-1]
         return ext_mapping.get(ext)
 
-    def _get_read_lambda(self, file_type: str, sep: str = None):
+    @staticmethod
+    def _get_read_lambda(file_type: str, sep: Optional[str] = None):
         """
 
         :param file_type:
@@ -239,7 +252,7 @@ class FileSource(Source):
         :return:
         """
         # Define any other helpers that will be used below.
-        def __get_skiprows(config: dict):
+        def __get_skiprows(config: 'YamlMapping'):
             """ Retrieve or set default for header_rows value for CSV reads. """
             _header_rows = config.get('header_rows', 1)
             return int(_header_rows) - 1  # If header_rows = 1, skip none.
@@ -271,8 +284,8 @@ class FtpSource(Source):
     """
     mode: str = 'ftp'
     is_remote: bool = True
-    allowed_configs: tuple = (
-        'debug', 'expect', 'show_progress', 'chunksize', 'optional',
+    allowed_configs: Tuple[str] = (
+        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional',
         'connection', 'query',
     )
 
@@ -325,7 +338,6 @@ class FtpSource(Source):
             flo.seek(0)
 
             self.data = pd.read_csv(flo)
-            self.ensure_dask_dataframe()
 
         except Exception as err:
             self.error_handler.throw(
@@ -344,8 +356,8 @@ class SqlSource(Source):
     """
     mode: str = 'sql'
     is_remote: bool = True
-    allowed_configs: tuple = (
-        'debug', 'expect', 'show_progress', 'chunksize', 'optional',
+    allowed_configs: Tuple[str] = (
+        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional',
         'connection', 'query',
     )
 
@@ -382,8 +394,8 @@ class SqlSource(Source):
         super().execute()
 
         try:
-            self.data = pd.read_sql(sql=self.query, con=self.connection)
-            self.ensure_dask_dataframe()
+            self.data = self.load_sql_dataframe()
+
 
             self.logger.debug(
                 f"source `{self.name}` loaded (via SQL)"
@@ -394,3 +406,21 @@ class SqlSource(Source):
                 f"source {self.name} error ({err}); check `connection` and `query`"
             )
             raise
+
+    def load_sql_dataframe(self):
+        """
+        SQLAlchemy 2.x breaks our original method of loading a SQL dataframe.
+        Because SQLAlchemy is not a required library, we must account for either version.
+        :return:
+        """
+        try:
+            return pd.read_sql(sql=self.query, con=self.connection)
+
+        except AttributeError:
+            self.logger.debug(
+                "SQLAlchemy 1.x approach failed! Attempting SQLAlchemy 2.x approach..."
+            )
+            import sqlalchemy
+
+            with sqlalchemy.create_engine(self.connection).connect() as engine_cloud:
+                return pd.DataFrame(engine_cloud.execute(sqlalchemy.text(self.query)))

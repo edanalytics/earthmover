@@ -2,9 +2,12 @@ import abc
 
 from earthmover.node import Node
 
+from typing import Dict, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
+    from dask.dataframe.core import DataFrame
     from earthmover.earthmover import Earthmover
+    from earthmover.yaml_parser import YamlMapping
 
 
 class Operation(Node):
@@ -12,9 +15,9 @@ class Operation(Node):
 
     """
     type: str = "operation"
-    allowed_configs: tuple = ('operation',)
+    allowed_configs: Tuple[str] = ('operation', 'repartition',)
 
-    def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
+    def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         """
         :param config:
         :param earthmover:
@@ -58,15 +61,15 @@ class Operation(Node):
 
         return object.__new__(operation_class)
 
-    def __init__(self, name: str, config: dict, *, earthmover: 'Earthmover'):
+    def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         full_name = f"{name}.operations:{config.get('operation')}"
         super().__init__(full_name, config, earthmover=earthmover)
 
     @abc.abstractmethod
-    def execute(self, data: 'DataFrame', *, data_mapping: dict, **kwargs) -> 'DataFrame':
+    def execute(self, data: 'DataFrame', *, data_mapping: Dict[str, Node], **kwargs) -> 'DataFrame':
         """
         Operation.execute() takes a DataFrame as input and outputs a DataFrame.
-        Operation.execute() uses different arguments than Node.execute().
+        This differs from Node.execute(), which mutates and returns self.data.
 
         In operations, `self.data` should NEVER be called, as this unnecessarily persists data in Operation nodes.
 
@@ -81,7 +84,21 @@ class Operation(Node):
 
         pass
 
-    def post_execute(self):
-        raise NotImplementedError(
-            "Operation.post_execute() is not permitted! Data is not persisted within Operations."
-        )
+    def post_execute(self, data: 'DataFrame'):
+        """
+        Operation.post_execute() takes a DataFrame as input and outputs a DataFrame.
+        This differs from Node.post_execute(), which mutates and returns self.data.
+
+        In operations, `self.data` should NEVER be called, as this unnecessarily persists data in Operation nodes.
+
+        :param data:
+        :return:
+        """
+
+        data = self.opt_repartition(data)
+
+        return data
+
+        # raise NotImplementedError(
+        #     "Operation.post_execute() is not permitted! Data is not persisted within Operations."
+        # )

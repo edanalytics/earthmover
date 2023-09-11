@@ -1,19 +1,19 @@
-import logging
+import dataclasses
 import os
 import yaml
 
-from dataclasses import dataclass
 from string import Template
+from typing import Dict
 
 from earthmover import util
 
 
-@dataclass
+@dataclasses.dataclass
 class YamlMapping(dict):
     __line__: int = None
 
 
-class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
+class JinjaEnvironmentYamlLoader(yaml.SafeLoader):
     """
     Convert the mapping to a YamlMapping in order to store line number internally
         - Allows us to determine the line number for any element loaded from YAML file
@@ -23,6 +23,8 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
     Add environment variable interpolation
         - See https://stackoverflow.com/questions/52412297
     """
+    num_macros_lines: int = 0
+
     def construct_yaml_map(self, node):
         """
         Add line numbers as attribute of pyyaml.Constructor
@@ -32,14 +34,14 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
         :return:
         """
         data = YamlMapping()  # Originally `data = {}`
-        data.__line__ = node.start_mark.line + 1  # Start line numbering at 1
+        data.__line__ = node.start_mark.line + + self.num_macros_lines
         yield data
 
         value = self.construct_mapping(node)
         data.update(value)
 
     @classmethod
-    def load_config_file(cls, filepath: str, params: dict, macros: str) -> YamlMapping:
+    def load_config_file(cls, filepath: str, params: Dict[str, str], macros: str) -> YamlMapping:
         """
 
         :param filepath:
@@ -84,7 +86,7 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
         return yaml_configs
 
     @classmethod
-    def load_project_configs(cls, filepath: str, params: dict):
+    def load_project_configs(cls, filepath: str, params: Dict[str, str]) -> Dict[str, object]:
         """
         Helper method to retrieve user-provided macros and environment vars to apply at full parsing.
         Events are returned element-by-element, so we can rely on certain keywords and datatypes.
@@ -121,6 +123,7 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
             loader.get_event()
 
         # Parse the file until we hit a dictionary that is not headed by "config".
+        project_configs = {}  # Return empty dict if no configs are found
         last_value = None  # Keep track of previous nodes
 
         while True:
@@ -128,20 +131,22 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
                 node = loader.compose_node(None, None)
                 value = loader.construct_object(node, True)
             except Exception:
-                return {}  # If we run into parsing errors, assume we've hit Jinja (and passed the configs).
+                break  # If we run into parsing errors, assume we've hit Jinja (and passed the configs).
 
-            if isinstance(value, dict):
+            if isinstance(value, dict):  # This prevents immediate return on `version: 2`.
                 if last_value == "config":
-                    return value
-                else:
-                    break  # Presume the first dictionary mapping of the file is the config block
+                    project_configs = value
+                break  # Presume the first dictionary mapping of the file is the config block
 
             last_value = value
 
-        return {}  # Return empty dict if no configs are found
+        macros = project_configs.get('macros', "")
+        JinjaEnvironmentYamlLoader.num_macros_lines = len(macros.split("\n"))  # Save line count for accurate logging
+
+        return project_configs
 
     @staticmethod
-    def template_open_filepath(filepath: str, params: dict) -> str:
+    def template_open_filepath(filepath: str, params: Dict[str, str]) -> str:
         """
 
         :param filepath:
@@ -149,6 +154,7 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
         :return:
         """
         full_params = {**params, **os.environ.copy()}
+        full_params = {k: str(v) for k, v in full_params.items()}  # Force values to strings before templating.
 
         with open(filepath, "r", encoding='utf-8') as stream:
             content_string = stream.read()  # Force to a string to apply templating and expand Jinja
@@ -156,7 +162,7 @@ class YamlEnvironmentJinjaLoader(yaml.SafeLoader):
         return Template(content_string).safe_substitute(full_params)
 
 
-YamlEnvironmentJinjaLoader.add_constructor(
+JinjaEnvironmentYamlLoader.add_constructor(
     'tag:yaml.org,2002:map',
-    YamlEnvironmentJinjaLoader.construct_yaml_map
+    JinjaEnvironmentYamlLoader.construct_yaml_map
 )

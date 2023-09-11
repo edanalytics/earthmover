@@ -8,23 +8,24 @@ import time
 import datetime
 import pandas as pd
 
-from typing import Optional
-
 from earthmover.error_handler import ErrorHandler
 from earthmover.graph import Graph
 from earthmover.runs_file import RunsFile
 from earthmover.nodes.destination import Destination
 from earthmover.nodes.source import Source
 from earthmover.nodes.transformation import Transformation
-from earthmover.yaml_parser import YamlEnvironmentJinjaLoader
+from earthmover.yaml_parser import JinjaEnvironmentYamlLoader
 from earthmover import util
+
+from typing import List, Optional
 
 
 class Earthmover:
     """
 
     """
-    start_timestamp = datetime.datetime.now()
+    start_timestamp: datetime.datetime  = datetime.datetime.now()
+    end_timestamp: Optional[datetime.datetime] = None
 
     config_defaults = {
         "output_dir": "./",
@@ -34,12 +35,11 @@ class Earthmover:
         "show_stacktrace": False,
         "tmp_dir": tempfile.gettempdir(),
         "show_progress": False,
-        "chunksize": 1024 * 1024 * 100,
     }
 
-    sources: list = []
-    transformations: list = []
-    destinations: list = []
+    sources: List[Source] = []
+    transformations: List[Transformation] = []
+    destinations: List[Destination] = []
 
     def __init__(self,
         config_file: str,
@@ -62,19 +62,15 @@ class Earthmover:
         # Merge the optional user configs into the defaults.
         self.params = json.loads(params) if params else {}
 
-        project_configs = YamlEnvironmentJinjaLoader.load_project_configs(self.config_file, params=self.params)
+        project_configs = JinjaEnvironmentYamlLoader.load_project_configs(self.config_file, params=self.params)
         self.macros = project_configs.get("macros", "").strip()
 
+        # Update parameter defaults, if any.
         for key, val in project_configs.get("parameter_defaults", {}).items():
-            if isinstance(val, str):
-                self.params.setdefault(key, val)  # set defaults, if any
-            else:
-                self.error_handler.throw(
-                    f"YAML config.parameter_defaults.{key} must be a string"
-                )
+            self.params.setdefault(key, val)
 
         # Complete a full-parse of the user config file.
-        self.user_configs = YamlEnvironmentJinjaLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
+        self.user_configs = JinjaEnvironmentYamlLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
 
         self.state_configs = {
             **self.config_defaults,
@@ -136,7 +132,7 @@ class Earthmover:
                     try:
                         node.upstream_sources[source] = self.graph.ref(source)
                         self.graph.add_edge(source, f"${node_type}.{name}")
-                    except:
+                    except KeyError:
                         self.error_handler.throw(f"invalid source {source}")
 
         ### Confirm that the graph is a DAG
@@ -166,7 +162,7 @@ class Earthmover:
                 break
 
 
-    def hash_graph_to_runs_file(self, subgraph):
+    def hash_graph_to_runs_file(self, subgraph: Graph):
         """
 
         :return:
@@ -223,7 +219,7 @@ class Earthmover:
         return runs_file
 
 
-    def compile(self, subgraph = None):
+    def compile(self, subgraph: Optional[Graph] = None):
         """
 
         :param subgraph:
@@ -248,8 +244,12 @@ class Earthmover:
                 elif node.type == 'destination':
                     self.destinations.append(node)
 
+        ### Confirm that at least one source is defined.
+        if not self.sources:
+            self.error_handler.throw("No sources have been defined!")
 
-    def execute(self, subgraph):
+
+    def execute(self, subgraph: Graph):
         """
 
         :param subgraph:
@@ -265,7 +265,7 @@ class Earthmover:
                         self.metadata["row_counts"].update({f"${node.type}s.{node.name}": len(node.data)})
 
 
-    def generate(self, selector):
+    def generate(self, selector: str):
         """
         Build DAG from YAML configs
 
@@ -353,7 +353,7 @@ class Earthmover:
                 fp.write(json.dumps(self.metadata, indent=4))
 
 
-    def test(self, tests_dir):
+    def test(self, tests_dir: str):
         # delete files in tests/output/
         output_dir = os.path.join(tests_dir, "outputs")
         for f in os.listdir(output_dir):
