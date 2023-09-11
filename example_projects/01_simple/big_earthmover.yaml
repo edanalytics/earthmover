@@ -15,20 +15,18 @@ sources:
 
 transformations:
   attendance:
+    source: $sources.attendance
     operations:
       - operation: map_values
-        source: $sources.attendance
         column: attended
         mapping:
           "TRUE": absent
           "FALSE": present
       - operation: rename_columns
-        source: $transformations.attendance
         columns:
           attended: status
           # section: session
       - operation: add_columns
-        source: $transformations.attendance
         columns:
           school: 12345
 

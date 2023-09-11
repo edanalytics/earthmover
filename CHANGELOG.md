@@ -1,3 +1,32 @@
+### v0.2.0
+<details>
+<summary>Released 2023-09-11</summary>
+* breaking change: remove `source` as Operation config and move to Transformation; this simplifies templates and reduces memory usage
+* breaking change: `version: 2` required in Earthmover YAML files 
+* feature: `SnakeCaseColumnsOperation` converts all columns to snake_case
+* feature: `show_progress` can be turned on globally in `config` or locally in any Source, Transformation, or Destination to display a progress bar
+* feature: `repartition` can be turned on in any applicable `Node` to alter Dask partition-sizes post-execute
+* feature: improve performance when writing Destination files
+* feature: improved Earthmover YAML-parsing and config-retrieval
+* internal: rename `YamlEnvironmentJinjaLoader` to `JinjaEnvironmentYamlLoader` for better transparency of use
+* internal: simplify Earthmover.build_graph()
+* internal: unify Jinja rendering into a single util function, instead of redeclaring across project
+* internal: unify `Node.verify()` into `Node.execute()` for improved code legibility
+* internal: improve attribute declarations across project
+* internal: improve type-hinting and doc-strings across project
+* bugfix: refactor SqlSource to be compatible with SQLAlchemy 2.x
+
+</details>
+
+### v0.1.6
+<details>
+<summary>Released 2023-07-11</summary>
+
+* bugfix: [fixing a bug to create the results_file directory if needed](https://github.com/edanalytics/earthmover/pull/40)
+* bugfix: [process a copy of each nodes data at each step, to avoid modifying original node data which downstreams nodes may rely on](https://github.com/edanalytics/earthmover/pull/41)
+
+</details>
+
 ### v0.1.5
 <details>
 <summary>Released 2023-06-13</summary>

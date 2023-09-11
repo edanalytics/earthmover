@@ -3,40 +3,56 @@ import dask
 import jinja2
 import pandas as pd
 
-from typing import List
+from dask.diagnostics import ProgressBar
 
-from earthmover.yaml_parser import YamlMapping
 from earthmover import util
 
+from typing import Dict, List, Tuple, Optional, Union
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
+    from dask.dataframe.core import DataFrame
     from earthmover.earthmover import Earthmover
+    from earthmover.error_handler import ErrorHandler
+    from earthmover.yaml_parser import YamlMapping
+    from logging import Logger
 
 
 class Node:
     """
 
     """
-    CHUNKSIZE = 1024 * 1024 * 100  # 100 MB
+    type: str = None
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition',)
 
-    def __init__(self, name: str, config: YamlMapping, *, earthmover: 'Earthmover'):
-        self.name = name
-        self.config = config
-        self.type = None
+    def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
+        self.name: str = name
+        self.config: 'YamlMapping' = config
 
-        self.earthmover = earthmover
-        self.logger = earthmover.logger
-        self.error_handler = earthmover.error_handler
+        self.earthmover: 'Earthmover' = earthmover
+        self.logger: 'Logger' = earthmover.logger
+        self.error_handler: 'ErrorHandler' = earthmover.error_handler
 
-        self.data = None
-        self.size = None
-        self.num_rows = None
-        self.num_cols = None
+        self.error_handler.ctx.update(
+            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
+        )
 
-        self.expectations = None
-        self.allowed_configs = {'debug', 'expect'}
-        self.debug = self.config.get('debug', False)
+        self.upstream_sources: Dict[str, Optional['Node']] = {}
 
+        self.data: 'DataFrame' = None
+
+        self.size: int = None
+        self.num_rows: int = None
+        self.num_cols: int = None
+
+        self.expectations: List[str] = None
+        self.debug: bool = False
+
+        # Internal Dask configs
+        self.partition_size: Union[str, int] = self.config.get('repartition')
+
+        # Optional variables for displaying progress and diagnostics.
+        self.show_progress: bool = self.config.get('show_progress', self.earthmover.state_configs["show_progress"])
+        self.progress_bar: ProgressBar = ProgressBar(minimum=10, dt=5.0)  # Always instantiate, but only use if `show_progress is True`.
 
     @abc.abstractmethod
     def compile(self):
@@ -56,52 +72,63 @@ class Node:
                     f"Config `{_config}` not defined for node `{self.name}`."
                 )
 
-        # Always check for expectations
+        # Always check for debug and expectations
+        self.debug = self.config.get('debug', False)
         self.expectations = self.error_handler.assert_get_key(self.config, 'expect', dtype=list, required=False)
 
         pass
 
-
     @abc.abstractmethod
-    def execute(self):
+    def execute(self, **kwargs):
         """
+        Node.execute()          :: Saves data into memory
+        Operation.execute(data) :: Does NOT save data into memory
 
         :return:
         """
         self.error_handler.ctx.update(
             file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
         )
+
+        # Turn on the progress bar manually.
+        if self.show_progress:
+            self.logger.info(f"Displaying progress for {self.type} node: {self.name}")
+            self.progress_bar.__enter__()  # Open context manager manually to avoid with-clause
+
         pass
 
-
-    def post_execute(self):
+    @abc.abstractmethod
+    def post_execute(self, **kwargs):
         """
         Function to run generic logic following execute.
 
-        1. Check the dataframe aligns with expectations
-        2. Prepare row and column counts for graphing
+        1. Complete any post-transformations to self.data (currently unused).
+        2. Check the dataframe aligns with expectations.
+        3. Prepare row and column counts for graphing.
+        4. Display row and column counts if debug is True.
 
         :return:
         """
+        # Close context manager manually to avoid with-clause.
+        if self.show_progress:
+            self.progress_bar.__exit__(None, None, None)
+
         self.check_expectations(self.expectations)
 
-        self.num_rows, self.num_cols = self.data.shape
+        # Get lazy row and column counts to display in graph.png.
+        if isinstance(self.data, (pd.Series, dask.dataframe.Series)):
+            self.num_rows, self.num_cols = self.data.size, 1
+        else:
+            self.num_rows, self.num_cols = self.data.shape
 
         if self.debug:
             self.num_rows = dask.compute(self.num_rows)[0]
             self.logger.debug(
                 f"Node {self.name}: {self.num_rows} rows; {self.num_cols} columns\n"
-                f"Header: {self.data.columns}"
+                f"Header: {self.data.columns if hasattr(self.data, 'columns') else 'No header'}"
             )
 
-
-    def get_source_node(self, source) -> 'Node':
-        """
-
-        :return:
-        """
-        return self.earthmover.graph.ref(source)
-
+        pass
 
     def check_expectations(self, expectations: List[str]):
         """
@@ -134,16 +161,7 @@ class Node:
                         f"Assertion passed! {self.name}: {expectation}"
                     )
 
-
-    def ensure_dask_dataframe(self):
-        """
-        Converts a Pandas DataFrame to a Dask DataFrame.
-        """
-        if isinstance(self.data, pd.DataFrame):
-            self.logger.debug(
-                f"Casting data in {self.type} node `{self.name}` to a Dask dataframe."
-            )
-            self.data = dask.dataframe.from_pandas(
-                self.data,
-                chunksize=self.CHUNKSIZE
-            )
+    def opt_repartition(self, data: 'DataFrame'):
+        if self.partition_size:
+            data = data.repartition(partition_size=self.partition_size)
+        return data

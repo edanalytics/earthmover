@@ -4,15 +4,9 @@ import logging
 import tempfile
 import networkx as nx
 import os
-import string
 import time
-import yaml
-import jinja2
 import datetime
 import pandas as pd
-
-from string import Template
-from typing import Optional
 
 from earthmover.error_handler import ErrorHandler
 from earthmover.graph import Graph
@@ -20,11 +14,18 @@ from earthmover.runs_file import RunsFile
 from earthmover.nodes.destination import Destination
 from earthmover.nodes.source import Source
 from earthmover.nodes.transformation import Transformation
-from earthmover.yaml_parser import SafeLineEnvVarLoader
+from earthmover.yaml_parser import JinjaEnvironmentYamlLoader
 from earthmover import util
+
+from typing import List, Optional
 
 
 class Earthmover:
+    """
+
+    """
+    start_timestamp: datetime.datetime  = datetime.datetime.now()
+    end_timestamp: Optional[datetime.datetime] = None
 
     config_defaults = {
         "output_dir": "./",
@@ -33,7 +34,12 @@ class Earthmover:
         "log_level": "INFO",
         "show_stacktrace": False,
         "tmp_dir": tempfile.gettempdir(),
+        "show_progress": False,
     }
+
+    sources: List[Source] = []
+    transformations: List[Transformation] = []
+    destinations: List[Destination] = []
 
     def __init__(self,
         config_file: str,
@@ -47,58 +53,49 @@ class Earthmover:
         self.do_generate = True
         self.force = force
         self.skip_hashing = skip_hashing
-        self.macros = ""
-        self.macros_lines = 0
 
         self.results_file = results_file
         self.config_file = config_file
-        self.config_template_string = ""
-        self.config_template = None
-        self.config_yaml = ""
         self.error_handler = ErrorHandler(file=self.config_file)
 
-        # Parse the user-provided config file and retrieve state-configs.
-        # Merge the optional user state configs into the defaults, then clean as necessary.
+        # Parse the user-provided config file and retrieve project-configs, macros, and parameter defaults.
+        # Merge the optional user configs into the defaults.
         self.params = json.loads(params) if params else {}
-        self.user_configs = self.load_config_file()
 
-        if cli_state_configs is None:
-            cli_state_configs = {}
+        project_configs = JinjaEnvironmentYamlLoader.load_project_configs(self.config_file, params=self.params)
+        self.macros = project_configs.get("macros", "").strip()
 
-        _state_configs = {**self.config_defaults, **self.user_configs.get('config', {}), **cli_state_configs}
+        # Update parameter defaults, if any.
+        for key, val in project_configs.get("parameter_defaults", {}).items():
+            self.params.setdefault(key, val)
+
+        # Complete a full-parse of the user config file.
+        self.user_configs = JinjaEnvironmentYamlLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
+
         self.state_configs = {
-            'output_dir': os.path.expanduser(_state_configs['output_dir']),
-            'macros': _state_configs['macros'].strip(),
-            'show_graph': _state_configs['show_graph'],
-            'log_level': _state_configs['log_level'].upper(),
-            'show_stacktrace': _state_configs['show_stacktrace'],
-            'tmp_dir': _state_configs['tmp_dir'],
+            **self.config_defaults,
+            **project_configs,
+            **(cli_state_configs or {})
         }
-        if 'state_file' in _state_configs.keys():
-            self.state_configs.update({'state_file': _state_configs['state_file']})
 
         # Set up the logger
         self.logger = logger
         self.logger.setLevel(
-            logging.getLevelName( self.state_configs['log_level'] )
+            logging.getLevelName( self.state_configs['log_level'].upper() )
         )
 
         # Prepare the output directory for destinations.
-        _output_dir = self.state_configs['output_dir']
-        if not os.path.isdir(_output_dir):
-            self.logger.info(f"creating output directory {_output_dir}")
-            os.makedirs(_output_dir, exist_ok=True)
-
-        # Initialize the sources, transformations, and destinations
-        self.sources = []
-        self.transformations = []
-        self.destinations = []
+        self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
+        if not os.path.isdir(self.state_configs['output_dir']):
+            self.logger.info(
+                f"creating output directory {self.state_configs['output_dir']}"
+            )
+            os.makedirs(self.state_configs['output_dir'], exist_ok=True)
 
         # Initialize the NetworkX DiGraph
         self.graph = Graph(error_handler=self.error_handler)
 
         # Initialize a dictionary for tracking run metadata (for structured output)
-        self.start_timestamp = datetime.datetime.now()
         self.metadata = {
             "started_at": self.start_timestamp.isoformat(timespec='microseconds'),
             "working_dir": os.getcwd(),
@@ -106,110 +103,6 @@ class Earthmover:
             "output_dir": self.state_configs["output_dir"],
             "row_counts": {}
         }
-
-
-    def load_config_file(self) -> dict:
-        """
-
-        :param: params
-        :return:
-        """
-
-        # pass 1: grab config.macros (if any) so Jinja in the YAML can be rendered with macros
-        with open(self.config_file, "r", encoding='utf-8') as stream:
-            # cannot just yaml.load() here, since Jinja in the YAML may make it invalid...
-            # instead, pull out just the `config` section, which must not contain Jinja (except for `macros`)
-            # then we yaml.load() just the config section to grab any `macros`
-            start = None
-            end = None
-
-            lines = stream.readlines()
-            for idx, line in enumerate(lines):
-
-                # Find the start of the config block.
-                if line.startswith("config:"):
-                    start = idx
-                    continue
-
-                # Find the end of the config block (i.e., the next top-level field)
-                if start is not None and not line.startswith(tuple(string.whitespace+"#")):
-                    end = idx
-                    break
-
-            # Read the configs block and extract the (optional) macros field.
-            if start is not None and end is not None:
-                configs_pass1 = yaml.safe_load("".join(lines[start:end]))
-                self.macros = configs_pass1.get("config", {}).get("macros", "")
-            else:
-                configs_pass1 = {}
-
-            # Figure out lines range of macro definitions, to skip (re)reading/parsing them later
-            self.macros_lines = self.macros.count("\n")
-            self.macros = self.macros.strip()
-            
-
-        # pass 2:
-        #   (a) load template YAML minus macros (which were already loaded in pass 1)
-        #   (b) replace envvars
-        #   (c) render Jinja in YAML template
-        #   (d) load YAML to config Dict
-
-        # (a)
-        self.config_template_string = "".join(lines)
-
-        # (b)
-        _env_backup = os.environ.copy() # backup envvars
-        os.environ.update(self.params) # override with CLI params
-
-        for k, v in configs_pass1.get("config", {}).get("parameter_defaults", {}).items():
-            if isinstance(v, str):
-                os.environ.setdefault(k, v)  # set defaults, if any
-            else:
-                self.error_handler.throw(
-                    f"YAML config.parameter_defaults.{k} must be a string"
-                )
-                raise
-
-        self.config_template_string = Template(self.config_template_string).safe_substitute(os.environ)
-        os.environ = _env_backup # restore envvars
-
-        # Uncomment the following to view original template yaml and parsed yaml:
-        # with open("./earthmover_template.yml", "w") as f:
-        #     f.write(self.config_template_string)
-        
-        # (c)
-        try:
-            self.config_template = jinja2.Environment(
-                loader=jinja2.FileSystemLoader(os.path.dirname('./'))
-            ).from_string(self.macros + "\n\n" + self.config_template_string)
-            self.config_template.globals['md5'] = util.jinja_md5
-
-            self.config_yaml = self.config_template.render()
-            # Uncomment the following to view original template yaml and parsed yaml:
-            # with open("./earthmover_yaml.yml", "w") as f:
-            #     f.write(self.config_yaml)
-    
-        except Exception as err:
-            lineno = util.jinja2_template_error_lineno()
-            if lineno:
-                lineno = ", near line " + str(lineno - self.macros_lines - 1)
-            self.error_handler.throw(
-                f"Jinja syntax error in YAML configuration template{lineno} ({err})"
-            )
-            raise
-
-        # (d)
-        try:
-            configs_pass2 = yaml.load(self.config_yaml, Loader=SafeLineEnvVarLoader)
-            configs_pass2.get("config", {}).update({"macros": self.macros})
-        except yaml.YAMLError as err:
-            linear_err = " ".join([line.replace("^", "").strip() for line in str(err).split("\n")])
-            self.error_handler.throw(
-                f"YAML could not be parsed: {linear_err}"
-            )
-            raise
-
-        return configs_pass2
 
     
     def build_graph(self):
@@ -219,49 +112,28 @@ class Earthmover:
         """
         self.logger.debug("building dataflow graph")
 
-        ### Build all nodes into a graph
-        # sources:
-        _sources = self.error_handler.assert_get_key(self.user_configs, 'sources', dtype=dict)
-        for name, config in _sources.items():
+        node_types = {
+            'sources': Source,
+            'transformations': Transformation,
+            'destinations': Destination,
+        }
 
-            node = Source(name, config, earthmover=self)
-            self.graph.add_node(f"$sources.{name}", data=node)
+        ### Build the graph type-by-type
+        for node_type, node_class in node_types.items():
+            nodes = self.error_handler.assert_get_key(self.user_configs, node_type, dtype=dict, required=False, default={})
 
-        # transformations:
-        _transformations = self.error_handler.assert_get_key(
-            self.user_configs, 'transformations',
-            dtype=dict, required=False, default={}
-        )
+            # Place the nodes
+            for name, config in nodes.items():
+                node = node_class(name, config, earthmover=self)
+                self.graph.add_node(f"${node_type}.{name}", data=node)
 
-        for name, config in _transformations.items():
-
-            node = Transformation(name, config, earthmover=self)
-            self.graph.add_node(f"$transformations.{name}", data=node)
-
-            for source in node.sources:
-                if not self.graph.ref(source):
-                    self.error_handler.throw(
-                        f"invalid source {source}"
-                    )
-                    raise
-
-                if source != f"$transformations.{name}":
-                    self.graph.add_edge(source, f"$transformations.{name}")
-
-        # destinations:
-        _destinations = self.error_handler.assert_get_key(self.user_configs, 'destinations', dtype=dict)
-        for name, config in _destinations.items():
-
-            node = Destination(name, config, earthmover=self)
-            self.graph.add_node(f"$destinations.{name}", data=node)
-
-            if not self.graph.ref(node.source):
-                self.error_handler.throw(
-                    f"invalid source {node.source}"
-                )
-                raise
-
-            self.graph.add_edge(node.source, f"$destinations.{name}")
+                # Place edges for transformations and destinations
+                for source in node.upstream_sources:
+                    try:
+                        node.upstream_sources[source] = self.graph.ref(source)
+                        self.graph.add_edge(source, f"${node_type}.{name}")
+                    except KeyError:
+                        self.error_handler.throw(f"invalid source {source}")
 
         ### Confirm that the graph is a DAG
         self.logger.debug("checking dataflow graph")
@@ -290,7 +162,64 @@ class Earthmover:
                 break
 
 
-    def compile(self, subgraph = None):
+    def hash_graph_to_runs_file(self, subgraph: Graph):
+        """
+
+        :return:
+        """
+        ### Hashing requires an entire class mixin and multiple additional steps.
+        if not self.skip_hashing and self.state_configs.get('state_file', False):
+            _runs_path = os.path.expanduser(self.state_configs['state_file'])
+
+            self.logger.info(f"computing input hashes for run log at {_runs_path}")
+
+            runs_file = RunsFile(_runs_path, earthmover=self)
+
+            # Remote sources cannot be hashed; no hashed runs contain remote sources.
+            if any(source.is_remote for source in self.sources):
+                self.logger.info(
+                    "forcing regenerate, since some sources are remote (and we cannot know if they changed)"
+                )
+
+            elif self.force:
+                self.logger.info("forcing regenerate")
+
+            else:
+                self.logger.info("checking for prior runs...")
+
+                # Find the latest run that matched our selector(s)...
+                most_recent_run = runs_file.get_newest_compatible_run(
+                    active_nodes=subgraph.get_node_data()
+                )
+
+                if most_recent_run is None:
+                    self.logger.info("regenerating (no prior runs found, or config.yaml has changed since last run)")
+
+                else:
+                    _run_differences = runs_file.find_hash_differences(most_recent_run)
+                    if _run_differences:
+                        self.logger.info("regenerating (changes since last run: ")
+                        self.logger.info("   [{0}])".format(", ".join(_run_differences)))
+                    else:
+                        _last_run_string = util.human_time(
+                            int(time.time()) - int(float(most_recent_run['run_timestamp'])))
+                        self.logger.info(
+                            f"skipping (no changes since the last run {_last_run_string} ago)"
+                        )
+                        self.do_generate = False
+
+        elif not self.state_configs.get('state_file', False):
+            self.logger.info("skipping hashing and run-logging (no `state_file` defined in config)")
+            runs_file = None  # This instantiation will never be used, but this avoids linter alerts.
+
+        else:  # Skip hashing
+            self.logger.info("skipping hashing and run-logging (run initiated with `--skip-hashing` flag)")
+            runs_file = None  # This instantiation will never be used, but this avoids linter alerts.
+
+        return runs_file
+
+
+    def compile(self, subgraph: Optional[Graph] = None):
         """
 
         :param subgraph:
@@ -315,10 +244,12 @@ class Earthmover:
                 elif node.type == 'destination':
                     self.destinations.append(node)
 
-                node.compile()
+        ### Confirm that at least one source is defined.
+        if not self.sources:
+            self.error_handler.throw("No sources have been defined!")
 
 
-    def execute(self, subgraph):
+    def execute(self, subgraph: Graph):
         """
 
         :param subgraph:
@@ -331,10 +262,10 @@ class Earthmover:
                     node.execute()  # Sets self.data in each node.
                     node.post_execute()
                     if self.results_file:
-                        self.metadata["row_counts"].update({'$'+node.type+'s.'+node.name: len(node.data)})
+                        self.metadata["row_counts"].update({f"${node.type}s.{node.name}": len(node.data)})
 
 
-    def generate(self, selector):
+    def generate(self, selector: str):
         """
         Build DAG from YAML configs
 
@@ -357,52 +288,7 @@ class Earthmover:
 
 
         ### Hashing requires an entire class mixin and multiple additional steps.
-        if not self.skip_hashing and self.state_configs.get('state_file', False):
-            _runs_path = os.path.expanduser(self.state_configs['state_file'])
-            
-            self.logger.info(f"computing input hashes for run log at {_runs_path}")
-
-            runs_file = RunsFile(_runs_path, earthmover=self)
-
-            # Remote sources cannot be hashed; no hashed runs contain remote sources.
-            if any(source.is_remote for source in self.sources):
-                self.logger.info(
-                    "forcing regenerate, since some sources are remote (and we cannot know if they changed)"
-                )
-
-            elif self.force:
-                self.logger.info("forcing regenerate")
-
-            else:
-                self.logger.info("checking for prior runs...")
-
-                # Find the latest run that matched our selector(s)...
-                most_recent_run = runs_file.get_newest_compatible_run(
-                    active_nodes=active_graph.get_node_data()
-                )
-
-                if most_recent_run is None:
-                    self.logger.info("regenerating (no prior runs found, or config.yaml has changed since last run)")
-
-                else:
-                    _run_differences = runs_file.find_hash_differences(most_recent_run)
-                    if _run_differences:
-                        self.logger.info("regenerating (changes since last run: ")
-                        self.logger.info("   [{0}])".format(", ".join(_run_differences)))
-                    else:
-                        _last_run_string = util.human_time(int(time.time()) - int(float(most_recent_run['run_timestamp'])))
-                        self.logger.info(
-                            f"skipping (no changes since the last run {_last_run_string} ago)"
-                        )
-                        self.do_generate = False
-
-        elif not self.state_configs.get('state_file', False):
-            self.logger.info("skipping hashing and run-logging (no `state_file` defined in config)")
-            runs_file = None  # This instantiation will never be used, but this avoids linter alerts.
-         
-        else:  # Skip hashing
-            self.logger.info("skipping hashing and run-logging (run initiated with `--skip-hashing` flag)")
-            runs_file = None  # This instantiation will never be used, but this avoids linter alerts.
+        runs_file = self.hash_graph_to_runs_file(active_graph)
 
 
         ### Draw the graph, regardless of whether a run is completed.
@@ -456,6 +342,10 @@ class Earthmover:
         
         ### Create structured output results_file if necessary
         if self.results_file:
+
+            # create directory if not exists
+            os.makedirs(os.path.dirname(self.results_file), exist_ok=True)
+
             self.end_timestamp = datetime.datetime.now()
             self.metadata.update({"completed_at": self.end_timestamp.isoformat(timespec='microseconds')})
             self.metadata.update({"runtime_sec": (self.end_timestamp - self.start_timestamp).total_seconds()})
@@ -463,7 +353,7 @@ class Earthmover:
                 fp.write(json.dumps(self.metadata, indent=4))
 
 
-    def test(self, tests_dir):
+    def test(self, tests_dir: str):
         # delete files in tests/output/
         output_dir = os.path.join(tests_dir, "outputs")
         for f in os.listdir(output_dir):

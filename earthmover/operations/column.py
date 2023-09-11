@@ -1,24 +1,30 @@
 import csv
-import dask.dataframe as dd
-import jinja2
-import os
+import dask
 import pandas as pd
+import re
+import string
 
 from earthmover.nodes.operation import Operation
 from earthmover import util
+
+from typing import Dict, List, Tuple
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from dask.dataframe.core import DataFrame
 
 
 class AddColumnsOperation(Operation):
     """
 
     """
+    allowed_configs: Tuple[str] = (
+        'operation', 'repartition', 
+        'columns',
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['columns'])
-
-        self.columns_dict = None
-
+        self.columns_dict: Dict[str, str] = None
 
     def compile(self):
         """
@@ -28,26 +34,22 @@ class AddColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-
-    def execute(self):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:
         """
-        super().execute()
+        super().execute(data, **kwargs)
 
         for col, val in self.columns_dict.items():
 
             # Apply the value as a static string if not obviously Jinja.
             if not util.contains_jinja(val):
-                self.data[col] = val
+                data[col] = val
 
             else:
                 try:
-                    template = jinja2.Environment(
-                        loader=jinja2.FileSystemLoader(os.path.dirname('./'))
-                    ).from_string(self.earthmover.state_configs['macros'] + val)
-                    template.globals['md5'] = util.jinja_md5
+                    template = util.build_jinja_template(val, macros=self.earthmover.macros)
 
                 except Exception as err:
                     self.error_handler.ctx.remove('line')
@@ -56,7 +58,7 @@ class AddColumnsOperation(Operation):
                     )
                     raise
 
-                self.data[col] = self.data.apply(
+                data[col] = data.apply(
                     util.render_jinja_template, axis=1,
                     meta=pd.Series(dtype='str', name=col),
                     template=template,
@@ -64,21 +66,21 @@ class AddColumnsOperation(Operation):
                     error_handler=self.error_handler
                 )
 
-        return self.data
-
+        return data
 
 
 class ModifyColumnsOperation(Operation):
     """
 
     """
+    allowed_configs: Tuple[str] = (
+        'operation', 'repartition', 
+        'columns',
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['columns'])
-
-        self.columns_dict = None
-
+        self.columns_dict: Dict[str, str] = None
 
     def compile(self):
         """
@@ -88,26 +90,22 @@ class ModifyColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-
-    def execute(self):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:
         """
-        super().execute()
+        super().execute(data, **kwargs)
 
         for col, val in self.columns_dict.items():
 
             # Apply the value as a static string if not obviously Jinja.
             if not util.contains_jinja(val):
-                self.data[col] = val
+                data[col] = val
 
             else:
                 try:
-                    template = jinja2.Environment(
-                        loader=jinja2.FileSystemLoader(os.path.dirname('./'))
-                    ).from_string(self.earthmover.state_configs['macros'] + val)
-                    template.globals['md5'] = util.jinja_md5
+                    template = util.build_jinja_template(val, macros=self.earthmover.macros)
 
                 except Exception as err:
                     self.error_handler.ctx.remove('line')
@@ -117,9 +115,9 @@ class ModifyColumnsOperation(Operation):
                     raise
 
                 # TODO: Allow user to specify string that represents current column value.
-                self.data['value'] = self.data[col]
+                data['value'] = data[col]
 
-                self.data[col] = self.data.apply(
+                data[col] = data.apply(
                     util.render_jinja_template, axis=1,
                     meta=pd.Series(dtype='str', name=col),
                     template=template,
@@ -127,23 +125,23 @@ class ModifyColumnsOperation(Operation):
                     error_handler=self.error_handler
                 )
 
-                del self.data["value"]
+                del data["value"]
 
-        return self.data
-
+        return data
 
 
 class DuplicateColumnsOperation(Operation):
     """
 
     """
+    allowed_configs: Tuple[str] = (
+        'operation', 'repartition', 
+        'columns',
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['columns'])
-
-        self.columns_dict = None
-
+        self.columns_dict: Dict[str, str] = None
 
     def compile(self):
         """
@@ -153,56 +151,42 @@ class DuplicateColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-    
-    def verify(self):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
-        
+
         :return:
         """
-        _columns = set(self.data.columns)
+        super().execute(data, **kwargs)
 
         for old_col, new_col in self.columns_dict.items():
 
-            if new_col in _columns:
+            if new_col in data.columns:
                 self.logger.warning(
                     f"Duplicate column operation overwrites existing column `{new_col}`."
                 )
 
-            if old_col not in _columns:
+            if old_col not in data.columns:
                 self.error_handler.throw(
                     f"column {old_col} not present in the dataset"
                 )
-            
-            _columns.remove(old_col)
-            _columns.add(new_col)
 
+            data[new_col] = data[old_col]
 
-    def execute(self):
-        """
-
-        :return:
-        """
-        super().execute()
-
-        for old_col, new_col in self.columns_dict.items():
-
-            self.data[new_col] = self.data[old_col]
-
-        return self.data
-
+        return data
 
 
 class RenameColumnsOperation(Operation):
     """
 
     """
+    allowed_configs: Tuple[str] = (
+        'operation', 'repartition', 
+        'columns',
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['columns'])
-
-        self.columns_dict = None
-
+        self.columns_dict: Dict[str, str] = None
 
     def compile(self):
         """
@@ -212,54 +196,40 @@ class RenameColumnsOperation(Operation):
         super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
-
-    def verify(self):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
-        
+
         :return:
         """
-        _columns = set(self.data.columns)
+        super().execute(data, **kwargs)
 
         for old_col, new_col in self.columns_dict.items():
-
-            if new_col in _columns:
+            if new_col in data.columns:
                 self.logger.warning(
                     f"Rename column operation overwrites existing column `{new_col}`."
                 )
-
-            if old_col not in _columns:
+            if old_col not in data.columns:
                 self.error_handler.throw(
                     f"column {old_col} not present in the dataset"
                 )
-            
-            _columns.remove(old_col)
-            _columns.add(new_col)
 
+        data = data.rename(columns=self.columns_dict)
 
-    def execute(self):
-        """
-
-        :return:
-        """
-        super().execute()
-
-        self.data = self.data.rename(columns=self.columns_dict)
-
-        return self.data
-
+        return data
 
 
 class DropColumnsOperation(Operation):
     """
 
     """
+    allowed_configs: Tuple[str] = (
+        'operation', 'repartition', 
+        'columns',
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['columns'])
-
-        self.columns_to_drop = None
-
+        self.columns_to_drop: List[str] = None
 
     def compile(self):
         """
@@ -269,45 +239,36 @@ class DropColumnsOperation(Operation):
         super().compile()
         self.columns_to_drop = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
 
-
-    def verify(self):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:
         """
-        super().verify()
+        super().execute(data, **kwargs)
 
-        if not set(self.columns_to_drop).issubset(self.data.columns):
+        if not set(self.columns_to_drop).issubset(data.columns):
             self.error_handler.throw(
                 "one or more columns specified to drop are not present in the dataset"
             )
             raise
 
+        data = data.drop(columns=self.columns_to_drop)
 
-    def execute(self):
-        """
-
-        :return:
-        """
-        super().execute()
-
-        self.data = self.data.drop(columns=self.columns_to_drop)
-
-        return self.data
+        return data
 
 
 class KeepColumnsOperation(Operation):
     """
 
     """
+    allowed_configs: Tuple[str] = (
+        'operation', 'repartition', 
+        'columns',
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['columns'])
-
-        self.header = None
-
+        self.header: List[str] = None
 
     def compile(self):
         """
@@ -318,46 +279,38 @@ class KeepColumnsOperation(Operation):
 
         self.header = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
 
-
-    def verify(self):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:
         """
-        super().verify()
+        super().execute(data, **kwargs)
 
-        if not set(self.header).issubset(self.data.columns):
+        if not set(self.header).issubset(data.columns):
             self.error_handler.throw(
                 "one or more columns specified to keep are not present in the dataset"
             )
             raise
 
+        data = data[self.header]
 
-    def execute(self):
-        """
-
-        :return:
-        """
-        super().execute()
-
-        self.data = self.data[self.header]
-
-        return self.data
+        return data
 
 
 class CombineColumnsOperation(Operation):
     """
 
     """
+    allowed_configs: Tuple[str] = (
+        'operation', 'repartition', 
+        'columns', 'new_column', 'separator',
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['columns', 'new_column', 'separator'])
-
-        self.columns_list = None
-        self.new_column = None
-        self.separator = None
-
+        self.columns_list: List[str] = None
+        self.new_column: str = None
+        self.separator: str = None
 
     def compile(self):
         """
@@ -371,34 +324,26 @@ class CombineColumnsOperation(Operation):
 
         self.separator = self.config.get('separator', "")
 
-
-    def verify(self):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:
         """
-        super().verify()
+        super().execute(data, **kwargs)
 
-        if not set(self.columns_list).issubset(self.data.columns):
+        if not set(self.columns_list).issubset(data.columns):
             self.error_handler.throw(
                 f"one or more defined columns is not present in the dataset"
             )
             raise
 
-    def execute(self):
-        """
-
-        :return:
-        """
-        super().execute()
-
-        self.data[self.new_column] = self.data.apply(
+        data[self.new_column] = data.apply(
             lambda x: self.separator.join(x[col] for col in self.columns_list),
             axis=1,
             meta=pd.Series(dtype='str', name=self.new_column)
         )
 
-        return self.data
+        return data
 
 
 
@@ -406,15 +351,16 @@ class MapValuesOperation(Operation):
     """
 
     """
+    allowed_configs: Tuple[str] = (
+        'operation', 'repartition', 
+        'column', 'columns', 'mapping', 'map_file',
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['column', 'columns', 'mapping', 'map_file'])
-
-        self.columns_list = None
-        self.map_file = None
-        self.mapping = None
-
+        self.columns_list: List[str] = None
+        self.map_file: str = None
+        self.mapping: Dict[str, str] = None
 
     def compile(self):
         """
@@ -449,38 +395,28 @@ class MapValuesOperation(Operation):
             )
             raise
 
-
-    def verify(self):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:
         """
-        super().verify()
+        super().execute(data, **kwargs)
 
-        if not set(self.columns_list).issubset(self.data.columns):
+        if not set(self.columns_list).issubset(data.columns):
             self.error_handler.throw(
                 "one or more columns to map are undefined in the dataset"
             )
 
-
-    def execute(self):
-        """
-
-        :return:
-        """
-        super().execute()
-
         try:
             for _column in self.columns_list:
-                self.data[_column] = self.data[_column].replace(self.mapping)
+                data[_column] = data[_column].replace(self.mapping)
 
         except Exception as _:
             self.error_handler.throw(
                 "error during `map_values` operation... check mapping shape and `column(s)`?"
             )
 
-        return self.data
-
+        return data
 
     def _read_map_file(self, file) -> dict:
         """
@@ -508,15 +444,16 @@ class DateFormatOperation(Operation):
     """
 
     """
+    allowed_configs: Tuple[str] = (
+        'operation', 'repartition', 
+        'column', 'columns', 'from_format', 'to_format',
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['column', 'columns', 'from_format', 'to_format'])
-
-        self.columns_list = None
-        self.from_format = None
-        self.to_format = None
-
+        self.columns_list: List[str] = None
+        self.from_format: str = None
+        self.to_format: str = None
 
     def compile(self):
         """
@@ -540,32 +477,23 @@ class DateFormatOperation(Operation):
 
         self.columns_list = _columns or [_column]  # `[None]` evaluates to True
 
-
-    def verify(self):
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
         :return:
         """
-        super().verify()
+        super().execute(data, **kwargs)
 
-        if not set(self.columns_list).issubset(self.data.columns):
+        if not set(self.columns_list).issubset(data.columns):
             self.error_handler.throw(
                 "one or more columns to map are undefined in the dataset"
             )
             raise
 
-
-    def execute(self):
-        """
-
-        :return:
-        """
-        super().execute()
-
         for _column in self.columns_list:
             try:
-                self.data[_column] = (
-                    dd.to_datetime(self.data[_column], format=self.from_format)
+                data[_column] = (
+                    dask.dataframe.to_datetime(data[_column], format=self.from_format)
                         .dt.strftime(self.to_format)
                 )
 
@@ -574,4 +502,50 @@ class DateFormatOperation(Operation):
                     f"error during `date_format` operation, `{_column}` column... check format strings? ({err})"
                 )
 
-        return self.data
+        return data
+
+
+
+class SnakeCaseColumnsOperation(Operation):
+    """
+
+    """
+    allowed_configs: Tuple[str] = (
+        'operation', 'repartition', 
+    )
+
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
+        """
+
+        :return:
+        """
+        super().execute(data, **kwargs)
+
+        data_columns  = list(data.columns)
+        snake_columns = list(map(self.to_snake_case, data_columns))
+
+        if len(set(data_columns)) != len(set(snake_columns)):
+            self.error_handler.throw(
+                f"Snake case operation creates duplicate columns!\n"
+                f"Columns before: {len(set(data_columns))}\n"
+                f"Columns after : {len(set(snake_columns))}"
+            )
+
+        data = data.rename(columns=dict(zip(data_columns, snake_columns)))
+        return data
+
+    @staticmethod
+    def to_snake_case(text: str):
+        """
+        Convert camelCase names to snake_case names.
+        :param text: A camelCase string value to be converted to snake_case.
+        :return: A string in snake_case.
+        """
+        punctuation_regex = re.compile("[" + re.escape(string.punctuation) + " ]")  # Include space
+
+        text = re.sub(r'(.)([A-Z][a-z]+)', r'\1_\2', text)
+        text = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', text)
+        text = punctuation_regex.sub("_", text)  # Replace any punctuation or spaces with underscores
+        text = re.sub(r'_+', '_', text)  # Consolidate underscores
+        text = re.sub(r'^_', '', text)  # Remove leading underscores
+        return text.lower()
