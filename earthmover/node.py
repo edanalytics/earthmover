@@ -22,7 +22,7 @@ class Node:
 
     """
     type: str = None
-    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'partition_size',)
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition',)
 
     def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         self.name: str = name
@@ -44,7 +44,7 @@ class Node:
         self.debug: bool = False
 
         # Internal Dask configs
-        self.partition_size: Union[str, int] = self.config.get('partition_size')
+        self.partition_size: Union[str, int] = self.config.get('repartition')
 
         # Optional variables for displaying progress and diagnostics.
         self.show_progress: bool = self.config.get('show_progress', self.earthmover.state_configs["show_progress"])
