@@ -92,6 +92,9 @@ class Earthmover:
             )
             os.makedirs(self.state_configs['output_dir'], exist_ok=True)
 
+        # Set the temporary directory in cases of disk-spillage.
+        dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
+
         # Initialize the NetworkX DiGraph
         self.graph = Graph(error_handler=self.error_handler)
 
@@ -301,7 +304,6 @@ class Earthmover:
 
 
         ### Process the graph
-        dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
         for idx, component in enumerate( nx.weakly_connected_components(active_graph) ):
             self.logger.debug(f"processing component {idx}")
 
