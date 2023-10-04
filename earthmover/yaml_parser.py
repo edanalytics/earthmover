@@ -79,7 +79,7 @@ class JinjaEnvironmentYamlLoader(yaml.SafeLoader):
         # Force version 2 check to ensure consistency across Earthmover versions.
         if yaml_configs.get('version') != 2:
             raise Exception(
-                "Earthmover version 1.x requires `version: 2` be defined in your YAML file!\n"
+                "Earthmover version 0.2.x requires `version: 2` be defined in your YAML file!\n"
                 "Please add this key and reattempt run."
             )
 
