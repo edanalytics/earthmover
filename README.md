@@ -48,7 +48,7 @@ If you develop a bundle for a particular source data system or format, please co
 
 
 ## Source data
-This tool is designed to operate on tabluar data in the form of multiple CSV or TSV files, such as those created by an export from some software system, or from a set of database tables.
+This tool is designed to operate on tabular data in the form of multiple CSV or TSV files, such as those created by an export from some software system, or from a set of database tables.
 
 There are few limitations on the source data besides its format (CSV or TSV). Generally it is better to avoid using spaces in column names, however this can be managed by renaming columns as described in the [`sources`](#sources) YAML configuration section below.
 
@@ -62,11 +62,49 @@ Note that templates may [include](https://jinja.palletsprojects.com/en/3.1.x/tem
 
 
 ## YAML configuration
+
+<details>
+<summary>When updating to 0.2.x</summary>
+
+-----
+A breaking change was introduced in version 0.2 of Earthmover.
+Before this update, each operation under a transformation required a `source` be defined.
+This allowed inconsistent behavior where the results of an upstream operation could be discarded if misdefined.
+
+The `source` key has been moved into transformations as a required field.
+In unary operations, the source is the output of the previous operation (or the transformation `source` if the first defined).
+In operations with more than one source (i.e., `join` and `union`), the output of the previous operation is treated as the first source;
+any additional sources are defined using the `sources` field.
+
+For example:
+```yaml
+# Before                          # After
+transA:                           transA:
+                                    source: $sources.A
+  operations:                       operations:
+    - operation: add_columns          - operation: add_columns
+      source: $sources.A
+      columns:                          columns:
+        - A: "a"                          - A: "a"
+        - B: "b"                          - B: "b"
+    - operation: union                - operation: union
+      sources:                          sources:
+      - $transformations.transA
+      - $sources.B                        - $sources.B
+      - $sources.C                        - $sources.C
+```
+
+To ensure the user has updated their templates accordingly, the key and value `version: 2` is mandatory at the beginning of Earthmover templates going forward.
+
+-----
+</details>
+
 All the instructions for this tool &mdash; where to find the source data, what transformations to apply to it, and how and where to save the output &mdash; are specified in a single YAML configuration file. Example YAML configuration files and projects can be found in `example_projects/`.
 
 The YAML configuration may also [contain Jinja](#jinja-in-yaml-configuration) and [environment variable references](#environment-variable-references).
 
-The general structure of the YAML involves four main sections:
+The general structure of the YAML involves the following sections:
+1. `version`, with required value `2` (Earthmover 0.2.x and later)
 1. [`config`](#config), which specifies options like the logging level and parameter defaults
 1. [`definitions`](#definitions) is an *optional* way to specify reusable values and blocks
 1. [`sources`](#sources), where each source file is listed with details like the number of header rows
@@ -249,7 +287,6 @@ transformations:
 ```
 The above example shows a transformation of the `courses` source, which consists of an ordered list of operations. A transformation defines a source to which a series of operations are applied. This source may be an original `$source` or another `$transformation`. Transformation operations each require further specification depending on their type; the operations are listed and documented below.
 
-Note: moving `source` from operations into transformations is a breaking change of Earthmover 0.2. To ensure the user has updated their templates accordingly, the key and value `version: 2` is mandatory at the beginning of Earthmover templates going forward.
 
 #### Frame operations
 
