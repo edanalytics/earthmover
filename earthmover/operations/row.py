@@ -1,17 +1,25 @@
+import dask
+
 from earthmover.nodes.operation import Operation
+
+from typing import List, Tuple
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from dask.dataframe.core import DataFrame
 
 
 class DistinctRowsOperation(Operation):
     """
 
     """
+    allowed_configs: Tuple[str] = (
+        'operation', 'repartition', 
+        'column', 'columns',
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['column', 'columns'])
-
-        self.columns_list = None
-
+        self.columns_list: List[str] = None
 
     def compile(self):
         """
@@ -31,50 +39,40 @@ class DistinctRowsOperation(Operation):
         else:
             self.columns_list = []
 
-
-    def verify(self):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().verify()
+        super().execute(data, **kwargs)
 
-        if not set(self.columns_list).issubset(self.data.columns):
+        if not set(self.columns_list).issubset(data.columns):
             self.error_handler.throw(
                 "one or more columns for checking for distinctness are undefined in the dataset"
             )
             raise
 
-
-    def execute(self):
-        """
-
-        :return:
-        """
-        super().execute()
-
         if not self.columns_list:
-            self.columns_list = self.data.columns
+            self.columns_list = data.columns
 
-        self.data = self.data.drop_duplicates(subset=self.columns_list)
-
-        return self.data
+        return data.drop_duplicates(subset=self.columns_list)
 
 
 class FilterRowsOperation(Operation):
     """
 
     """
+    allowed_configs: Tuple[str] = (
+        'operation', 'repartition', 
+        'query', 'behavior',
+    )
+
     BEHAVIORS = ["include", "exclude"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.allowed_configs.update(['query', 'behavior'])
-
-        self.query = None
-        self.behavior = None
-
+        self.query: str = None
+        self.behavior: str = None
 
     def compile(self):
         """
@@ -92,13 +90,12 @@ class FilterRowsOperation(Operation):
             )
             raise
 
-
-    def execute(self):
+    def execute(self, data: 'DataFrame', **kwargs):
         """
 
         :return:
         """
-        super().execute()
+        super().execute(data, **kwargs)
 
         #
         if self.behavior == 'exclude':
@@ -107,7 +104,7 @@ class FilterRowsOperation(Operation):
             _query = self.query
 
         try:
-            self.data = self.data.query(_query, engine='python')  #`numexpr` is used by default if installed.
+            data = data.query(_query, engine='python')  #`numexpr` is used by default if installed.
 
         except Exception as _:
             self.error_handler.throw(
@@ -115,4 +112,4 @@ class FilterRowsOperation(Operation):
             )
             raise
 
-        return self.data
+        return data

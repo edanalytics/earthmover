@@ -2,11 +2,13 @@ import math
 import re
 import networkx as nx
 
-from typing import Dict, Iterable, Optional
-
-from earthmover.error_handler import ErrorHandler
-from earthmover.node import Node
 from earthmover import util
+
+from typing import Dict, Iterable, Optional
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from earthmover.error_handler import ErrorHandler
+    from earthmover.node import Node
 
 
 class Graph(nx.DiGraph):
@@ -17,7 +19,7 @@ class Graph(nx.DiGraph):
     LABEL_OPTIONS = {"font_size": 12, "font_color": "whitesmoke"}
     SIZE_OPTIONS  = {"font_size": 8 , "font_color": "black"}
 
-    def __init__(self, error_handler: Optional[ErrorHandler] = None, graph: Optional['Graph'] = None):
+    def __init__(self, error_handler: Optional['ErrorHandler'] = None, graph: Optional['Graph'] = None):
         """
         Note: Defining `error_handler` as optional is a hack
         to allow networkx methods to still act on `Graph`.
@@ -31,14 +33,14 @@ class Graph(nx.DiGraph):
         else:
             super().__init__()  # Empty init for an empty graph
 
-        self.error_handler: ErrorHandler = error_handler
+        self.error_handler: 'ErrorHandler' = error_handler
 
 
-    def get_node_data(self) -> Dict[str, Node]:
+    def get_node_data(self) -> Dict[str, 'Node']:
         return {node[0]: node[1]["data"] for node in self.nodes(data=True)}
 
 
-    def get_terminal_nodes(self) -> Iterable[Node]:
+    def get_terminal_nodes(self) -> Iterable['Node']:
         """
         Helper function to remove terminal source and transformation nodes during Earthmover.build_graph().
         :return:
@@ -46,7 +48,7 @@ class Graph(nx.DiGraph):
         return [node for node, degree in self.out_degree() if degree == 0]
 
 
-    def ref(self, ref) -> Optional[Node]:
+    def ref(self, ref) -> 'Node':
         """
         Destinations can reference either sources directly, or an intermediate transformation.
         This function determines which a reference refers to, and returns the appropriate target.
@@ -54,11 +56,12 @@ class Graph(nx.DiGraph):
         :param ref:
         :return:
         """
-        _node = self.nodes.get(ref)
-        if _node:
-            return _node['data']
-        else:
-            return None
+        node = self.nodes.get(ref)
+        if not node:
+            raise KeyError(
+                f"Node not found in the graph: {ref}"
+            )
+        return node['data']
 
 
     def select_subgraph(self, selector: str) -> 'Graph':
@@ -102,7 +105,7 @@ class Graph(nx.DiGraph):
             return Graph(graph=_graph, error_handler=self.error_handler)
 
 
-    def draw(self, image_width=20, image_height=14):
+    def draw(self, image_width: int = 20, image_height: int = 14):
         """
 
         :param image_width:

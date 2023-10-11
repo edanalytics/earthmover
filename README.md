@@ -48,7 +48,7 @@ If you develop a bundle for a particular source data system or format, please co
 
 
 ## Source data
-This tool is designed to operate on tabluar data in the form of multiple CSV or TSV files, such as those created by an export from some software system, or from a set of database tables.
+This tool is designed to operate on tabular data in the form of multiple CSV or TSV files, such as those created by an export from some software system, or from a set of database tables.
 
 There are few limitations on the source data besides its format (CSV or TSV). Generally it is better to avoid using spaces in column names, however this can be managed by renaming columns as described in the [`sources`](#sources) YAML configuration section below.
 
@@ -62,11 +62,49 @@ Note that templates may [include](https://jinja.palletsprojects.com/en/3.1.x/tem
 
 
 ## YAML configuration
+
+<details>
+<summary>When updating to 0.2.x</summary>
+
+-----
+A breaking change was introduced in version 0.2 of Earthmover.
+Before this update, each operation under a transformation required a `source` be defined.
+This allowed inconsistent behavior where the results of an upstream operation could be discarded if misdefined.
+
+The `source` key has been moved into transformations as a required field.
+In unary operations, the source is the output of the previous operation (or the transformation `source` if the first defined).
+In operations with more than one source (i.e., `join` and `union`), the output of the previous operation is treated as the first source;
+any additional sources are defined using the `sources` field.
+
+For example:
+```yaml
+# Before                          # After
+transA:                           transA:
+                                    source: $sources.A
+  operations:                       operations:
+    - operation: add_columns          - operation: add_columns
+      source: $sources.A
+      columns:                          columns:
+        - A: "a"                          - A: "a"
+        - B: "b"                          - B: "b"
+    - operation: union                - operation: union
+      sources:                          sources:
+      - $transformations.transA
+      - $sources.B                        - $sources.B
+      - $sources.C                        - $sources.C
+```
+
+To ensure the user has updated their templates accordingly, the key and value `version: 2` is mandatory at the beginning of Earthmover templates going forward.
+
+-----
+</details>
+
 All the instructions for this tool &mdash; where to find the source data, what transformations to apply to it, and how and where to save the output &mdash; are specified in a single YAML configuration file. Example YAML configuration files and projects can be found in `example_projects/`.
 
 The YAML configuration may also [contain Jinja](#jinja-in-yaml-configuration) and [environment variable references](#environment-variable-references).
 
-The general structure of the YAML involves four main sections:
+The general structure of the YAML involves the following sections:
+1. `version`, with required value `2` (Earthmover 0.2.x and later)
 1. [`config`](#config), which specifies options like the logging level and parameter defaults
 1. [`definitions`](#definitions) is an *optional* way to specify reusable values and blocks
 1. [`sources`](#sources), where each source file is listed with details like the number of header rows
@@ -93,6 +131,7 @@ config:
     {%- endmacro %}
   parameter_defaults:
     SOURCE_DIR: ./sources/
+  show_progress: True
 
 ```
 * (optional) `output_dir` determines where generated JSONL is stored. The default is `./`.
@@ -107,6 +146,7 @@ config:
 * (optional) Specify whether or not `show_graph` (default is `False`), which requires [PyGraphViz](https://pygraphviz.github.io/) to be installed and creates `graph.png` and `graph.svg` which are visual depictions of the dependency graph.
 * (optional) Specify Jinja `macros` which will be available within any Jinja template content throughout the project. (This can slow performance.)
 * (optional) Specify `parameter_defaults` which will be used if the user fails to specify a particular [parameter](#command-line-parameters) or [environment variable](#environment-variable-references).
+* (optional) Specify whether to `show_progress` while processing, via a Dask progress bar.
 
 
 ### **`definitions`**
@@ -224,9 +264,9 @@ A sample `transformations` section is shown here; the options are explained belo
 ```yaml
 transformations:
   courses:
+    source: $sources.courses
     operations:
       - operation: map_values
-        source: $sources.courses
         column: subject_id
         mapping:
           01: 1 (Mathematics)
@@ -236,25 +276,24 @@ transformations:
           05: 5 (Computer and Information Systems)
       - operation: join
         sources:
-          - $transformations.courses
           - $sources.schools
         join_type: inner
         left_key: school_id
         right_key: school_id
       - operation: drop_columns
-        source: $transformations.courses
         columns:
           - address
           - phone_number
 ```
-The above example shows a transformation of the `courses` source, which consists of an ordered list of operations. Each operation has one or more sources, which may be an original `$source`, another `$transformation`, or the prior step of the same `$transformation` (operations can be chained together within a transformation). Transformation operations each require further specification depending on their type; the operations are listed and documented below.
+The above example shows a transformation of the `courses` source, which consists of an ordered list of operations. A transformation defines a source to which a series of operations are applied. This source may be an original `$source` or another `$transformation`. Transformation operations each require further specification depending on their type; the operations are listed and documented below.
+
 
 #### Frame operations
 
 <details>
 <summary><code>union</code></summary>
 
-Concatenates two or more sources sources of the same shape.
+Concatenates the transformation source with one or more sources sources of the same shape.
 ```yaml
       - operation: union
         sources:
@@ -268,11 +307,10 @@ Concatenates two or more sources sources of the same shape.
 <details>
 <summary><code>join</code></summary>
 
-Joins two sources.
+Joins the transformation source with one or more sources.
 ```yaml
       - operation: join
         sources:
-          - $transformations.courses
           - $sources.schools
         join_type: inner | left | right
         left_key: school_id
@@ -314,7 +352,6 @@ Besides the join column(s), if a column `my_column` with the same name exists in
 Adds columns with specified values.
 ```yaml
       - operation: add_columns
-        source: $transformations.courses
         columns:
           - new_column_1: value_1
           - new_column_2: "{%raw%}{% if True %}Jinja works here{% endif %}{%endraw%}"
@@ -331,7 +368,6 @@ Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers
 Renames columns.
 ```yaml
       - operation: rename_columns
-        source: $transformations.courses
         columns:
           old_column_1: new_column_1
           old_column_2: new_column_2
@@ -346,7 +382,6 @@ Renames columns.
 Duplicates columns (and all their values).
 ```yaml
       - operation: duplicate_columns
-        source: $transformations.courses
         columns:
           existing_column1: new_copy_of_column1
           existing_column2: new_copy_of_column2
@@ -360,7 +395,6 @@ Duplicates columns (and all their values).
 Removes the specified columns.
 ```yaml
       - operation: drop_columns
-        source: $transformations.courses
         columns:
           - column_to_drop_1
           - column_to_drop_2
@@ -374,7 +408,6 @@ Removes the specified columns.
 Keeps only the specified columns, discards the rest.
 ```yaml
       - operation: keep_columns
-        source: $transformations.courses
         columns:
           - column_to_keep_1
           - column_to_keep_2
@@ -388,7 +421,6 @@ Keeps only the specified columns, discards the rest.
 Combines the values of the specified columns, delimited by a separator, into a new column.
 ```yaml
       - operation: combine_columns
-        source: $transformations.courses
         columns:
           - column_1
           - column_2
@@ -405,7 +437,6 @@ Default `separator` is none - values are smashed together.
 Modify the values in the specified columns.
 ```yaml
       - operation: modify_columns
-        source: $transformations.school_directory
         columns:
           state_abbr: "{%raw%}XXX{{value|reverse}}XXX{%endraw%}"
           school_year: "{%raw%}20{{value[-2:]}}{%endraw%}"
@@ -421,7 +452,6 @@ Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers
 Map the values of a column.
 ```yaml
       - operation: map_values
-        source: $sources.courses
         column: column_name
         # or, to map multiple columns simultaneously
         columns:
@@ -442,7 +472,6 @@ Map the values of a column.
 Change the format of a date column.
 ```yaml
       - operation: date_format
-        source: $transformations.students
         column: date_of_birth
         # or
         columns:
@@ -456,6 +485,16 @@ The `from_format` and `to_format` must follow [Python's strftime() and strptime(
 </details>
 
 
+<details>
+<summary><code>snake_case_columns</code></summary>
+
+Force the names of all columns to [snake_case](https://en.wikipedia.org/wiki/Snake_case).
+```yaml
+      - operation: snake_case_columns
+```
+</details>
+
+
 #### Row operations
 
 <details>
@@ -464,7 +503,6 @@ The `from_format` and `to_format` must follow [Python's strftime() and strptime(
 Removes duplicate rows.
 ```yaml
       - operation: distinct_rows
-        source: $transformations.courses
         columns:
           - distinctness_column_1
           - distinctness_column_2
@@ -479,7 +517,6 @@ Optionally specify the `columns` to use for uniqueness, otherwise all columns ar
 Filter (include or exclude) rows matching a query.
 ```yaml
       - operation: filter_rows
-        source: $transformations.courses
         query: school_year < 2020
         behavior: exclude | include
 ```
@@ -495,7 +532,6 @@ The query format is anything supported by [Pandas.DataFrame.query](https://panda
 Reduce the number of rows by grouping, and add columns with values calculated over each group.
 ```yaml
       - operation: group_by
-        source: $transformations.assessment_items
         group_by_columns:
           - student_id
         create_columns:
@@ -558,10 +594,6 @@ This transformation can be useful for building up nested structures, like arrays
 
 -->
 
-#### Global options
-
-Any operation may also specify `debug: True` which will output the dataframe shape and columns after the operation. This can be very useful for building and debugging transformations.
-
 
 
 ### **`destinations`**
@@ -593,6 +625,15 @@ For each file you want materialized, provide the `source` and the `template` fil
 If `linearize` is `True`, all line breaks are removed from the template, resulting in one output line per row. (This is useful for creating JSONL and other linear output formats.) If omitted, `linearize` is `True`.
 
 
+## Global options
+
+Any source, transformation, or destination may also specify `debug: True` which will output the dataframe shape and columns after the node completes processing. This can be very useful while building and debugging.
+
+Additionally, the `show_progress` boolean flag can be specified on any source, transformation, or destination to display a progress bar while processing.
+
+Finally, `repartition` can be passed to any node to repartition the node in memory before continuing to the next node.
+Set either the number of bytes, or a text representation (e.g., "100MB") to shuffle data into new partitions of that size.
+(Note: this configuration is advanced, and its use may drastically affect performance.)
 
 # Usage
 Once you have the required [setup](#setup) and your source data, run the transformations with
@@ -642,22 +683,22 @@ sources:
 transformations:
 {% for i in range(1,10) %}
   source{{i}}:
+    source: $sources.source{{i}}
     operations:
       - operation: add_columns
-        source: $sources.source{{i}}
         columns:
           - source_file: {{i}}
 {% endfor %}
   stacked:
+    source: $transformations.source1
     operations:
       - operation: union
         sources:
-{% for i in range(1,10) %}
+{% for i in range(2,10) %}
           - $transformations.source{{i}}
 {% endfor %}
 {% if "${DO_FILTERING}"=="True" %}
       - operations: filter_rows
-        source: $transformations.stacked
         query: school_year < 2020
         behavior: exclude
 {% endif %}

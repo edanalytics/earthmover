@@ -2,16 +2,22 @@ import abc
 
 from earthmover.node import Node
 
+from typing import Dict, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
+    from dask.dataframe.core import DataFrame
     from earthmover.earthmover import Earthmover
+    from earthmover.yaml_parser import YamlMapping
 
 
 class Operation(Node):
     """
 
     """
-    def __new__(cls, name: str, config: dict, *, earthmover: 'Earthmover'):
+    type: str = "operation"
+    allowed_configs: Tuple[str] = ('operation', 'repartition',)
+
+    def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         """
         :param config:
         :param earthmover:
@@ -34,6 +40,7 @@ class Operation(Node):
             'combine_columns': column_operations.CombineColumnsOperation,
             'map_values': column_operations.MapValuesOperation,
             'date_format': column_operations.DateFormatOperation,
+            'snake_case_columns': column_operations.SnakeCaseColumnsOperation,
 
             'distinct_rows': row_operations.DistinctRowsOperation,
             'filter_rows': row_operations.FilterRowsOperation,
@@ -54,62 +61,44 @@ class Operation(Node):
 
         return object.__new__(operation_class)
 
-
-    def __init__(self, name: str, config: dict, *, earthmover: 'Earthmover'):
+    def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         full_name = f"{name}.operations:{config.get('operation')}"
         super().__init__(full_name, config, earthmover=earthmover)
 
-        self.type = "transformation" # self.config.get('operation')
-
-        self.allowed_configs.update(['operation', 'sources', 'source'])
-
-        # `source` and `source_list` are mutually-exclusive attributes.
-        # `source_list` is for operations with multiple sources (i.e., dataframe operations)
-        self.source = self.error_handler.assert_get_key(self.config, 'source', dtype=str, required=False)
-        self.source_list = self.error_handler.assert_get_key(self.config, 'sources', dtype=list, required=False)
-        self.source_data_list = None  # Retrieved data for operations with multiple sources
-
-        if bool(self.source) == bool(self.source_list):  # Fail if both or neither are populated.
-            self.error_handler.throw(
-                "A `source` or a list of `sources` must be defined for any operation!"
-            )
-            raise
-
-
     @abc.abstractmethod
-    def compile(self):
+    def execute(self, data: 'DataFrame', *, data_mapping: Dict[str, Node], **kwargs) -> 'DataFrame':
         """
+        Operation.execute() takes a DataFrame as input and outputs a DataFrame.
+        This differs from Node.execute(), which mutates and returns self.data.
 
+        In operations, `self.data` should NEVER be called, as this unnecessarily persists data in Operation nodes.
+
+        :param data:
+        :param data_mapping:
+        :param kwargs:
         :return:
         """
-        super().compile()
+        self.error_handler.ctx.update(
+            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
+        )
 
-
-    def verify(self):
-        """
-        Because verifications are optional, this is not an abstract method.
-
-        :return:
-        """
         pass
 
-
-    @abc.abstractmethod
-    def execute(self):
+    def post_execute(self, data: 'DataFrame'):
         """
+        Operation.post_execute() takes a DataFrame as input and outputs a DataFrame.
+        This differs from Node.post_execute(), which mutates and returns self.data.
 
+        In operations, `self.data` should NEVER be called, as this unnecessarily persists data in Operation nodes.
+
+        :param data:
         :return:
         """
-        super().execute()
 
-        # If multiple sources are required for an operation, self.data must be defined in the child class execute().
-        if self.source_list:
-            self.source_data_list = [
-                self.get_source_node(source).data.copy() for source in self.source_list
-            ]
-        else:
-            self.data = self.get_source_node(self.source).data.copy()
+        data = self.opt_repartition(data)
 
-        self.verify()
+        return data
 
-        pass
+        # raise NotImplementedError(
+        #     "Operation.post_execute() is not permitted! Data is not persisted within Operations."
+        # )

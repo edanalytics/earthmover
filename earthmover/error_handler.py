@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 
 class ErrorContext:
     """
@@ -86,7 +86,7 @@ class ErrorHandler:
         dtype: Optional[type] = None,
         required: bool = True,
         default: Optional[object] = None
-    ) -> Optional[object]:
+    ) -> Any:
         """
 
         :param obj:
