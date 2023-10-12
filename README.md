@@ -524,6 +524,20 @@ The query format is anything supported by [Pandas.DataFrame.query](https://panda
 </details>
 
 
+<details>
+<summary><code>sort_rows</code></summary>
+
+Sort rows by one or more columns.
+```yaml
+      - operation: sort_rows
+        columns:
+          - sort_column_1
+        ascending: True
+```
+By default, rows are sorted ascendingly. Set `descending: True` to reverse this order.
+</details>
+
+
 #### Group operations
 
 <details>
