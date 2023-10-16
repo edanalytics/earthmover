@@ -532,7 +532,7 @@ Sort rows by one or more columns.
       - operation: sort_rows
         columns:
           - sort_column_1
-        ascending: True
+        descending: False
 ```
 By default, rows are sorted ascendingly. Set `descending: True` to reverse this order.
 </details>
