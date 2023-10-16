@@ -120,7 +120,7 @@ class SortRowsOperation(Operation):
         """
         allowed_configs: Tuple[str] = (
             'operation', 'repartition',
-            'columns', 'ascending',
+            'columns', 'descending',
         )
 
         def __init__(self, *args, **kwargs):
