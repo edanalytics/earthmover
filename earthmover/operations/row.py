@@ -1,4 +1,4 @@
-import dask
+import logging
 
 from earthmover.nodes.operation import Operation
 
@@ -6,6 +6,9 @@ from typing import List, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
+
+
+logger = logging.getLogger("earthmover")
 
 
 class DistinctRowsOperation(Operation):
@@ -47,7 +50,7 @@ class DistinctRowsOperation(Operation):
         super().execute(data, **kwargs)
 
         if not set(self.columns_list).issubset(data.columns):
-            self.error_handler.throw(
+            logger.critical(
                 "one or more columns for checking for distinctness are undefined in the dataset"
             )
             raise
@@ -85,7 +88,7 @@ class FilterRowsOperation(Operation):
         self.behavior = self.config.get('behavior', dtype=str)
 
         if self.behavior not in self.BEHAVIORS:
-            self.error_handler.throw(
+            logger.critical(
                 "`behavior` must be one of [include, exclude]"
             )
             raise
@@ -107,7 +110,7 @@ class FilterRowsOperation(Operation):
             data = data.query(_query, engine='python')  #`numexpr` is used by default if installed.
 
         except Exception as _:
-            self.error_handler.throw(
+            logger.critical(
                 "error during `filter_rows` operation... check query format?"
             )
             raise

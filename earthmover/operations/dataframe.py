@@ -1,6 +1,7 @@
+import logging
+
 import dask.dataframe as dd
-import numpy as np
-import pandas as pd
+import logging
 
 from earthmover.node import Node
 from earthmover.nodes.operation import Operation
@@ -9,6 +10,9 @@ from typing import Dict, List, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
+
+
+logger = logging.getLogger("earthmover")
 
 
 class JoinOperation(Operation):
@@ -55,7 +59,7 @@ class JoinOperation(Operation):
         _keys = self.config.get('left_keys', [], dtype=list)
 
         if bool(_key) == bool(_keys):  # Fail if both or neither are populated.
-            self.error_handler.throw("must define `left_key` or `left_keys`")
+            logger.critical("must define `left_key` or `left_keys`")
             raise
 
         self.left_keys = _keys or [_key]  # `[None]` evaluates to True
@@ -65,19 +69,15 @@ class JoinOperation(Operation):
         _keys = self.config.get('right_keys', [], dtype=list)
 
         if bool(_key) == bool(_keys):  # Fail if both or neither are populated.
-            self.error_handler.throw("must define `right_key` or `right_keys`")
+            logger.critical("must define `right_key` or `right_keys`")
             raise
 
         self.right_keys = _keys or [_key]  # `[None]` evaluates to True
 
         # Check join type
-        self.join_type = self.config.get('join_type')
-        if not self.join_type:
-            self.error_handler.throw("must define `join_type`")
-            raise
-
+        self.join_type = self.config.get('join_type', dtype=str)
         if self.join_type not in self.JOIN_TYPES:
-            self.error_handler.throw(
+            logger.critical(
                 f"`join_type` must be one of [inner, left, right, outer], not `{self.join_type}`"
             )
             raise
@@ -101,7 +101,7 @@ class JoinOperation(Operation):
 
         if self.left_keep_cols:
             if not set(self.left_keep_cols).issubset(self.left_cols):
-                self.error_handler.throw(
+                logger.critical(
                     "columns in `left_keep_columns` are not defined in the dataset"
                 )
                 raise
@@ -110,7 +110,7 @@ class JoinOperation(Operation):
 
         elif self.left_drop_cols:
             if any(col in self.left_keys for col in self.left_drop_cols):
-                self.error_handler.throw(
+                logger.critical(
                     "you may not `left_drop_columns` that are part of the `left_key(s)`"
                 )
                 raise
@@ -126,7 +126,7 @@ class JoinOperation(Operation):
 
             if self.right_keep_cols:
                 if not set(self.right_keep_cols).issubset(self.right_cols):
-                    self.error_handler.throw(
+                    logger.critical(
                         "columns in `right_keep_columns` are not defined in the dataset"
                     )
                     raise
@@ -135,7 +135,7 @@ class JoinOperation(Operation):
 
             elif self.right_drop_cols:
                 if any(col in self.right_keys for col in self.right_drop_cols):
-                    self.error_handler.throw(
+                    logger.critical(
                         "you may not `right_drop_columns` that are part of the `right_key(s)`"
                     )
                     raise
@@ -152,7 +152,7 @@ class JoinOperation(Operation):
                 )
 
             except Exception as _:
-                self.error_handler.throw(
+                logger.critical(
                     "error during `join` operation. Check your join keys?"
                 )
                 raise
@@ -183,14 +183,14 @@ class UnionOperation(Operation):
             source_data = data_mapping[source].data
 
             if set(source_data.columns) != set(data.columns):
-                self.error_handler.throw('dataframes to union do not share identical columns')
+                logger.critical('dataframes to union do not share identical columns')
                 raise
 
             try:
                 data = dd.concat([data, source_data], ignore_index=True)
             
             except Exception as _:
-                self.error_handler.throw(
+                logger.critical(
                     "error during `union` operation... are sources same shape?"
                 )
                 raise

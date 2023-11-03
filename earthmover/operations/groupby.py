@@ -1,3 +1,5 @@
+import logging
+
 import pandas as pd
 import re
 
@@ -7,6 +9,10 @@ from typing import Dict, List, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
+
+
+logger = logging.getLogger("earthmover")
+
 
 class GroupByWithCountOperation(Operation):
     """
@@ -42,7 +48,7 @@ class GroupByWithCountOperation(Operation):
         super().execute(data, **kwargs)
 
         if not set(self.group_by_columns).issubset(data.columns):
-            self.error_handler.throw(
+            logger.critical(
                 "one or more specified group-by columns not in the dataset"
             )
             raise
@@ -103,7 +109,7 @@ class GroupByWithAggOperation(Operation):
         super().execute(data, **kwargs)
 
         if not set(self.group_by_columns).issubset(data.columns):
-            self.error_handler.throw(
+            logger.critical(
                 "one or more specified group-by columns not in the dataset"
             )
             raise
@@ -170,7 +176,7 @@ class GroupByOperation(Operation):
         super().execute(data, **kwargs)
 
         if not set(self.group_by_columns).issubset(data.columns):
-            self.error_handler.throw(
+            logger.critical(
                 "one or more specified group-by columns not in the dataset"
             )
             raise
@@ -196,18 +202,18 @@ class GroupByOperation(Operation):
             if _agg_type in self.COLUMN_REQ_AGG_TYPES:
 
                 if _col == "":
-                    self.error_handler.throw(
+                    logger.critical(
                         f"aggregation function `{_agg_type}`(column) missing required column"
                     )
 
                 if _col not in data.columns:
-                    self.error_handler.throw(
+                    logger.critical(
                         f"aggregation function `{_agg_type}`({_col}) refers to a column {_col} which does not exist"
                     )
 
             agg_lambda = self._get_agg_lambda(_agg_type, _col, _sep)
             if not agg_lambda:
-                self.error_handler.throw(
+                logger.critical(
                     f"invalid aggregation function `{_agg_type}` in `group_by` operation"
                 )
 

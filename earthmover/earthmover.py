@@ -8,7 +8,6 @@ import time
 import datetime
 import pandas as pd
 
-from earthmover.error_handler import ErrorHandler
 from earthmover.graph import Graph
 from earthmover.runs_file import RunsFile
 from earthmover.nodes.destination import Destination
@@ -58,7 +57,6 @@ class Earthmover:
 
         self.results_file = results_file
         self.config_file = config_file
-        self.error_handler = ErrorHandler(file=self.config_file)
 
         # Parse the user-provided config file and retrieve project-configs, macros, and parameter defaults.
         # Merge the optional user configs into the defaults.
@@ -98,7 +96,7 @@ class Earthmover:
         dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
 
         # Initialize the NetworkX DiGraph
-        self.graph = Graph(error_handler=self.error_handler)
+        self.graph = Graph()
 
         # Initialize a dictionary for tracking run metadata (for structured output)
         self.metadata = {
@@ -138,13 +136,13 @@ class Earthmover:
                         node.upstream_sources[source] = self.graph.ref(source)
                         self.graph.add_edge(source, f"${node_type}.{name}")
                     except KeyError:
-                        self.error_handler.throw(f"invalid source {source}")
+                        logger.critical(f"invalid source {source}")
 
         ### Confirm that the graph is a DAG
         logger.debug("checking dataflow graph")
         if not nx.is_directed_acyclic_graph(self.graph):
             _cycle = nx.find_cycle(self.graph)
-            self.error_handler.throw(
+            logger.critical(
                 f"the graph is not a DAG! it has the cycle {_cycle}"
             )
             raise
@@ -251,7 +249,7 @@ class Earthmover:
 
         ### Confirm that at least one source is defined.
         if not self.sources:
-            self.error_handler.throw("No sources have been defined!")
+            logger.critical("No sources have been defined!")
 
 
     def execute(self, subgraph: Graph):

@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
     from earthmover.earthmover import Earthmover
-    from earthmover.error_handler import ErrorHandler
     from earthmover.yaml_parser import YamlMapping
 
 
@@ -32,12 +31,6 @@ class Node:
         self.config: 'YamlMapping' = config
 
         self.earthmover: 'Earthmover' = earthmover
-        self.error_handler: 'ErrorHandler' = earthmover.error_handler
-
-        self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
-        )
-
         self.upstream_sources: Dict[str, Optional['Node']] = {}
 
         self.data: 'DataFrame' = None
@@ -50,10 +43,10 @@ class Node:
         self.debug: bool = False
 
         # Internal Dask configs
-        self.partition_size: Union[str, int] = self.config.get('repartition')
+        self.partition_size: Union[str, int] = self.config.get('repartition', 0, dtype=(str, int))
 
         # Optional variables for displaying progress and diagnostics.
-        self.show_progress: bool = self.config.get('show_progress', self.earthmover.state_configs["show_progress"])
+        self.show_progress: bool = self.config.get('show_progress', self.earthmover.state_configs["show_progress"], dtype=bool)
         self.progress_bar: ProgressBar = ProgressBar(minimum=10, dt=5.0)  # Always instantiate, but only use if `show_progress is True`.
 
     @abc.abstractmethod
@@ -62,10 +55,6 @@ class Node:
 
         :return:
         """
-        self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
-        )
-
         # Verify all configs provided by the user are specified for the node.
         # (This ensures the user doesn't pass in unexpected or misspelled configs.)
         for _config in self.config:
@@ -75,7 +64,7 @@ class Node:
                 )
 
         # Always check for debug and expectations
-        self.debug = self.config.get('debug', False)
+        self.debug = self.config.get('debug', False, dtype=bool)
         self.expectations = self.config.get('expect', [], dtype=list)
 
         pass
@@ -88,10 +77,6 @@ class Node:
 
         :return:
         """
-        self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
-        )
-
         # Turn on the progress bar manually.
         if self.show_progress:
             logger.info(f"Displaying progress for {self.type} node: {self.name}")
@@ -149,13 +134,12 @@ class Node:
                     util.render_jinja_template, axis=1,
                     meta=pd.Series(dtype='str', name=expectation_result_col),
                     template=template,
-                    template_str="{{" + expectation + "}}",
-                    error_handler = self.error_handler
+                    template_str="{{" + expectation + "}}"
                 )
 
                 num_failed = len(result.query(f"{expectation_result_col}=='False'").index)
                 if num_failed > 0:
-                    self.error_handler.throw(
+                    logger.critical(
                         f"Source `${self.type}s.{self.name}` failed expectation `{expectation}` ({num_failed} rows fail)"
                     )
                 else:

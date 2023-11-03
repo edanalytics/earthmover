@@ -11,6 +11,9 @@ from earthmover import util
 from typing import Tuple
 
 
+logger = logging.getLogger("earthmover")
+
+
 class Destination(Node):
     """
 
@@ -73,34 +76,31 @@ class FileDestination(Destination):
                 template_string = fp.read()
 
         except Exception as err:
-            self.error_handler.throw(
+            logger.critical(
                 f"`template` file {self.template} cannot be opened ({err})"
             )
             raise
 
         #
-        if self.config.get('linearize', True):
+        if self.config.get('linearize', True, dtype=bool):
             template_string = self.EXP.sub(" ", template_string)  # Replace multiple spaces with a single space.
 
-        if 'header' in self.config:
-            self.header = self.config["header"]
-
-        if 'footer' in self.config:
-            self.footer = self.config["footer"]
+        self.header = self.config.get("header", "", dtype=str)
+        self.footer = self.config.get("footer", "", dtype=str)
 
         #
         try:
             self.jinja_template = util.build_jinja_template(template_string, macros=self.earthmover.macros)
 
         except Exception as err:
-            self.earthmover.error_handler.throw(
+            logger.critical(
                 f"syntax error in Jinja template in `template` file {self.template} ({err})"
             )
             raise
 
     def execute(self, **kwargs):
         """
-        There is a bug in Dask where where `dd.to_csv(mode='a', single_file=True)` fails.
+        There is a bug in Dask where `dd.to_csv(mode='a', single_file=True)` fails.
         This is resolved in 2023.8.1: https://docs.dask.org/en/stable/changelog.html#id7 
 
         :return:
@@ -143,7 +143,7 @@ class FileDestination(Destination):
             json_string = self.jinja_template.render(_data_tuple)
 
         except Exception as err:
-            self.error_handler.throw(
+            logger.critical(
                 f"error rendering Jinja template in `template` file {self.template} ({err})"
             )
             raise
