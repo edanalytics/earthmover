@@ -1,6 +1,7 @@
 import dask.dataframe as dd
 import ftplib
 import io
+import logging
 import os
 import pandas as pd
 import re
@@ -14,6 +15,9 @@ if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
     from earthmover.earthmover import Earthmover
     from earthmover.yaml_parser import YamlMapping
+
+
+logger = logging.getLogger("earthmover")
 
 
 class Source(Node):
@@ -74,7 +78,7 @@ class Source(Node):
         :return:
         """
         if isinstance(self.data, pd.DataFrame):
-            self.logger.debug(
+            logger.debug(
                 f"Casting data in {self.type} node `{self.name}` to a Dask dataframe."
             )
             self.data = dd.from_pandas(self.data, chunksize=self.chunksize)
@@ -188,7 +192,7 @@ class FileSource(Source):
             if self.columns_list:
                 self.data.columns = self.columns_list
 
-            self.logger.debug(
+            logger.debug(
                 f"source `{self.name}` loaded"
             )
 
@@ -345,7 +349,7 @@ class FtpSource(Source):
             )
             raise
 
-        self.logger.debug(
+        logger.debug(
             f"source `{self.name}` loaded (via FTP)"
         )
 
@@ -397,7 +401,7 @@ class SqlSource(Source):
             self.data = self.load_sql_dataframe()
 
 
-            self.logger.debug(
+            logger.debug(
                 f"source `{self.name}` loaded (via SQL)"
             )
 
@@ -417,7 +421,7 @@ class SqlSource(Source):
             return pd.read_sql(sql=self.query, con=self.connection)
 
         except AttributeError:
-            self.logger.debug(
+            logger.debug(
                 "SQLAlchemy 1.x approach failed! Attempting SQLAlchemy 2.x approach..."
             )
             import sqlalchemy

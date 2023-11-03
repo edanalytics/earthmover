@@ -1,6 +1,7 @@
 import abc
 import dask
 import jinja2
+import logging
 import pandas as pd
 
 from dask.diagnostics import ProgressBar
@@ -14,7 +15,9 @@ if TYPE_CHECKING:
     from earthmover.earthmover import Earthmover
     from earthmover.error_handler import ErrorHandler
     from earthmover.yaml_parser import YamlMapping
-    from logging import Logger
+
+
+logger = logging.getLogger("earthmover")
 
 
 class Node:
@@ -29,7 +32,6 @@ class Node:
         self.config: 'YamlMapping' = config
 
         self.earthmover: 'Earthmover' = earthmover
-        self.logger: 'Logger' = earthmover.logger
         self.error_handler: 'ErrorHandler' = earthmover.error_handler
 
         self.error_handler.ctx.update(
@@ -68,7 +70,7 @@ class Node:
         # (This ensures the user doesn't pass in unexpected or misspelled configs.)
         for _config in self.config:
             if _config not in self.allowed_configs:
-                self.logger.warning(
+                logger.warning(
                     f"Config `{_config}` not defined for node `{self.name}`."
                 )
 
@@ -92,7 +94,7 @@ class Node:
 
         # Turn on the progress bar manually.
         if self.show_progress:
-            self.logger.info(f"Displaying progress for {self.type} node: {self.name}")
+            logger.info(f"Displaying progress for {self.type} node: {self.name}")
             self.progress_bar.__enter__()  # Open context manager manually to avoid with-clause
 
         pass
@@ -123,7 +125,7 @@ class Node:
 
         if self.debug:
             self.num_rows = dask.compute(self.num_rows)[0]
-            self.logger.debug(
+            logger.debug(
                 f"Node {self.name}: {self.num_rows} rows; {self.num_cols} columns\n"
                 f"Header: {self.data.columns if hasattr(self.data, 'columns') else 'No header'}"
             )
@@ -157,7 +159,7 @@ class Node:
                         f"Source `${self.type}s.{self.name}` failed expectation `{expectation}` ({num_failed} rows fail)"
                     )
                 else:
-                    self.logger.info(
+                    logger.info(
                         f"Assertion passed! {self.name}: {expectation}"
                     )
 

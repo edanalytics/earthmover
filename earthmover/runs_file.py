@@ -1,6 +1,7 @@
 import csv
 import hashlib
 import json
+import logging
 import os
 import time
 
@@ -9,7 +10,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from earthmover.earthmover import Earthmover
     from earthmover.node import Node
-    from logging import Logger
+
+
+logger = logging.getLogger("earthmover")
 
 
 class RunsFile:
@@ -34,7 +37,6 @@ class RunsFile:
         self.file: str = file
 
         self.earthmover: 'Earthmover' = earthmover
-        self.logger: 'Logger' = self.earthmover.logger
         self.hashes: Dict[str, str] = self._build_hashes()
 
         # Force the existence of the runs file.
@@ -220,7 +222,7 @@ class RunsFile:
 
         # Raise a warning for the user to manually reset or select a new log-runs file.
         if len(runs) > self.ROW_COUNT_TO_WARN:
-            self.logger.warning(
+            logger.warning(
                 f"run log file {self.file} is getting long, consider truncating it for better performance.",
                 True
             )

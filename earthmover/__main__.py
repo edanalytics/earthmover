@@ -5,28 +5,7 @@ import sys
 
 from earthmover.earthmover import Earthmover
 
-
-class ExitOnExceptionHandler(logging.StreamHandler):
-    """
-
-    """
-    def emit(self, record):
-        super().emit(record)
-        if record.levelno in (logging.ERROR, logging.CRITICAL):
-            raise SystemExit(-1)
-
 DEFAULT_CONFIG_FILES = ['earthmover.yaml', 'earthmover.yml']
-
-# Set up logging
-handler = ExitOnExceptionHandler()
-
-_formatter = logging.Formatter("%(asctime)s.%(msecs)03d %(name)s %(levelname)s %(message)s", "%Y-%m-%d %H:%M:%S")
-handler.setFormatter(_formatter)
-
-logger = logging.getLogger("earthmover")
-logger.setLevel(logging.getLevelName('INFO'))
-logger.addHandler(handler)
-
 
 def main(argv=None):
     """
@@ -34,6 +13,8 @@ def main(argv=None):
     :param argv:
     :return:
     """
+    logger = logging.getLogger("earthmover")
+
     if argv is None:
         argv = sys.argv
     
@@ -115,14 +96,13 @@ def main(argv=None):
         
         em = Earthmover(
             config_file=os.path.join(tests_dir, "earthmover.yaml"),
-            logger=logger,
             params='{"BASE_DIR": "' + tests_dir + '"}',
             force=True,
             skip_hashing=True
         )
-        em.logger.info("running tests...")
+        logger.info("running tests...")
         em.test(tests_dir)
-        em.logger.info('tests passed successfully.')
+        logger.info('tests passed successfully.')
         exit(0)
 
     if not args.config_file:
@@ -151,7 +131,6 @@ def main(argv=None):
     try:
         em = Earthmover(
             config_file=args.config_file,
-            logger=logger,
             params=args.params,
             force=args.force,
             skip_hashing=args.skip_hashing,
@@ -163,25 +142,25 @@ def main(argv=None):
         raise  # Avoids linting error
 
     if args.command == 'compile':
-        em.logger.info(f"compiling project...")
+        logger.info(f"compiling project...")
         try:
             if args.selector != '*':
-                em.logger.info("selector is ignored for compile-only run.")
+                logger.info("selector is ignored for compile-only run.")
 
             em.build_graph()
             em.compile()
-            em.logger.info("looks ok")
+            logger.info("looks ok")
         except Exception as e:
             logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
             raise
 
     elif args.command == 'run' or not args.command:
         if not args.command:
-            em.logger.warning("[no command specified; proceeding with `run` but we recommend explicitly giving a command]")
+            logger.warning("[no command specified; proceeding with `run` but we recommend explicitly giving a command]")
         try:
-            em.logger.info("starting...")
+            logger.info("starting...")
             em.generate(selector=args.selector)
-            em.logger.info("done!")
+            logger.info("done!")
         except Exception as e:
             logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
             raise

@@ -20,6 +20,9 @@ from earthmover import util
 from typing import List, Optional
 
 
+logger = logging.getLogger("earthmover")
+
+
 class Earthmover:
     """
 
@@ -43,7 +46,6 @@ class Earthmover:
 
     def __init__(self,
         config_file: str,
-        logger: logging.Logger,
         params: str = "",
         force: bool = False,
         skip_hashing: bool = False,
@@ -78,16 +80,16 @@ class Earthmover:
             **(cli_state_configs or {})
         }
 
-        # Set up the logger
-        self.logger = logger
-        self.logger.setLevel(
-            logging.getLevelName( self.state_configs['log_level'].upper() )
+        # Set up the logging
+        logger.set_logging_config(
+            level=self.state_configs['log_level'].upper(),
+            show_stacktrace=self.state_configs['show_stacktrace']
         )
 
         # Prepare the output directory for destinations.
         self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
         if not os.path.isdir(self.state_configs['output_dir']):
-            self.logger.info(
+            logger.info(
                 f"creating output directory {self.state_configs['output_dir']}"
             )
             os.makedirs(self.state_configs['output_dir'], exist_ok=True)
@@ -113,7 +115,7 @@ class Earthmover:
 
         :return:
         """
-        self.logger.debug("building dataflow graph")
+        logger.debug("building dataflow graph")
 
         node_types = {
             'sources': Source,
@@ -139,7 +141,7 @@ class Earthmover:
                         self.error_handler.throw(f"invalid source {source}")
 
         ### Confirm that the graph is a DAG
-        self.logger.debug("checking dataflow graph")
+        logger.debug("checking dataflow graph")
         if not nx.is_directed_acyclic_graph(self.graph):
             _cycle = nx.find_cycle(self.graph)
             self.error_handler.throw(
@@ -156,7 +158,7 @@ class Earthmover:
 
                 if node.type != 'destination':
                     self.graph.remove_node(node_name)
-                    self.logger.warning(
+                    logger.warning(
                         f"{node.type} node `{node.name}` will not be generated because it is not connected to a destination"
                     )
 
@@ -174,21 +176,21 @@ class Earthmover:
         if not self.skip_hashing and self.state_configs.get('state_file', False):
             _runs_path = os.path.expanduser(self.state_configs['state_file'])
 
-            self.logger.info(f"computing input hashes for run log at {_runs_path}")
+            logger.info(f"computing input hashes for run log at {_runs_path}")
 
             runs_file = RunsFile(_runs_path, earthmover=self)
 
             # Remote sources cannot be hashed; no hashed runs contain remote sources.
             if any(source.is_remote for source in self.sources):
-                self.logger.info(
+                logger.info(
                     "forcing regenerate, since some sources are remote (and we cannot know if they changed)"
                 )
 
             elif self.force:
-                self.logger.info("forcing regenerate")
+                logger.info("forcing regenerate")
 
             else:
-                self.logger.info("checking for prior runs...")
+                logger.info("checking for prior runs...")
 
                 # Find the latest run that matched our selector(s)...
                 most_recent_run = runs_file.get_newest_compatible_run(
@@ -196,27 +198,27 @@ class Earthmover:
                 )
 
                 if most_recent_run is None:
-                    self.logger.info("regenerating (no prior runs found, or config.yaml has changed since last run)")
+                    logger.info("regenerating (no prior runs found, or config.yaml has changed since last run)")
 
                 else:
                     _run_differences = runs_file.find_hash_differences(most_recent_run)
                     if _run_differences:
-                        self.logger.info("regenerating (changes since last run: ")
-                        self.logger.info("   [{0}])".format(", ".join(_run_differences)))
+                        logger.info("regenerating (changes since last run: ")
+                        logger.info("   [{0}])".format(", ".join(_run_differences)))
                     else:
                         _last_run_string = util.human_time(
                             int(time.time()) - int(float(most_recent_run['run_timestamp'])))
-                        self.logger.info(
+                        logger.info(
                             f"skipping (no changes since the last run {_last_run_string} ago)"
                         )
                         self.do_generate = False
 
         elif not self.state_configs.get('state_file', False):
-            self.logger.info("skipping hashing and run-logging (no `state_file` defined in config)")
+            logger.info("skipping hashing and run-logging (no `state_file` defined in config)")
             runs_file = None  # This instantiation will never be used, but this avoids linter alerts.
 
         else:  # Skip hashing
-            self.logger.info("skipping hashing and run-logging (run initiated with `--skip-hashing` flag)")
+            logger.info("skipping hashing and run-logging (run initiated with `--skip-hashing` flag)")
             runs_file = None  # This instantiation will never be used, but this avoids linter alerts.
 
         return runs_file
@@ -284,7 +286,7 @@ class Earthmover:
         self.build_graph()
 
         if selector != "*":
-            self.logger.info(f"filtering dataflow graph using selector `{selector}`")
+            logger.info(f"filtering dataflow graph using selector `{selector}`")
 
         active_graph = self.graph.select_subgraph(selector)
         self.compile(active_graph)
@@ -305,7 +307,7 @@ class Earthmover:
 
         ### Process the graph
         for idx, component in enumerate( nx.weakly_connected_components(active_graph) ):
-            self.logger.debug(f"processing component {idx}")
+            logger.debug(f"processing component {idx}")
 
             # load all sources! (in topological sort order)
             _subgraph = active_graph.subgraph(component)
@@ -315,7 +317,7 @@ class Earthmover:
         ### Save run log only after a successful run! (in case of errors)
         # Note: `runs_file` is only defined in certain circumstances.
         if not self.skip_hashing and runs_file:
-            self.logger.debug("saving details to run log")
+            logger.debug("saving details to run log")
 
             # Build selector information
             if selector == "*":
@@ -329,7 +331,7 @@ class Earthmover:
 
         ### Draw the graph again, this time add metadata about rows/cols/size at each node
         if self.state_configs['show_graph']:
-            self.logger.info("saving dataflow graph image to `graph.png` and `graph.svg`")
+            logger.info("saving dataflow graph image to `graph.png` and `graph.svg`")
 
             # Compute all row number values at once for performance, then update the nodes.
             computed_node_rows = dask.compute(
@@ -381,5 +383,5 @@ class Earthmover:
             
             # compare sorted contents
             if not _expected_df.equals(_outputted_df):
-                self.logger.critical(f"Test output `{_outputted_file}` does not match expected output.")
+                logger.critical(f"Test output `{_outputted_file}` does not match expected output.")
                 exit(1)

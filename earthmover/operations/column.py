@@ -1,5 +1,6 @@
 import csv
 import dask
+import logging
 import pandas as pd
 import re
 import string
@@ -11,6 +12,9 @@ from typing import Dict, List, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
+
+
+logger = logging.getLogger("earthmover")
 
 
 class AddColumnsOperation(Operation):
@@ -161,7 +165,7 @@ class DuplicateColumnsOperation(Operation):
         for old_col, new_col in self.columns_dict.items():
 
             if new_col in data.columns:
-                self.logger.warning(
+                logger.warning(
                     f"Duplicate column operation overwrites existing column `{new_col}`."
                 )
 
@@ -205,7 +209,7 @@ class RenameColumnsOperation(Operation):
 
         for old_col, new_col in self.columns_dict.items():
             if new_col in data.columns:
-                self.logger.warning(
+                logger.warning(
                     f"Rename column operation overwrites existing column `{new_col}`."
                 )
             if old_col not in data.columns:

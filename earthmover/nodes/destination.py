@@ -1,5 +1,6 @@
 import csv
 import jinja2
+import logging
 import os
 import pandas as pd
 import re
@@ -131,7 +132,7 @@ class FileDestination(Destination):
             with open(self.file, 'a', encoding='utf-8') as fp:
                 fp.write(self.footer)
 
-        self.logger.debug(f"output `{self.file}` written")
+        logging.debug(f"output `{self.file}` written")
         self.size = os.path.getsize(self.file)
 
     def render_row(self, row: pd.Series):
