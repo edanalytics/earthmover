@@ -1,6 +1,5 @@
 import csv
 import jinja2
-import logging
 import os
 import pandas as pd
 import re
@@ -9,9 +8,6 @@ from earthmover.node import Node
 from earthmover import util
 
 from typing import Tuple
-
-
-logger = logging.getLogger("earthmover")
 
 
 class Destination(Node):
@@ -76,7 +72,7 @@ class FileDestination(Destination):
                 template_string = fp.read()
 
         except Exception as err:
-            logger.critical(
+            self.logger.critical(
                 f"`template` file {self.template} cannot be opened ({err})"
             )
             raise
@@ -93,7 +89,7 @@ class FileDestination(Destination):
             self.jinja_template = util.build_jinja_template(template_string, macros=self.earthmover.macros)
 
         except Exception as err:
-            logger.critical(
+            self.logger.critical(
                 f"syntax error in Jinja template in `template` file {self.template} ({err})"
             )
             raise
@@ -132,7 +128,7 @@ class FileDestination(Destination):
             with open(self.file, 'a', encoding='utf-8') as fp:
                 fp.write(self.footer)
 
-        logging.debug(f"output `{self.file}` written")
+        self.logger.debug(f"output `{self.file}` written")
         self.size = os.path.getsize(self.file)
 
     def render_row(self, row: pd.Series):
@@ -143,7 +139,7 @@ class FileDestination(Destination):
             json_string = self.jinja_template.render(_data_tuple)
 
         except Exception as err:
-            logger.critical(
+            self.logger.critical(
                 f"error rendering Jinja template in `template` file {self.template} ({err})"
             )
             raise

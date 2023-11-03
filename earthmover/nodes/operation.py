@@ -1,5 +1,4 @@
 import abc
-import logging
 
 from earthmover.node import Node
 
@@ -9,9 +8,6 @@ if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
     from earthmover.earthmover import Earthmover
     from earthmover.yaml_parser import YamlMapping
-
-
-logger = logging.getLogger("earthmover")
 
 
 class Operation(Node):
@@ -58,7 +54,7 @@ class Operation(Node):
         operation_class = operation_mapping.get(operation)
 
         if operation_class is None:
-            logger.critical(
+            self.logger.critical(
                 f"invalid transformation operation `{operation}`"
             )
             raise

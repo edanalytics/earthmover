@@ -16,9 +16,6 @@ if TYPE_CHECKING:
     from earthmover.yaml_parser import YamlMapping
 
 
-logger = logging.getLogger("earthmover")
-
-
 class Node:
     """
 
@@ -31,6 +28,7 @@ class Node:
         self.config: 'YamlMapping' = config
 
         self.earthmover: 'Earthmover' = earthmover
+        self.logger = logging.getLogger("earthmover")
         self.upstream_sources: Dict[str, Optional['Node']] = {}
 
         self.data: 'DataFrame' = None
@@ -59,7 +57,7 @@ class Node:
         # (This ensures the user doesn't pass in unexpected or misspelled configs.)
         for _config in self.config:
             if _config not in self.allowed_configs:
-                logger.warning(
+                self.logger.warning(
                     f"Config `{_config}` not defined for node `{self.name}`."
                 )
 
@@ -79,7 +77,7 @@ class Node:
         """
         # Turn on the progress bar manually.
         if self.show_progress:
-            logger.info(f"Displaying progress for {self.type} node: {self.name}")
+            self.logger.info(f"Displaying progress for {self.type} node: {self.name}")
             self.progress_bar.__enter__()  # Open context manager manually to avoid with-clause
 
         pass
@@ -110,7 +108,7 @@ class Node:
 
         if self.debug:
             self.num_rows = dask.compute(self.num_rows)[0]
-            logger.debug(
+            self.logger.debug(
                 f"Node {self.name}: {self.num_rows} rows; {self.num_cols} columns\n"
                 f"Header: {self.data.columns if hasattr(self.data, 'columns') else 'No header'}"
             )
@@ -139,11 +137,11 @@ class Node:
 
                 num_failed = len(result.query(f"{expectation_result_col}=='False'").index)
                 if num_failed > 0:
-                    logger.critical(
+                    self.logger.critical(
                         f"Source `${self.type}s.{self.name}` failed expectation `{expectation}` ({num_failed} rows fail)"
                     )
                 else:
-                    logger.info(
+                    self.logger.info(
                         f"Assertion passed! {self.name}: {expectation}"
                     )
 

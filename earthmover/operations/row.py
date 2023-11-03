@@ -1,14 +1,9 @@
-import logging
-
 from earthmover.nodes.operation import Operation
 
 from typing import List, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
-
-
-logger = logging.getLogger("earthmover")
 
 
 class DistinctRowsOperation(Operation):

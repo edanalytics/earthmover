@@ -1,7 +1,6 @@
 import dask.dataframe as dd
 import ftplib
 import io
-import logging
 import os
 import pandas as pd
 import re
@@ -15,9 +14,6 @@ if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
     from earthmover.earthmover import Earthmover
     from earthmover.yaml_parser import YamlMapping
-
-
-logger = logging.getLogger("earthmover")
 
 
 class Source(Node):
@@ -49,7 +45,7 @@ class Source(Node):
             return object.__new__(FileSource)
 
         else:
-            logger.critical(
+            self.logger.critical(
                 "sources must specify either a `file` and/or `connection` string and `query`"
             )
             raise
@@ -78,7 +74,7 @@ class Source(Node):
         :return:
         """
         if isinstance(self.data, pd.DataFrame):
-            logger.debug(
+            self.logger.debug(
                 f"Casting data in {self.type} node `{self.name}` to a Dask dataframe."
             )
             self.data = dd.from_pandas(self.data, chunksize=self.chunksize)
@@ -124,14 +120,14 @@ class FileSource(Source):
             self.file_type = self.config.get('type', self._get_filetype(self.file), dtype=str)
 
             if not self.file_type:
-                logger.critical(
+                self.logger.critical(
                     f"file `{self.file}` is of unrecognized file format - specify the `type` manually or see documentation for supported file types"
                 )
                 raise
 
         #
         if not self.file and self.optional and ('columns' not in self.config or not isinstance(self.config['columns'], list)):
-            logger.critical(
+            self.logger.critical(
                 f"source `{self.name}` is optional and missing, but does not specify `columns` (which are required in this case)"
             )
             raise
@@ -142,7 +138,7 @@ class FileSource(Source):
             self.read_lambda = self._get_read_lambda(self.file_type, sep=_sep)
 
         except Exception as _:
-            logger.critical(
+            self.logger.critical(
                 f"no lambda defined for file type `{self.file_type}`"
             )
             raise
@@ -158,7 +154,7 @@ class FileSource(Source):
             try:
                 self.size = os.path.getsize(self.file)
             except FileNotFoundError:
-                logger.critical(
+                self.logger.critical(
                     f"Source file {self.file} not found"
                 )
                 raise
@@ -181,7 +177,7 @@ class FileSource(Source):
                 _num_data_cols = len(self.data.columns)
                 _num_list_cols = len(self.columns_list)
                 if _num_data_cols != _num_list_cols:
-                    logger.critical(
+                    self.logger.critical(
                         f"source file {self.file} specified {_num_list_cols} `columns` but has {_num_data_cols} columns"
                     )
                     raise
@@ -189,21 +185,21 @@ class FileSource(Source):
             if self.columns_list:
                 self.data.columns = self.columns_list
 
-            logger.debug(
+            self.logger.debug(
                 f"source `{self.name}` loaded"
             )
 
         # error handling:
         except ImportError:
-            logger.critical(
+            self.logger.critical(
                 f"processing .{self.file_type} file {self.file} requires the pyarrow library... please `pip install pyarrow`"
             )
         except FileNotFoundError:
-            logger.critical(
+            self.logger.critical(
                 f"source file {self.file} not found"
             )
         except Exception as err:
-            logger.critical(
+            self.logger.critical(
                 f"error with source file {self.file} ({err})"
             )
 
@@ -321,7 +317,7 @@ class FtpSource(Source):
             self.size = self.ftp.size(self.file)
 
         except Exception as err:
-            logger.critical(
+            self.logger.critical(
                 f"source file {self.connection} could not be accessed: {err}"
             )
 
@@ -341,12 +337,12 @@ class FtpSource(Source):
             self.data = pd.read_csv(flo)
 
         except Exception as err:
-            logger.critical(
+            self.logger.critical(
                 f"error with source file {self.file} ({err})"
             )
             raise
 
-        logger.debug(
+        self.logger.debug(
             f"source `{self.name}` loaded (via FTP)"
         )
 
@@ -398,12 +394,12 @@ class SqlSource(Source):
             self.data = self.load_sql_dataframe()
 
 
-            logger.debug(
+            self.logger.debug(
                 f"source `{self.name}` loaded (via SQL)"
             )
 
         except Exception as err:
-            logger.critical(
+            self.logger.critical(
                 f"source {self.name} error ({err}); check `connection` and `query`"
             )
             raise
@@ -418,7 +414,7 @@ class SqlSource(Source):
             return pd.read_sql(sql=self.query, con=self.connection)
 
         except AttributeError:
-            logger.debug(
+            self.logger.debug(
                 "SQLAlchemy 1.x approach failed! Attempting SQLAlchemy 2.x approach..."
             )
             import sqlalchemy
