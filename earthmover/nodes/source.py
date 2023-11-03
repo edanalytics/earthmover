@@ -69,7 +69,7 @@ class Source(Node):
         :return:
         """
         super().compile()
-        self.chunksize = self.error_handler.assert_get_key(self.config, 'chunksize', dtype=int, required=False, default=self.NUM_ROWS_PER_CHUNK)
+        self.chunksize = self.config.get('chunksize', self.NUM_ROWS_PER_CHUNK, dtype=int)
 
     def post_execute(self, **kwargs):
         """
@@ -113,7 +113,7 @@ class FileSource(Source):
         :return:
         """
         super().compile()
-        self.file = self.error_handler.assert_get_key(self.config, 'file', dtype=str, required=False)
+        self.file = self.config.get('file', "", dtype=str)
 
         #
         if not self.file:
@@ -121,10 +121,7 @@ class FileSource(Source):
             self.file_type = ''
         #
         else:
-            self.file_type = self.error_handler.assert_get_key(
-                self.config, 'type', dtype=str, required=False,
-                default=self._get_filetype(self.file)
-            )
+            self.file_type = self.config.get('type', self._get_filetype(self.file), dtype=str)
 
             if not self.file_type:
                 self.error_handler.throw(
@@ -151,7 +148,7 @@ class FileSource(Source):
             raise
 
         #
-        self.columns_list = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
+        self.columns_list = self.config.get('columns', [], dtype=list)
 
         #
         if "://" in self.file:
@@ -305,7 +302,7 @@ class FtpSource(Source):
         :return:
         """
         super().compile()
-        self.connection = self.error_handler.assert_get_key(self.config, 'connection', dtype=str)
+        self.connection = self.config.get('connection', dtype=str)
 
         # There's probably a network builtin to simplify this.
         user, passwd, host, port, self.file = re.match(
@@ -376,8 +373,8 @@ class SqlSource(Source):
         :return:
         """
         super().compile()
-        self.connection = self.error_handler.assert_get_key(self.config, 'connection', dtype=str)
-        self.query = self.error_handler.assert_get_key(self.config, 'query', dtype=str)
+        self.connection = self.config.get('connection', dtype=str)
+        self.query = self.config.get('query', dtype=str)
 
         # JK: I turned this off in the Dask refactor. Should it be turned back on?
         # # replace columns from outer query with count(*), to measure the size of the datasource (and determine is_chunked):

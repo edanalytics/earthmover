@@ -76,7 +76,7 @@ class Node:
 
         # Always check for debug and expectations
         self.debug = self.config.get('debug', False)
-        self.expectations = self.error_handler.assert_get_key(self.config, 'expect', dtype=list, required=False)
+        self.expectations = self.config.get('expect', [], dtype=list)
 
         pass
 

@@ -125,7 +125,7 @@ class Earthmover:
 
         ### Build the graph type-by-type
         for node_type, node_class in node_types.items():
-            nodes = self.error_handler.assert_get_key(self.user_configs, node_type, dtype=dict, required=False, default={})
+            nodes = self.user_configs.get(node_type, {}, dtype=dict)
 
             # Place the nodes
             for name, config in nodes.items():

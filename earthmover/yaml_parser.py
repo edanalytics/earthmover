@@ -1,16 +1,42 @@
 import dataclasses
+import logging
 import os
 import yaml
 
 from string import Template
-from typing import Dict
+from typing import Any, Dict, Optional
 
 from earthmover import util
+
+
+logger = logging.getLogger("earthmover")
 
 
 @dataclasses.dataclass
 class YamlMapping(dict):
     __line__: int = None
+
+    def get(self, key: str, default: Optional[Any] = "[[UNDEFINED]]", *, dtype: Any = object):
+        value = super().get(key, default)
+
+        if value == "[[UNDEFINED]]":
+            logger.critical(
+                f"YAML parse error: Field not defined: {key}."
+            )
+
+        if not isinstance(value, dtype):
+            if isinstance(dtype, tuple):
+                dtype_name = "({})".format(", ".join(map(lambda x: x.__name__, dtype)))
+            else:
+                dtype_name = dtype.__name__
+
+            logger.critical(
+                f"YAML parse error: Field does not match expected datatype: {key}\n"
+                f"    Expected: {dtype_name}\n"
+                f"    Received: {type(value).__name__ if value is not None else 'No value specified'}"
+            )
+
+        return value
 
 
 class JinjaEnvironmentYamlLoader(yaml.SafeLoader):

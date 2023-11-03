@@ -29,8 +29,8 @@ class DistinctRowsOperation(Operation):
         super().compile()
 
         # Only 'column' or 'columns' can be populated
-        _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
-        _columns = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
+        _column = self.config.get('column', "", dtype=str)
+        _columns = self.config.get('columns', [], dtype=list)
 
         if _column:
             self.columns_list = [_column]
@@ -81,8 +81,8 @@ class FilterRowsOperation(Operation):
         """
         super().compile()
 
-        self.query    = self.error_handler.assert_get_key(self.config, 'query', dtype=str)
-        self.behavior = self.error_handler.assert_get_key(self.config, 'behavior', dtype=str)
+        self.query = self.config.get('query', dtype=str)
+        self.behavior = self.config.get('behavior', dtype=str)
 
         if self.behavior not in self.BEHAVIORS:
             self.error_handler.throw(

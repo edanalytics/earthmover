@@ -36,7 +36,7 @@ class AddColumnsOperation(Operation):
         :return:
         """
         super().compile()
-        self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
+        self.columns_dict = self.config.get('columns', dtype=dict)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
@@ -92,7 +92,7 @@ class ModifyColumnsOperation(Operation):
         :return:
         """
         super().compile()
-        self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
+        self.columns_dict = self.config.get('columns', dtype=dict)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
@@ -153,7 +153,7 @@ class DuplicateColumnsOperation(Operation):
         :return:
         """
         super().compile()
-        self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
+        self.columns_dict = self.config.get('columns', dtype=dict)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
@@ -198,7 +198,7 @@ class RenameColumnsOperation(Operation):
         :return:
         """
         super().compile()
-        self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
+        self.columns_dict = self.config.get('columns', dtype=dict)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
@@ -241,7 +241,7 @@ class DropColumnsOperation(Operation):
         :return:
         """
         super().compile()
-        self.columns_to_drop = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
+        self.columns_to_drop = self.config.get('columns', dtype=list)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
@@ -281,7 +281,7 @@ class KeepColumnsOperation(Operation):
         """
         super().compile()
 
-        self.header = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
+        self.header = self.config.get('columns', dtype=list)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
@@ -323,10 +323,10 @@ class CombineColumnsOperation(Operation):
         """
         super().compile()
 
-        self.columns_list = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
-        self.new_column   = self.error_handler.assert_get_key(self.config, 'new_column', dtype=str)
+        self.columns_list = self.config.get('columns', dtype=list)
+        self.new_column   = self.config.get('new_column', dtype=str)
 
-        self.separator = self.config.get('separator', "")
+        self.separator = self.config.get('separator', "", dtype=str)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
@@ -374,8 +374,8 @@ class MapValuesOperation(Operation):
         super().compile()
 
         # Only 'column' or 'columns' can be populated
-        _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
-        _columns = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
+        _column  = self.config.get('column', "", dtype=str)
+        _columns = self.config.get('columns', [], dtype=list)
 
         if bool(_column) == bool(_columns):  # Fail if both or neither are populated.
             self.error_handler.throw(
@@ -386,8 +386,8 @@ class MapValuesOperation(Operation):
         self.columns_list = _columns or [_column]  # `[None]` evaluates to True
 
         #
-        _mapping  = self.error_handler.assert_get_key(self.config, 'mapping', dtype=dict, required=False)
-        _map_file = self.error_handler.assert_get_key(self.config, 'map_file', dtype=str, required=False)
+        _mapping  = self.config.get('mapping', {}, dtype=dict)
+        _map_file = self.config.get('map_file', "", dtype=str)
 
         if _mapping:
             self.mapping = _mapping
@@ -466,12 +466,12 @@ class DateFormatOperation(Operation):
         """
         super().compile()
 
-        self.from_format = self.error_handler.assert_get_key(self.config, 'from_format', dtype=str)
-        self.to_format   = self.error_handler.assert_get_key(self.config, 'to_format', dtype=str)
+        self.from_format = self.config.get('from_format', dtype=str)
+        self.to_format   = self.config.get('to_format', dtype=str)
 
         # Only 'column' or 'columns' can be populated
-        _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
-        _columns = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
+        _column  = self.config.get('column', "", dtype=str)
+        _columns = self.config.get('columns', [], dtype=list)
 
         if bool(_column) == bool(_columns):  # Fail if both or neither are populated.
             self.error_handler.throw(
