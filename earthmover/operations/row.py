@@ -45,7 +45,7 @@ class DistinctRowsOperation(Operation):
         super().execute(data, **kwargs)
 
         if not set(self.columns_list).issubset(data.columns):
-            logger.critical(
+            self.logger.exception(
                 "one or more columns for checking for distinctness are undefined in the dataset"
             )
             raise
@@ -83,7 +83,7 @@ class FilterRowsOperation(Operation):
         self.behavior = self.config.get('behavior', dtype=str)
 
         if self.behavior not in self.BEHAVIORS:
-            logger.critical(
+            self.logger.critical(
                 "`behavior` must be one of [include, exclude]"
             )
             raise
@@ -105,7 +105,7 @@ class FilterRowsOperation(Operation):
             data = data.query(_query, engine='python')  #`numexpr` is used by default if installed.
 
         except Exception as _:
-            logger.critical(
+            self.logger.critical(
                 "error during `filter_rows` operation... check query format?"
             )
             raise
