@@ -17,9 +17,12 @@ from earthmover.yaml_parser import JinjaEnvironmentYamlLoader
 from earthmover import util
 
 from typing import List, Optional
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from earthmover.logger import ClassConsciousLogger
 
 
-logger = logging.getLogger("earthmover")
+logger: 'ClassConsciousLogger' = logging.getLogger(__name__)
 
 
 class Earthmover:
@@ -80,7 +83,7 @@ class Earthmover:
 
         # Set up the logging
         logger.set_logging_config(
-            level=self.state_configs['log_level'].upper(),
+            level=self.state_configs['log_level'],
             show_stacktrace=self.state_configs['show_stacktrace']
         )
 

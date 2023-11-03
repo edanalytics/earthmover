@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional
 from earthmover import util
 
 
-logger = logging.getLogger("earthmover")
+logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass

@@ -5,7 +5,10 @@ import sys
 
 from earthmover.earthmover import Earthmover
 
+
+logger = logging.getLogger(__name__)
 DEFAULT_CONFIG_FILES = ['earthmover.yaml', 'earthmover.yml']
+
 
 def main(argv=None):
     """
@@ -13,8 +16,6 @@ def main(argv=None):
     :param argv:
     :return:
     """
-    logger = logging.getLogger("earthmover")
-
     if argv is None:
         argv = sys.argv
     

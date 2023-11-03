@@ -1,10 +1,7 @@
 import inspect
 import logging
 
-from typing import Optional
 
-
-###
 class ExitOnExceptionHandler(logging.StreamHandler):
     """
     Automatically exit Earthmover if an error or higher event is passed.
@@ -15,7 +12,6 @@ class ExitOnExceptionHandler(logging.StreamHandler):
             raise SystemExit(-1)
 
 
-###
 class DynamicLoggingFormatter(logging.Formatter):
     """
     Override Formatter to retrieve the calling_class extra from LogRecord.
@@ -64,7 +60,9 @@ class DynamicLoggingFormatter(logging.Formatter):
 class ClassConsciousLogger(logging.Logger):
     """
     """
-    show_stacktrace: bool = False  # Default to False, and turn on using `LoggingMixin.set_logging_level()`
+    # Override using `ClassConsciousLogger.set_logging_config()`.
+    log_level: int = logging.getLevelName("INFO")
+    show_stacktrace: bool = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -75,7 +73,15 @@ class ClassConsciousLogger(logging.Logger):
         )
         handler.setFormatter(formatter)
         self.addHandler(handler)
-        self.set_logging_config()
+        self.setLevel(self.log_level)
+
+    def __repr__(self):
+        return f"<ClassConsciousLogger earthmover ({logging.getLevelName(self.log_level)}: {self.show_stacktrace})>"
+
+    def set_logging_config(self, level: str = "INFO", show_stacktrace: bool = False):
+        ClassConsciousLogger.log_level = logging.getLevelName(level.upper())
+        ClassConsciousLogger.show_stacktrace = show_stacktrace
+        self.setLevel(self.log_level)
 
     def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1):
         """
@@ -101,7 +107,3 @@ class ClassConsciousLogger(logging.Logger):
                 return calling_class
         else:
             return None
-
-    def set_logging_config(self, level: str = "INFO", show_stacktrace: bool = False):
-        self.setLevel(logging.getLevelName(level.upper()))
-        self.show_stacktrace = show_stacktrace

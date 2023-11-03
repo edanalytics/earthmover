@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from earthmover.node import Node
 
 
-logger = logging.getLogger("earthmover")
+logger = logging.getLogger(__name__)
 
 
 class Graph(nx.DiGraph):
