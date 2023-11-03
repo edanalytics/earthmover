@@ -45,7 +45,7 @@ class Source(Node):
             return object.__new__(FileSource)
 
         else:
-            self.logger.critical(
+            cls.logger.critical(
                 "sources must specify either a `file` and/or `connection` string and `query`"
             )
             raise

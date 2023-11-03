@@ -18,6 +18,8 @@ class Node:
     """
 
     """
+    logger = logging.getLogger("earthmover")
+
     type: str = None
     allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition',)
 
@@ -26,7 +28,6 @@ class Node:
         self.config: 'YamlMapping' = config
 
         self.earthmover: 'Earthmover' = earthmover
-        self.logger = logging.getLogger("earthmover")
         self.upstream_sources: Dict[str, Optional['Node']] = {}
 
         self.data: 'DataFrame' = None
