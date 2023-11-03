@@ -109,7 +109,7 @@ class FileSource(Source):
         :return:
         """
         super().compile()
-        self.file = self.config.get('file', "", dtype=str)
+        self.file = self.config.get('file', "", dtype=(str, type(None))) # Files can be NULL if optional.)
 
         #
         if not self.file:
