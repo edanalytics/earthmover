@@ -6,8 +6,6 @@ import pandas as pd
 
 from dask.diagnostics import ProgressBar
 
-from earthmover import util
-
 from typing import Dict, List, Tuple, Optional, Union
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -129,7 +127,7 @@ class Node:
                 template = jinja2.Template("{{" + expectation + "}}")
 
                 result[expectation_result_col] = result.apply(
-                    util.render_jinja_template, axis=1,
+                    self.render_jinja_template, axis=1,
                     meta=pd.Series(dtype='str', name=expectation_result_col),
                     template=template,
                     template_str="{{" + expectation + "}}"
@@ -149,3 +147,26 @@ class Node:
         if self.partition_size:
             data = data.repartition(partition_size=self.partition_size)
         return data
+
+    def render_jinja_template(self, row: 'Series', template: jinja2.Template, template_str: str) -> str:
+        """
+
+        :param row:
+        :param template:
+        :param template_str:
+        :return:
+        """
+        try:
+            return template.render(row)
+
+        except Exception as err:
+            if dict(row):
+                _joined_keys = "`, `".join(dict(row).keys())
+                variables = f"\n(available variables are `{_joined_keys}`)"
+            else:
+                variables = f"\n(no available variables)"
+
+            self.logger.critical(
+                f"Error rendering Jinja template: ({err}):\n===> {template_str}{variables}"
+            )
+            raise

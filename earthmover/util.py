@@ -1,19 +1,9 @@
-import logging
-
 import jinja2
 import hashlib
-import logging
 import os
 
 from sys import exc_info
-
 from typing import Optional
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from pandas import Series
-
-
-logger = logging.getLogger("earthmover")
 
 
 def human_time(seconds: int) -> str:
@@ -72,31 +62,6 @@ def contains_jinja(string: str) -> bool:
         return True
     else:
         return False
-
-
-def render_jinja_template(row: 'Series', template: jinja2.Template, template_str: str) -> str:
-    """
-
-    :param row:
-    :param template:
-    :param template_str:
-    :return:
-    """
-    try:
-        return template.render(row)
-
-    except Exception as err:
-        if dict(row):
-            _joined_keys = "`, `".join(dict(row).keys())
-            variables = f"\n(available variables are `{_joined_keys}`)"
-        else:
-            variables = f"\n(no available variables)"
-
-        logger.critical(
-            f"Error rendering Jinja template: ({err}):\n===> {template_str}{variables}"
-        )
-        raise
-
 
 def jinja2_template_error_lineno():
     """

@@ -58,7 +58,7 @@ class AddColumnsOperation(Operation):
                     raise
 
                 data[col] = data.apply(
-                    util.render_jinja_template, axis=1,
+                    self.render_jinja_template, axis=1,
                     meta=pd.Series(dtype='str', name=col),
                     template=template,
                     template_str=val
@@ -115,7 +115,7 @@ class ModifyColumnsOperation(Operation):
                 data['value'] = data[col]
 
                 data[col] = data.apply(
-                    util.render_jinja_template, axis=1,
+                    self.render_jinja_template, axis=1,
                     meta=pd.Series(dtype='str', name=col),
                     template=template,
                     template_str=val
