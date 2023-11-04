@@ -15,16 +15,11 @@ if TYPE_CHECKING:
     from earthmover.yaml_parser import YamlMapping
 
 
-logger = logging.getLogger(__name__)
-
-
 class Node:
     """
 
     """
-    logger: 'ClassConsciousLogger' = logger
-
-    type: str = None
+    logger: 'ClassConsciousLogger' = logging.getLogger(__name__)
     allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition',)
 
     def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
