@@ -139,13 +139,14 @@ class Earthmover:
                         node.upstream_sources[source] = self.graph.ref(source)
                         self.graph.add_edge(source, f"${node_type}.{name}")
                     except KeyError:
-                        logger.critical(f"invalid source {source}")
+                        logger.exception(f"invalid source {source}")
+                        raise
 
         ### Confirm that the graph is a DAG
         logger.debug("checking dataflow graph")
         if not nx.is_directed_acyclic_graph(self.graph):
             _cycle = nx.find_cycle(self.graph)
-            logger.critical(
+            logger.exception(
                 f"the graph is not a DAG! it has the cycle {_cycle}"
             )
             raise
@@ -252,7 +253,8 @@ class Earthmover:
 
         ### Confirm that at least one source is defined.
         if not self.sources:
-            logger.critical("No sources have been defined!")
+            logger.exception("No sources have been defined!")
+            raise
 
 
     def execute(self, subgraph: Graph):
@@ -384,5 +386,5 @@ class Earthmover:
             
             # compare sorted contents
             if not _expected_df.equals(_outputted_df):
-                logger.critical(f"Test output `{_outputted_file}` does not match expected output.")
-                exit(1)
+                logger.exception(f"Test output `{_outputted_file}` does not match expected output.")
+                raise
