@@ -14,6 +14,7 @@ class Destination(Node):
     """
 
     """
+    type: str = 'destination'
     mode: str = None  # Documents which class was chosen.
     allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition', 'source',)
 
@@ -22,7 +23,6 @@ class Destination(Node):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.type: str = 'destination'
         self.source: str = self.config.get('source', dtype=str)
         self.upstream_sources[self.source] = None
 

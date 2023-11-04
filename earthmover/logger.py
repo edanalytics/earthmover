@@ -91,6 +91,10 @@ class ClassConsciousLogger(logging.Logger):
         if calling_class:
             self.kwargs = {**self.kwargs, **vars(calling_class)}
 
+            # Class attributes cannot be accessed in vars().
+            if hasattr(calling_class, 'type'):
+                self.kwargs['type'] = calling_class.type
+
         extra['kwargs'] = self.kwargs
         super()._log(*args, extra=extra, **kwargs)
 

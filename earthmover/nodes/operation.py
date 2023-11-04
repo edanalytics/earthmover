@@ -14,6 +14,7 @@ class Operation(Node):
     """
 
     """
+    type: str = "transformation"
     allowed_configs: Tuple[str] = ('operation', 'repartition',)
 
     def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
@@ -63,7 +64,6 @@ class Operation(Node):
     def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         full_name = f"{name}.operations:{config.get('operation')}"
         super().__init__(full_name, config, earthmover=earthmover)
-        self.type: str = "transformation"
 
     @abc.abstractmethod
     def execute(self, data: 'DataFrame', *, data_mapping: Dict[str, Node], **kwargs) -> 'DataFrame':
