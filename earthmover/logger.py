@@ -1,7 +1,7 @@
 import inspect
 import logging
 
-from typing import Any
+from typing import Optional
 
 
 class ExitOnExceptionHandler(logging.StreamHandler):
@@ -33,7 +33,6 @@ class DynamicLoggingFormatter(logging.Formatter):
             return super().format(record)
 
         # Retrieve the parent class kwargs (i.e., YamlMapping, Node, etc.) and use duck-typing to build a message.
-        calling_class = getattr(record, 'calling_class')
         kwargs = getattr(record, 'kwargs')
 
         # Format the record into a location-string to make debugging errors easier.
@@ -42,9 +41,8 @@ class DynamicLoggingFormatter(logging.Formatter):
         if 'config' in kwargs:
             log_string += f"near line {kwargs['config'].__line__} "
 
-        # Name and Type are Class attributes, so they are not collected in vars().
-        if hasattr(calling_class, 'name') and hasattr(calling_class, 'type'):
-            log_string += f"in `${calling_class.type}s.{calling_class.name}` "
+        if 'name' in kwargs and 'type' in kwargs:
+            log_string += f"in `${kwargs['type']}s.{kwargs['name']}` "
 
         log_string = f"({log_string.strip()})" if log_string else ""
         return f"{super().format(record)} {log_string}"
@@ -54,18 +52,17 @@ class ClassConsciousLogger(logging.Logger):
     """
     """
     # Override using `ClassConsciousLogger.set_logging_config()`.
-    log_level: int = logging.getLevelName("DEBUG")
-    show_stacktrace: bool = True
+    log_level: int = logging.getLevelName("INFO")
+    show_stacktrace: bool = False
 
     # Store latest context as a class and kwargs object
-    calling_class: Any = None
     kwargs: dict = dict()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         handler = ExitOnExceptionHandler()
         formatter = DynamicLoggingFormatter(
-            "[%(asctime)s.%(msecs)03d] %(levelname)-8s :: %(message)s",
+            "[%(asctime)s.%(msecs)03d] %(levelname)-5s: %(message)s",
             "%Y-%m-%d %H:%M:%S"
         )
         handler.setFormatter(formatter)
@@ -79,26 +76,23 @@ class ClassConsciousLogger(logging.Logger):
         ClassConsciousLogger.log_level = logging.getLevelName(level.upper())
         ClassConsciousLogger.show_stacktrace = show_stacktrace
 
-    def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1):
+    def exception(self, *args, exc_info=show_stacktrace, **kwargs):
+        return super().exception(*args, exc_info=exc_info, **kwargs)
+
+    def _log(self, *args, extra: Optional[dict] = None, **kwargs):
         """
         Override Logger._log() to automatically infer calling-class.
         """
         if extra is None:
             extra = {}
 
-        # Automatically add the 'calling_class' attribute to the extra dictionary
-        self.calling_class = self.get_calling_class()
-        if self.calling_class:
-            self.kwargs = {**self.kwargs, **vars(self.calling_class)}
+        # Automatically add the calling class attributes to the extra dictionary, including name and type
+        calling_class = self.get_calling_class()
+        if calling_class:
+            self.kwargs = {**self.kwargs, **vars(calling_class)}
 
-        extra['calling_class'] = self.calling_class
         extra['kwargs'] = self.kwargs
-
-        super()._log(
-            level, msg, args,
-            exc_info=(exc_info or self.show_stacktrace),
-            extra=extra, stack_info=stack_info, stacklevel=stacklevel
-        )
+        super()._log(*args, extra=extra, **kwargs)
 
     @classmethod
     def get_calling_class(cls):
