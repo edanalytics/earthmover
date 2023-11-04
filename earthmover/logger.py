@@ -1,6 +1,8 @@
 import inspect
 import logging
 
+from typing import Any
+
 
 class ExitOnExceptionHandler(logging.StreamHandler):
     """
@@ -20,49 +22,44 @@ class DynamicLoggingFormatter(logging.Formatter):
     Warning: `line` is similar to built-in `lineno`.
     """
     def format(self, record: logging.LogRecord):
-        # Retrieve the calling-class (i.e., Node, Graph, Operation, etc.) and dynamically-infer context.
-        calling_class = getattr(record, 'calling_class')
-        if calling_class:
-
-            # Use duck-typing to check whether the calling class is a Node (or Node child-class).
-            if hasattr(calling_class, 'name') and hasattr(calling_class, 'type'):
-                record.node = calling_class
-
-            if hasattr(calling_class, 'config'):
-                record.line = calling_class.config.__line__
-
-        # Format the record into a location-string to make debugging errors easier.
-        log_string = self.to_formatted_string(record)
-
-        if log_string and record.levelno >= logging.ERROR:
-            return f"{super().format(record)} ({log_string})"
-        else:
-            return super().format(record)
-
-    @staticmethod
-    def to_formatted_string(record: logging.LogRecord):
         """
         e.g. (near line 257 in `$transformations.total_of_each_species.operations:add_columns`)
+
         :param record:
         :return:
         """
+        # Only use extended format if an error.
+        if record.levelno < logging.ERROR:
+            return super().format(record)
+
+        # Retrieve the parent class kwargs (i.e., YamlMapping, Node, etc.) and use duck-typing to build a message.
+        calling_class = getattr(record, 'calling_class')
+        kwargs = getattr(record, 'kwargs')
+
+        # Format the record into a location-string to make debugging errors easier.
         log_string = ""
 
-        if hasattr(record, 'line'):
-            log_string += f"near line {record.line} "
+        if 'config' in kwargs:
+            log_string += f"near line {kwargs['config'].__line__} "
 
-        if hasattr(record, 'node'):
-            log_string += f"in `${record.node.type}s.{record.node.name}` "
+        # Name and Type are Class attributes, so they are not collected in vars().
+        if hasattr(calling_class, 'name') and hasattr(calling_class, 'type'):
+            log_string += f"in `${calling_class.type}s.{calling_class.name}` "
 
-        return log_string.strip()
+        log_string = f"({log_string.strip()})" if log_string else ""
+        return f"{super().format(record)} {log_string}"
 
 
 class ClassConsciousLogger(logging.Logger):
     """
     """
     # Override using `ClassConsciousLogger.set_logging_config()`.
-    log_level: int = logging.getLevelName("INFO")
-    show_stacktrace: bool = False
+    log_level: int = logging.getLevelName("DEBUG")
+    show_stacktrace: bool = True
+
+    # Store latest context as a class and kwargs object
+    calling_class: Any = None
+    kwargs: dict = dict()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -78,19 +75,24 @@ class ClassConsciousLogger(logging.Logger):
     def __repr__(self):
         return f"<ClassConsciousLogger earthmover ({logging.getLevelName(self.log_level)}: {self.show_stacktrace})>"
 
-    def set_logging_config(self, level: str = "INFO", show_stacktrace: bool = False):
+    def set_logging_config(self, level: str = log_level, show_stacktrace: bool = False):
         ClassConsciousLogger.log_level = logging.getLevelName(level.upper())
         ClassConsciousLogger.show_stacktrace = show_stacktrace
-        self.setLevel(self.log_level)
 
     def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1):
         """
         Override Logger._log() to automatically infer calling-class.
         """
-        # Automatically add the 'calling_class' attribute to the extra dictionary
         if extra is None:
             extra = {}
-        extra['calling_class'] = self._get_calling_class()
+
+        # Automatically add the 'calling_class' attribute to the extra dictionary
+        self.calling_class = self.get_calling_class()
+        if self.calling_class:
+            self.kwargs = {**self.kwargs, **vars(self.calling_class)}
+
+        extra['calling_class'] = self.calling_class
+        extra['kwargs'] = self.kwargs
 
         super()._log(
             level, msg, args,
@@ -99,7 +101,7 @@ class ClassConsciousLogger(logging.Logger):
         )
 
     @classmethod
-    def _get_calling_class(cls):
+    def get_calling_class(cls):
         # Iterate the stack until the first object that is not the logger is found.
         for frame_info in inspect.stack():
             calling_class = frame_info[0].f_locals.get('self', None)

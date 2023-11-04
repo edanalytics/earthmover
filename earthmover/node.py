@@ -11,13 +11,19 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
     from earthmover.earthmover import Earthmover
+    from earthmover.logger import ClassConsciousLogger
     from earthmover.yaml_parser import YamlMapping
+
+
+logger = logging.getLogger(__name__)
 
 
 class Node:
     """
 
     """
+    logger: 'ClassConsciousLogger' = logger
+
     type: str = None
     allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition',)
 
@@ -26,11 +32,9 @@ class Node:
         self.config: 'YamlMapping' = config
 
         self.earthmover: 'Earthmover' = earthmover
-        self.logger = logging.getLogger(__name__)
         self.upstream_sources: Dict[str, Optional['Node']] = {}
 
         self.data: 'DataFrame' = None
-
         self.size: int = None
         self.num_rows: int = None
         self.num_cols: int = None
