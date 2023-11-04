@@ -53,7 +53,7 @@ class JoinOperation(Operation):
         _keys = self.config.get('left_keys', [], dtype=list)
 
         if bool(_key) == bool(_keys):  # Fail if both or neither are populated.
-            self.logger.critical("must define `left_key` or `left_keys`")
+            self.logger.exception("must define `left_key` or `left_keys`")
             raise
 
         self.left_keys = _keys or [_key]  # `[None]` evaluates to True
@@ -63,7 +63,7 @@ class JoinOperation(Operation):
         _keys = self.config.get('right_keys', [], dtype=list)
 
         if bool(_key) == bool(_keys):  # Fail if both or neither are populated.
-            self.logger.critical("must define `right_key` or `right_keys`")
+            self.logger.exception("must define `right_key` or `right_keys`")
             raise
 
         self.right_keys = _keys or [_key]  # `[None]` evaluates to True
@@ -71,7 +71,7 @@ class JoinOperation(Operation):
         # Check join type
         self.join_type = self.config.get('join_type', dtype=str)
         if self.join_type not in self.JOIN_TYPES:
-            self.logger.critical(
+            self.logger.exception(
                 f"`join_type` must be one of [inner, left, right, outer], not `{self.join_type}`"
             )
             raise
@@ -95,7 +95,7 @@ class JoinOperation(Operation):
 
         if self.left_keep_cols:
             if not set(self.left_keep_cols).issubset(self.left_cols):
-                self.logger.critical(
+                self.logger.exception(
                     "columns in `left_keep_columns` are not defined in the dataset"
                 )
                 raise
@@ -104,7 +104,7 @@ class JoinOperation(Operation):
 
         elif self.left_drop_cols:
             if any(col in self.left_keys for col in self.left_drop_cols):
-                self.logger.critical(
+                self.logger.exception(
                     "you may not `left_drop_columns` that are part of the `left_key(s)`"
                 )
                 raise
@@ -120,7 +120,7 @@ class JoinOperation(Operation):
 
             if self.right_keep_cols:
                 if not set(self.right_keep_cols).issubset(self.right_cols):
-                    self.logger.critical(
+                    self.logger.exception(
                         "columns in `right_keep_columns` are not defined in the dataset"
                     )
                     raise
@@ -129,7 +129,7 @@ class JoinOperation(Operation):
 
             elif self.right_drop_cols:
                 if any(col in self.right_keys for col in self.right_drop_cols):
-                    self.logger.critical(
+                    self.logger.exception(
                         "you may not `right_drop_columns` that are part of the `right_key(s)`"
                     )
                     raise
@@ -146,7 +146,7 @@ class JoinOperation(Operation):
                 )
 
             except Exception as _:
-                self.logger.critical(
+                self.logger.exception(
                     "error during `join` operation. Check your join keys?"
                 )
                 raise
@@ -177,14 +177,14 @@ class UnionOperation(Operation):
             source_data = data_mapping[source].data
 
             if set(source_data.columns) != set(data.columns):
-                self.logger.critical('dataframes to union do not share identical columns')
+                self.logger.exception('dataframes to union do not share identical columns')
                 raise
 
             try:
                 data = dd.concat([data, source_data], ignore_index=True)
             
             except Exception as _:
-                self.logger.critical(
+                self.logger.exception(
                     "error during `union` operation... are sources same shape?"
                 )
                 raise

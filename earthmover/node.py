@@ -139,9 +139,10 @@ class Node:
 
                 num_failed = len(result.query(f"{expectation_result_col}=='False'").index)
                 if num_failed > 0:
-                    self.logger.critical(
+                    self.logger.exception(
                         f"Source `${self.type}s.{self.name}` failed expectation `{expectation}` ({num_failed} rows fail)"
                     )
+                    raise
                 else:
                     self.logger.info(
                         f"Assertion passed! {self.name}: {expectation}"
@@ -170,7 +171,7 @@ class Node:
             else:
                 variables = f"\n(no available variables)"
 
-            self.logger.critical(
+            self.logger.exception(
                 f"Error rendering Jinja template: ({err}):\n===> {template_str}{variables}"
             )
             raise

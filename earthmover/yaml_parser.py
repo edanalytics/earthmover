@@ -20,9 +20,10 @@ class YamlMapping(dict):
         value = super().get(key, default)
 
         if value == "[[UNDEFINED]]":
-            logger.critical(
+            logger.exception(
                 f"YAML parse error: Field not defined: {key}."
             )
+            raise
 
         if not isinstance(value, dtype):
             if isinstance(dtype, tuple):
@@ -30,11 +31,12 @@ class YamlMapping(dict):
             else:
                 dtype_name = dtype.__name__
 
-            logger.critical(
+            logger.exception(
                 f"YAML parse error: Field does not match expected datatype: {key}\n"
                 f"    Expected: {dtype_name}\n"
                 f"    Received: {type(value).__name__ if value is not None else 'No value specified'}"
             )
+            raise
 
         return value
 

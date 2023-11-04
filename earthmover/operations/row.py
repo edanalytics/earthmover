@@ -83,7 +83,7 @@ class FilterRowsOperation(Operation):
         self.behavior = self.config.get('behavior', dtype=str)
 
         if self.behavior not in self.BEHAVIORS:
-            self.logger.critical(
+            self.logger.exception(
                 "`behavior` must be one of [include, exclude]"
             )
             raise
@@ -105,7 +105,7 @@ class FilterRowsOperation(Operation):
             data = data.query(_query, engine='python')  #`numexpr` is used by default if installed.
 
         except Exception as _:
-            self.logger.critical(
+            self.logger.exception(
                 "error during `filter_rows` operation... check query format?"
             )
             raise

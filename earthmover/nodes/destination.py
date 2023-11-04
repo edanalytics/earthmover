@@ -72,7 +72,7 @@ class FileDestination(Destination):
                 template_string = fp.read()
 
         except Exception as err:
-            self.logger.critical(
+            self.logger.exception(
                 f"`template` file {self.template} cannot be opened ({err})"
             )
             raise
@@ -89,7 +89,7 @@ class FileDestination(Destination):
             self.jinja_template = util.build_jinja_template(template_string, macros=self.earthmover.macros)
 
         except Exception as err:
-            self.logger.critical(
+            self.logger.exception(
                 f"syntax error in Jinja template in `template` file {self.template} ({err})"
             )
             raise
@@ -139,7 +139,7 @@ class FileDestination(Destination):
             json_string = self.jinja_template.render(_data_tuple)
 
         except Exception as err:
-            self.logger.critical(
+            self.logger.exception(
                 f"error rendering Jinja template in `template` file {self.template} ({err})"
             )
             raise

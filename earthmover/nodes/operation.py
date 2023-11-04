@@ -54,7 +54,7 @@ class Operation(Node):
         operation_class = operation_mapping.get(operation)
 
         if operation_class is None:
-            cls.logger.critical(
+            cls.logger.exception(
                 f"invalid transformation operation `{operation}`"
             )
             raise

@@ -56,9 +56,10 @@ class Graph(nx.DiGraph):
         """
         node = self.nodes.get(ref)
         if not node:
-            raise KeyError(
+            logger.exception(
                 f"Node not found in the graph: {ref}"
             )
+            raise
         return node['data']
 
 
@@ -115,7 +116,7 @@ class Graph(nx.DiGraph):
             import matplotlib.pyplot as plt
             _ = plt.figure(figsize=(image_width, image_height))
         except ImportError:
-            logger.critical(
+            logger.exception(
                 "drawing the graph requires the matplotlib library... please install it with `pip install matplotlib` or similar"
             )
             raise  # Never called; avoids linting errors
@@ -150,7 +151,7 @@ class Graph(nx.DiGraph):
         try:
             node_positions = nx.drawing.nx_agraph.graphviz_layout(self, prog='dot', args='-Grankdir=LR')
         except ImportError:
-            logger.critical(
+            logger.exception(
                 "drawing the graph requires the PyGraphViz library... please install it with `sudo apt-get install graphviz graphviz-dev && pip install pygraphviz` or similar"
             )
             raise  # Never called; avoids linting errors
