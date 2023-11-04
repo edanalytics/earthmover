@@ -20,7 +20,6 @@ class Source(Node):
     """
 
     """
-    type: str = 'source'
     mode: str = None  # Documents which class was chosen.
     is_remote: bool = None
     allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional',)
@@ -52,6 +51,7 @@ class Source(Node):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.type: str = 'source'
         self.chunksize: int = None
 
         # A source can be blank if `optional=True` is specified in its configs.
