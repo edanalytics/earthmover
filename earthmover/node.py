@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
     from earthmover.earthmover import Earthmover
-    from earthmover.logger import ClassConsciousLogger
     from earthmover.yaml_parser import YamlMapping
 
 
@@ -19,7 +18,7 @@ class Node:
     """
 
     """
-    logger: 'ClassConsciousLogger' = logging.getLogger(__name__)
+    logger: logging.Logger = logging.getLogger(__name__)
     allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition',)
 
     def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):

@@ -1,4 +1,4 @@
 import logging
 
-from earthmover.logger import ClassConsciousLogger
-logging.setLoggerClass(ClassConsciousLogger)
+from earthmover.logger import UniversalLogger
+logging.setLoggerClass(UniversalLogger)

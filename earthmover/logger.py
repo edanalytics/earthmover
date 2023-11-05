@@ -39,64 +39,39 @@ class DynamicLoggingFormatter(logging.Formatter):
         log_string = ""
 
         if 'config' in kwargs:
-            log_string += f"near line {kwargs['config'].__line__} "
+            log_string += "near line {} ".format(kwargs['config'].__line__)
 
         if 'name' in kwargs and 'type' in kwargs:
-            log_string += f"in `${kwargs['type']}s.{kwargs['name']}` "
+            log_string += "in `${}s.{}` ".format(kwargs['type'], kwargs['name'])
 
         log_string = f"({log_string.strip()})" if log_string else ""
         return f"{super().format(record)} {log_string}"
 
 
-class ClassConsciousLogger(logging.Logger):
+class ClassConsciousFilter(logging.Filter):
     """
+    logging.Filter: https://docs.python.org/3/library/logging.html#filter-objects
     """
-    # Override using `ClassConsciousLogger.set_logging_config()`.
-    log_level: int = logging.getLevelName("INFO")
-    show_stacktrace: bool = False
+    kwargs: dict = dict()  # Update context over the run
 
-    # Store latest context as a class and kwargs object
-    kwargs: dict = dict()
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        handler = ExitOnExceptionHandler()
-        formatter = DynamicLoggingFormatter(
-            "[%(asctime)s.%(msecs)03d] %(levelname)-5s: %(message)s",
-            "%Y-%m-%d %H:%M:%S"
-        )
-        handler.setFormatter(formatter)
-        self.addHandler(handler)
-        self.setLevel(self.log_level)
-
-    def __repr__(self):
-        return f"<ClassConsciousLogger earthmover ({logging.getLevelName(self.log_level)}: {self.show_stacktrace})>"
-
-    def set_logging_config(self, level: str = log_level, show_stacktrace: bool = False):
-        ClassConsciousLogger.log_level = logging.getLevelName(level.upper())
-        ClassConsciousLogger.show_stacktrace = show_stacktrace
-
-    def exception(self, *args, exc_info=show_stacktrace, **kwargs):
-        return super().exception(*args, exc_info=exc_info, **kwargs)
-
-    def _log(self, *args, extra: Optional[dict] = None, **kwargs):
+    def filter(self, record):
         """
-        Override Logger._log() to automatically infer calling-class.
-        """
-        if extra is None:
-            extra = {}
 
-        # Automatically add the calling class attributes to the extra dictionary, including name and type
+        :param record:
+        :return:
+        """
+        default_kwargs = {}
+        record.kwargs = getattr(record, 'kwargs', default_kwargs)
+
         calling_class = self.get_calling_class()
         if calling_class:
-            self.kwargs = {**self.kwargs, **vars(calling_class)}
+            record.kwargs = {**record.kwargs, **vars(calling_class)}
 
             # Class attributes cannot be accessed in vars().
             if hasattr(calling_class, 'type'):
-                self.kwargs['type'] = calling_class.type
+                record.kwargs['type'] = calling_class.type
 
-        extra['kwargs'] = self.kwargs
-        super()._log(*args, extra=extra, **kwargs)
+        return super().filter(record)
 
     @classmethod
     def get_calling_class(cls):
@@ -107,3 +82,57 @@ class ClassConsciousLogger(logging.Logger):
                 return calling_class
         else:
             return None
+
+
+class UniversalLogger(logging.Logger):
+    """
+    logging.Formatter: https://docs.python.org/3/library/logging.html#formatter-objects
+    """
+    # TODO: logging.{fmt, datefmt} must be defined in-line, not as class attributes.
+    # # Override using `ClassConsciousLogger.set_logging_config()`.
+    # logging_fmt  : str = "[%(asctime)s.%(msecs)03d] %(levelname)-5s: %(message)s",
+    # logging_datefmt: str = "%Y-%m-%d %H:%M:%S"
+
+    log_level: int = logging.getLevelName("DEBUG")
+    show_stacktrace: bool = False
+
+    def __init__(self, *args, level=log_level, **kwargs):
+        super().__init__(*args, level=level, **kwargs)
+        self.log_level = level
+
+        handler = ExitOnExceptionHandler()
+
+        formatter = DynamicLoggingFormatter(
+            "[%(asctime)s.%(msecs)03d] %(levelname)-5s: %(message)s",
+            "%Y-%m-%d %H:%M:%S"
+        )
+        handler.setFormatter(formatter)
+
+        filter_ = ClassConsciousFilter()
+        handler.addFilter(filter_)
+
+        self.addHandler(handler)
+
+    def __repr__(self):
+        return f"<{self.__name__} ({logging.getLevelName(self.log_level)}: {self.show_stacktrace})>"
+
+    @classmethod
+    def set_logging_config(cls, level: str = log_level, show_stacktrace: bool = False):
+        cls.log_level = logging.getLevelName(level.upper())
+        cls.show_stacktrace = show_stacktrace
+
+    def exception(self, *args, exc_info=show_stacktrace, **kwargs):
+        return super().exception(*args, exc_info=exc_info, **kwargs)
+
+    @property
+    def level(self):
+        """
+        :return:
+        """
+        return self.log_level
+
+    @level.setter
+    def level(self, value):
+        self.log_level = value
+
+
