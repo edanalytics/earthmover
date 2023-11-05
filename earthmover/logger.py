@@ -6,7 +6,7 @@ class UniversalLogger(logging.Logger):
     """
     logging.Formatter: https://docs.python.org/3/library/logging.html#formatter-objects
     """
-    # TODO: logging.{fmt, datefmt} must be defined in-line, not as class attributes.
+    # TODO: logging.{fmt, datefmt} must be defined in-line, not as class attributes???
     # # Override using `UniversalLogger.set_logging_config()`.
     # logging_fmt  : str = "[%(asctime)s.%(msecs)03d] %(levelname)-5s: %(message)s",
     # logging_datefmt: str = "%Y-%m-%d %H:%M:%S"
@@ -15,9 +15,8 @@ class UniversalLogger(logging.Logger):
     show_stacktrace: bool = False
 
     def __init__(self, *args, level: int = log_level, **kwargs):
-        level = level or self.log_level
-        super().__init__(*args, level=level, **kwargs)
-        self.log_level = level
+        self.log_level = level or self.log_level
+        super().__init__(*args, level=self.log_level, **kwargs)
 
         handler = ExitOnExceptionHandler()
 
