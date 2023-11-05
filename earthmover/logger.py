@@ -1,7 +1,70 @@
 import inspect
 import logging
 
-from typing import Optional
+
+class UniversalLogger(logging.Logger):
+    """
+    logging.Formatter: https://docs.python.org/3/library/logging.html#formatter-objects
+    """
+    # TODO: logging.{fmt, datefmt} must be defined in-line, not as class attributes.
+    # # Override using `UniversalLogger.set_logging_config()`.
+    # logging_fmt  : str = "[%(asctime)s.%(msecs)03d] %(levelname)-5s: %(message)s",
+    # logging_datefmt: str = "%Y-%m-%d %H:%M:%S"
+
+    log_level: int = logging.getLevelName("INFO")
+    show_stacktrace: bool = False
+
+    def __init__(self, *args, level: int = log_level, **kwargs):
+        level = level or self.log_level
+        super().__init__(*args, level=level, **kwargs)
+        self.log_level = level
+
+        handler = ExitOnExceptionHandler()
+
+        formatter = DynamicLoggingFormatter(
+            "[%(asctime)s.%(msecs)03d] %(levelname)-5s: %(message)s",
+            "%Y-%m-%d %H:%M:%S"
+        )
+        handler.setFormatter(formatter)
+
+        filter_ = ClassConsciousFilter()
+        handler.addFilter(filter_)
+
+        self.addHandler(handler)
+
+    def __repr__(self):
+        return f"<{self.__name__} ({logging.getLevelName(self.log_level)}: {self.show_stacktrace})>"
+
+    @staticmethod
+    def set_logging_config(level: str = log_level, show_stacktrace: bool = False):
+        """
+
+        :param level:
+        :param show_stacktrace:
+        :return:
+        """
+        if isinstance(level, str):
+            level = logging.getLevelName(level.upper())
+
+        UniversalLogger.log_level = level
+        UniversalLogger.show_stacktrace = show_stacktrace
+
+    def _log(self, *args, **kwargs):
+        print("@@@", self.log_level)
+        print("@@@", self.show_stacktrace)
+        super()._log(*args, **kwargs)
+
+    def exception(self, *args, exc_info=show_stacktrace, **kwargs):
+        return super().exception(*args, exc_info=exc_info, **kwargs)
+
+    @property
+    def level(self):
+        return self.log_level
+
+    @level.setter
+    def level(self, value):
+        print(self.log_level, ' :: ', value)
+        self.log_level = value
 
 
 class ExitOnExceptionHandler(logging.StreamHandler):
@@ -82,57 +145,3 @@ class ClassConsciousFilter(logging.Filter):
                 return calling_class
         else:
             return None
-
-
-class UniversalLogger(logging.Logger):
-    """
-    logging.Formatter: https://docs.python.org/3/library/logging.html#formatter-objects
-    """
-    # TODO: logging.{fmt, datefmt} must be defined in-line, not as class attributes.
-    # # Override using `ClassConsciousLogger.set_logging_config()`.
-    # logging_fmt  : str = "[%(asctime)s.%(msecs)03d] %(levelname)-5s: %(message)s",
-    # logging_datefmt: str = "%Y-%m-%d %H:%M:%S"
-
-    log_level: int = logging.getLevelName("DEBUG")
-    show_stacktrace: bool = False
-
-    def __init__(self, *args, level=log_level, **kwargs):
-        super().__init__(*args, level=level, **kwargs)
-        self.log_level = level
-
-        handler = ExitOnExceptionHandler()
-
-        formatter = DynamicLoggingFormatter(
-            "[%(asctime)s.%(msecs)03d] %(levelname)-5s: %(message)s",
-            "%Y-%m-%d %H:%M:%S"
-        )
-        handler.setFormatter(formatter)
-
-        filter_ = ClassConsciousFilter()
-        handler.addFilter(filter_)
-
-        self.addHandler(handler)
-
-    def __repr__(self):
-        return f"<{self.__name__} ({logging.getLevelName(self.log_level)}: {self.show_stacktrace})>"
-
-    @classmethod
-    def set_logging_config(cls, level: str = log_level, show_stacktrace: bool = False):
-        cls.log_level = logging.getLevelName(level.upper())
-        cls.show_stacktrace = show_stacktrace
-
-    def exception(self, *args, exc_info=show_stacktrace, **kwargs):
-        return super().exception(*args, exc_info=exc_info, **kwargs)
-
-    @property
-    def level(self):
-        """
-        :return:
-        """
-        return self.log_level
-
-    @level.setter
-    def level(self, value):
-        self.log_level = value
-
-
