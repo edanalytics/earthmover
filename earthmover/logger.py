@@ -1,41 +1,40 @@
 import inspect
 import logging
 
+from typing import Union
+
 
 class UniversalLogger(logging.Logger):
     """
     logging.Formatter: https://docs.python.org/3/library/logging.html#formatter-objects
     """
     # TODO: logging.{fmt, datefmt} must be defined in-line, not as class attributes???
-    # # Override using `UniversalLogger.set_logging_config()`.
-    # logging_fmt  : str = "[%(asctime)s.%(msecs)03d] %(levelname)-5s: %(message)s",
-    # logging_datefmt: str = "%Y-%m-%d %H:%M:%S"
+    logging_fmt  : str = "[%(asctime)s.%(msecs)03d] %(levelname)-5s: %(message)s",
+    logging_datefmt: str = "%Y-%m-%d %H:%M:%S"
 
+    # Override using `UniversalLogger.set_logging_config()`.
     log_level: int = logging.getLevelName("INFO")
     show_stacktrace: bool = False
 
-    def __init__(self, *args, level: int = log_level, **kwargs):
-        self.log_level = level or self.log_level
-        super().__init__(*args, level=self.log_level, **kwargs)
+    def __new__(cls, *args, **kwargs):
+        _ = logging.getLogger()  # Force the root logger to initialize (maybe unnecessary)
 
-        handler = ExitOnExceptionHandler()
+        exit_on_exception = ExitOnExceptionHandler()
+        output_earthmover = ContextFormatter()
 
-        formatter = DynamicLoggingFormatter(
-            "[%(asctime)s.%(msecs)03d] %(levelname)-5s: %(message)s",
-            "%Y-%m-%d %H:%M:%S"
+        logging.basicConfig(
+            format="[%(asctime)s.%(msecs)03d] %(levelname)-5s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+            handlers=[exit_on_exception, output_earthmover]
         )
-        handler.setFormatter(formatter)
 
-        filter_ = ClassConsciousFilter()
-        handler.addFilter(filter_)
-
-        self.addHandler(handler)
+        return super().__new__(cls)
 
     def __repr__(self):
-        return f"<{self.__name__} ({logging.getLevelName(self.log_level)}: {self.show_stacktrace})>"
+        return f"{type(self)} ({logging.getLevelName(self.log_level)}: {self.show_stacktrace})"
 
-    @staticmethod
-    def set_logging_config(level: str = log_level, show_stacktrace: bool = False):
+    @classmethod
+    def set_logging_config(cls, level: Union[int, str], show_stacktrace: bool):
         """
 
         :param level:
@@ -45,25 +44,32 @@ class UniversalLogger(logging.Logger):
         if isinstance(level, str):
             level = logging.getLevelName(level.upper())
 
-        UniversalLogger.log_level = level
-        UniversalLogger.show_stacktrace = show_stacktrace
+        cls.log_level = level
+        cls.show_stacktrace = show_stacktrace
 
-    def _log(self, *args, **kwargs):
-        print("@@@", self.log_level)
-        print("@@@", self.show_stacktrace)
-        super()._log(*args, **kwargs)
+    def isEnabledFor(self, level):
+        """
+        All logging output methods use this, so this is the bottleneck to override log-level.
 
-    def exception(self, *args, exc_info=show_stacktrace, **kwargs):
-        return super().exception(*args, exc_info=exc_info, **kwargs)
+        :param level:
+        :return:
+        """
+        # Force session to match universal log level.
+        if self.level != self.log_level:
+            self.setLevel(self.log_level)
 
-    @property
-    def level(self):
-        return self.log_level
+        return super().isEnabledFor(level)
 
-    @level.setter
-    def level(self, value):
-        print(self.log_level, ' :: ', value)
-        self.log_level = value
+    def exception(self, *args, exc_info=None, **kwargs):
+        """
+        Apply stacktrace only if globally-specified.
+
+        :param args:
+        :param exc_info:
+        :param kwargs:
+        :return:
+        """
+        return super().exception(*args, exc_info=self.show_stacktrace, **kwargs)
 
 
 class ExitOnExceptionHandler(logging.StreamHandler):
@@ -76,13 +82,39 @@ class ExitOnExceptionHandler(logging.StreamHandler):
             raise SystemExit(-1)
 
 
-class DynamicLoggingFormatter(logging.Formatter):
+class ContextFormatter(logging.StreamHandler):
     """
+    logging.Filter: https://docs.python.org/3/library/logging.html#filter-objects
+
     Override Formatter to retrieve the calling_class extra from LogRecord.
     Check for extended-logging attributes, and add them to the record.
     Dynamically build out an error-location message from the attributes.
     Warning: `line` is similar to built-in `lineno`.
     """
+    context: dict = dict()  # Update context over the run
+
+    def filter(self, record):
+        """
+        TODO: Maybe there's a better method than filter for this logic?
+        Add the calling class' metadata to the context.
+
+        :param record:
+        :return:
+        """
+        calling_class = self.get_calling_class()
+
+        if not calling_class:
+            return super().filter(record)
+
+        #
+        self.context = {**self.context, **vars(calling_class)}
+
+        # Class attributes cannot be accessed in vars().
+        if hasattr(calling_class, 'type'):
+            self.context['type'] = calling_class.type
+
+        return super().filter(record)
+
     def format(self, record: logging.LogRecord):
         """
         e.g. (near line 257 in `$transformations.total_of_each_species.operations:add_columns`)
@@ -94,46 +126,17 @@ class DynamicLoggingFormatter(logging.Formatter):
         if record.levelno < logging.ERROR:
             return super().format(record)
 
-        # Retrieve the parent class kwargs (i.e., YamlMapping, Node, etc.) and use duck-typing to build a message.
-        kwargs = getattr(record, 'kwargs')
-
         # Format the record into a location-string to make debugging errors easier.
         log_string = ""
 
-        if 'config' in kwargs:
-            log_string += "near line {} ".format(kwargs['config'].__line__)
+        if 'config' in self.context:
+            log_string += "near line {} ".format(self.context['config'].__line__)
 
-        if 'name' in kwargs and 'type' in kwargs:
-            log_string += "in `${}s.{}` ".format(kwargs['type'], kwargs['name'])
+        if 'name' in self.context and 'type' in self.context:
+            log_string += "in `${}s.{}` ".format(self.context['type'], self.context['name'])
 
         log_string = f"({log_string.strip()})" if log_string else ""
         return f"{super().format(record)} {log_string}"
-
-
-class ClassConsciousFilter(logging.Filter):
-    """
-    logging.Filter: https://docs.python.org/3/library/logging.html#filter-objects
-    """
-    kwargs: dict = dict()  # Update context over the run
-
-    def filter(self, record):
-        """
-
-        :param record:
-        :return:
-        """
-        default_kwargs = {}
-        record.kwargs = getattr(record, 'kwargs', default_kwargs)
-
-        calling_class = self.get_calling_class()
-        if calling_class:
-            record.kwargs = {**record.kwargs, **vars(calling_class)}
-
-            # Class attributes cannot be accessed in vars().
-            if hasattr(calling_class, 'type'):
-                record.kwargs['type'] = calling_class.type
-
-        return super().filter(record)
 
     @classmethod
     def get_calling_class(cls):

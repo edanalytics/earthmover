@@ -79,7 +79,7 @@ class Earthmover:
         }
 
         # UniversalLogger.set_logging_config(): This updates ALL loggers
-        type(logger).set_logging_config(
+        logger.set_logging_config(
             level=self.state_configs['log_level'],
             show_stacktrace=self.state_configs['show_stacktrace']
         )
