@@ -97,8 +97,12 @@ class ClassContextFilter(logging.Filter):
             self.context = {**self.context, **vars(calling_class)}
 
             # Class attributes cannot be accessed in vars().
+            # TODO `getattr()` causes a recursion-loop.
             for var in dir(calling_class):
-                self.context[var] = getattr(calling_class, var)  # Avoid `hasattr()` to prevent recursion-loop
+                try:
+                    self.context[var] = getattr(calling_class, var)
+                except RecursionError:
+                    pass
 
         record.context = self.context
         return super().filter(record)
@@ -113,7 +117,6 @@ class ClassContextFilter(logging.Filter):
                     and not isinstance(calling_class, cls)
                     and not issubclass(type(calling_class), (logging.Logger, logging.Handler))
             ):
-                print(calling_class.__module__)
                 return calling_class
         else:
             return None
