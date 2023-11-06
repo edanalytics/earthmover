@@ -16,22 +16,21 @@ class UniversalLogger(logging.Logger):
     log_level: int = logging.getLevelName("INFO")
     show_stacktrace: bool = False
 
-    def __new__(cls, *args, **kwargs):
+    def __repr__(self):
+        return f"{type(self)} ({logging.getLevelName(self.log_level)}: {self.show_stacktrace})"
+
+    @classmethod
+    def initialize(cls):
         _ = logging.getLogger()  # Force the root logger to initialize (maybe unnecessary)
 
-        exit_on_exception = ExitOnExceptionHandler()
         output_earthmover = ContextFormatter()
+        exit_on_exception = ExitOnExceptionHandler()  # Must come last because of system exit
 
         logging.basicConfig(
             format="[%(asctime)s.%(msecs)03d] %(levelname)-5s: %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
-            handlers=[exit_on_exception, output_earthmover]
+            handlers=[output_earthmover, exit_on_exception]
         )
-
-        return super().__new__(cls)
-
-    def __repr__(self):
-        return f"{type(self)} ({logging.getLevelName(self.log_level)}: {self.show_stacktrace})"
 
     @classmethod
     def set_logging_config(cls, level: Union[int, str], show_stacktrace: bool):
@@ -49,10 +48,7 @@ class UniversalLogger(logging.Logger):
 
     def isEnabledFor(self, level):
         """
-        All logging output methods use this, so this is the bottleneck to override log-level.
-
-        :param level:
-        :return:
+        All logging output methods use this method, so force log-level override.
         """
         # Force session to match universal log level.
         if self.level != self.log_level:
@@ -62,12 +58,7 @@ class UniversalLogger(logging.Logger):
 
     def exception(self, *args, exc_info=None, **kwargs):
         """
-        Apply stacktrace only if globally-specified.
-
-        :param args:
-        :param exc_info:
-        :param kwargs:
-        :return:
+        Apply stacktrace on error only if globally-specified.
         """
         return super().exception(*args, exc_info=self.show_stacktrace, **kwargs)
 
@@ -75,9 +66,9 @@ class UniversalLogger(logging.Logger):
 class ExitOnExceptionHandler(logging.StreamHandler):
     """
     Automatically exit Earthmover if an error or higher event is passed.
+    Turn off `super().emit()` to prevent double-logging.
     """
     def emit(self, record: logging.LogRecord):
-        super().emit(record)
         if record.levelno >= logging.ERROR:
             raise SystemExit(-1)
 
@@ -93,9 +84,8 @@ class ContextFormatter(logging.StreamHandler):
     """
     context: dict = dict()  # Update context over the run
 
-    def filter(self, record):
+    def handle(self, record):
         """
-        TODO: Maybe there's a better method than filter for this logic?
         Add the calling class' metadata to the context.
 
         :param record:
@@ -104,16 +94,19 @@ class ContextFormatter(logging.StreamHandler):
         calling_class = self.get_calling_class()
 
         if not calling_class:
-            return super().filter(record)
+            return super().handle(record)
 
-        #
+        # Merge global context with latest calling class
         self.context = {**self.context, **vars(calling_class)}
 
         # Class attributes cannot be accessed in vars().
-        if hasattr(calling_class, 'type'):
-            self.context['type'] = calling_class.type
+        # Use __dict__ directly to prevent `getattr()` recursive loop.
+        class_vars = ('type',)
+        for var in class_vars:
+            if var in calling_class.__dict__:
+                self.context[var] = calling_class.__dict__[var]
 
-        return super().filter(record)
+        return super().handle(record)
 
     def format(self, record: logging.LogRecord):
         """
@@ -140,10 +133,14 @@ class ContextFormatter(logging.StreamHandler):
 
     @classmethod
     def get_calling_class(cls):
-        # Iterate the stack until the first object that is not the logger is found.
+        # Iterate the stack until the first object that is not itself or logger is found.
         for frame_info in inspect.stack():
             calling_class = frame_info[0].f_locals.get('self', None)
-            if calling_class and not isinstance(calling_class, cls):
+            if (
+                calling_class
+                and not isinstance(calling_class, cls)
+                and not issubclass(type(calling_class), logging.Logger)
+            ):
                 return calling_class
         else:
             return None
