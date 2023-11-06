@@ -6,7 +6,10 @@ from typing import Union
 
 class UniversalLogger(logging.Logger):
     """
-    logging.Formatter: https://docs.python.org/3/library/logging.html#formatter-objects
+    Universal logger class that can be initialized anywhere in the project.
+    Setting logging configs updates all loggers automatically.
+
+    logging.Logger: https://docs.python.org/3/library/logging.html#logging.Logger
     """
     logging_format : str = "[%(asctime)s.%(msecs)03d] %(levelname)-5s: %(message)s"
     logging_datefmt: str = "%Y-%m-%d %H:%M:%S"
@@ -23,13 +26,15 @@ class UniversalLogger(logging.Logger):
         root_logger = logging.getLogger()  # Force the root logger to initialize (maybe unnecessary)
         root_logger.propagate = False  # Turn off propagation to prevent multiple logging (maybe unnecessary)
 
-        output_earthmover = ContextFormatter()
-        exit_on_exception = ExitOnExceptionHandler()  # Must come last because of system exit
+        save_class_context = ClassContextFilter()
+        earthmover_output = EarthmoverFormatter(fmt=cls.logging_format, datefmt=cls.logging_datefmt)
+
+        exit_on_exception = ExitOnExceptionHandler()
+        exit_on_exception.addFilter(save_class_context)
+        exit_on_exception.setFormatter(earthmover_output)
 
         logging.basicConfig(
-            format=cls.logging_format,
-            datefmt=cls.logging_datefmt,
-            handlers=[output_earthmover, exit_on_exception]
+            handlers=[exit_on_exception]
         )
         logging.setLoggerClass(cls)  # Force all child loggers to use this class.
 
@@ -67,52 +72,61 @@ class UniversalLogger(logging.Logger):
 class ExitOnExceptionHandler(logging.StreamHandler):
     """
     Automatically exit Earthmover if an error or higher event is passed.
-    Turn off `super().emit()` to prevent double-logging.
+
+    logging.StreamHandler: https://docs.python.org/3/library/logging.handlers.html#logging.StreamHandler
     """
     def emit(self, record: logging.LogRecord):
+        super().emit(record)
         if record.levelno >= logging.ERROR:
             raise SystemExit(-1)
 
 
-class ContextFormatter(logging.StreamHandler):
+class ClassContextFilter(logging.Filter):
     """
-    logging.Filter: https://docs.python.org/3/library/logging.html#filter-objects
+    Inject calling-class attributes into LogRecord.context.
 
-    Override Formatter to retrieve the calling_class extra from LogRecord.
-    Check for extended-logging attributes, and add them to the record.
-    Dynamically build out an error-location message from the attributes.
-    Warning: `line` is similar to built-in `lineno`.
+    logging.Filter: https://docs.python.org/3/library/logging.html#filter-objects
     """
     context: dict = dict()  # Update context over the run
 
-    def handle(self, record):
-        """
-        Add the calling class' metadata to the context.
-
-        :param record:
-        :return:
-        """
+    def filter(self, record):
         calling_class = self.get_calling_class()
 
-        if not calling_class:
-            return super().handle(record)
+        if calling_class:
+            # Merge global context with latest calling class
+            self.context = {**self.context, **vars(calling_class)}
 
-        # Merge global context with latest calling class
-        self.context = {**self.context, **vars(calling_class)}
+            # Class attributes cannot be accessed in vars().
+            for var in dir(calling_class):
+                self.context[var] = getattr(calling_class, var)  # Avoid `hasattr()` to prevent recursion-loop
 
-        # Class attributes cannot be accessed in vars().
-        for var in dir(calling_class):
-            self.context[var] = getattr(calling_class, var)  # Avoid `hasattr()` to prevent recursion-loop
+        record.context = self.context
+        return super().filter(record)
 
-        return super().handle(record)
+    @classmethod
+    def get_calling_class(cls):
+        # Iterate the stack until the first object that is not part of the logging module.
+        for frame_info in inspect.stack():
+            calling_class = frame_info[0].f_locals.get('self', None)
+            if (
+                    calling_class
+                    and not isinstance(calling_class, cls)
+                    and not issubclass(type(calling_class), (logging.Logger, logging.Handler))
+            ):
+                print(calling_class.__module__)
+                return calling_class
+        else:
+            return None
 
+
+class EarthmoverFormatter(logging.Formatter):
+    """
+    Earthmover-specific output-logging during exceptions
+    e.g. (near line 257 in `$transformations.total_of_each_species.operations:add_columns`)
+
+    logging.Formatter: https://docs.python.org/3/library/logging.html#logging.Formatter
+    """
     def format(self, record: logging.LogRecord):
-        """
-        e.g. (near line 257 in `$transformations.total_of_each_species.operations:add_columns`)
-
-        :param record:
-        :return:
-        """
         # Only use extended format if an error.
         if record.levelno < logging.ERROR:
             return super().format(record)
@@ -120,25 +134,11 @@ class ContextFormatter(logging.StreamHandler):
         # Format the record into a location-string to make debugging errors easier.
         log_string = ""
 
-        if 'config' in self.context:
-            log_string += "near line {} ".format(self.context['config'].__line__)
+        if 'config' in record.context:
+            log_string += "near line {} ".format(record.context['config'].__line__)
 
-        if 'name' in self.context and 'type' in self.context:
-            log_string += "in `${}s.{}` ".format(self.context['type'], self.context['name'])
+        if 'name' in record.context and 'type' in record.context:
+            log_string += "in `${}s.{}` ".format(record.context['type'], record.context['name'])
 
         log_string = f"({log_string.strip()})" if log_string else ""
         return f"{super().format(record)} {log_string}"
-
-    @classmethod
-    def get_calling_class(cls):
-        # Iterate the stack until the first object that is not itself or logger is found.
-        for frame_info in inspect.stack():
-            calling_class = frame_info[0].f_locals.get('self', None)
-            if (
-                calling_class
-                and not isinstance(calling_class, cls)
-                and not issubclass(type(calling_class), logging.Logger)
-            ):
-                return calling_class
-        else:
-            return None
