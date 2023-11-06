@@ -100,10 +100,8 @@ class ContextFormatter(logging.StreamHandler):
         self.context = {**self.context, **vars(calling_class)}
 
         # Class attributes cannot be accessed in vars().
-        class_vars = ('type',)
-        for var in class_vars:
-            if var in dir(calling_class):  # Avoid `hasattr()` to prevent recursion-loop
-                self.context[var] = getattr(calling_class, var)
+        for var in dir(calling_class):
+            self.context[var] = getattr(calling_class, var)  # Avoid `hasattr()` to prevent recursion-loop
 
         return super().handle(record)
 
