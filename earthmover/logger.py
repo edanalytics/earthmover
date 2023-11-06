@@ -21,7 +21,8 @@ class UniversalLogger(logging.Logger):
 
     @classmethod
     def initialize(cls):
-        _ = logging.getLogger()  # Force the root logger to initialize (maybe unnecessary)
+        root_logger = logging.getLogger()  # Force the root logger to initialize (maybe unnecessary)
+        root_logger.propagate = False  # Turn off propagation to prevent multiple logging (maybe unnecessary)
 
         output_earthmover = ContextFormatter()
         exit_on_exception = ExitOnExceptionHandler()  # Must come last because of system exit
