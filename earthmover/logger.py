@@ -8,8 +8,7 @@ class UniversalLogger(logging.Logger):
     """
     logging.Formatter: https://docs.python.org/3/library/logging.html#formatter-objects
     """
-    # TODO: logging.{fmt, datefmt} must be defined in-line, not as class attributes???
-    logging_fmt  : str = "[%(asctime)s.%(msecs)03d] %(levelname)-5s: %(message)s",
+    logging_format : str = "[%(asctime)s.%(msecs)03d] %(levelname)-5s: %(message)s"
     logging_datefmt: str = "%Y-%m-%d %H:%M:%S"
 
     # Override using `UniversalLogger.set_logging_config()`.
@@ -28,8 +27,8 @@ class UniversalLogger(logging.Logger):
         exit_on_exception = ExitOnExceptionHandler()  # Must come last because of system exit
 
         logging.basicConfig(
-            format="[%(asctime)s.%(msecs)03d] %(levelname)-5s: %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
+            format=cls.logging_format,
+            datefmt=cls.logging_datefmt,
             handlers=[output_earthmover, exit_on_exception]
         )
 
@@ -101,11 +100,10 @@ class ContextFormatter(logging.StreamHandler):
         self.context = {**self.context, **vars(calling_class)}
 
         # Class attributes cannot be accessed in vars().
-        # Use __dict__ directly to prevent `getattr()` recursive loop.
         class_vars = ('type',)
         for var in class_vars:
-            if var in calling_class.__dict__:
-                self.context[var] = calling_class.__dict__[var]
+            if var in dir(calling_class):  # Avoid `hasattr()` to prevent recursion-loop
+                self.context[var] = getattr(calling_class, var)
 
         return super().handle(record)
 
