@@ -31,6 +31,7 @@ class UniversalLogger(logging.Logger):
             datefmt=cls.logging_datefmt,
             handlers=[output_earthmover, exit_on_exception]
         )
+        logging.setLoggerClass(cls)  # Force all child loggers to use this class.
 
     @classmethod
     def set_logging_config(cls, level: Union[int, str], show_stacktrace: bool):
