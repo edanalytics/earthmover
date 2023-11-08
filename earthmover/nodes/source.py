@@ -25,8 +25,6 @@ class Source(Node):
     is_remote: bool = None
     allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional',)
 
-    NUM_ROWS_PER_CHUNK: int = 1000000
-
     def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         """
         Logic for assigning sources to their respective classes.
