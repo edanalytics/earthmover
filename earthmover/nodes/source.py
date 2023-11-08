@@ -1,8 +1,9 @@
-import dask.dataframe as dd
+# import dask.dataframe as dd
 import ftplib
 import io
 import os
 import pandas as pd
+import polars as pl
 import re
 
 from earthmover.node import Node
@@ -11,7 +12,6 @@ from earthmover import util
 from typing import Callable, List, Optional, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from dask.dataframe.core import DataFrame
     from earthmover.earthmover import Earthmover
     from earthmover.yaml_parser import YamlMapping
 
@@ -75,7 +75,7 @@ class Source(Node):
             self.logger.debug(
                 f"Casting data in {self.type} node `{self.name}` to a Dask dataframe."
             )
-            self.data = dd.from_pandas(self.data, chunksize=self.chunksize)
+            self.data = pl.LazyFrame(self.data)  # TODO: Is self.chunksize still valid?
 
         self.data = self.opt_repartition(self.data)  # Repartition if specified.
 
@@ -93,6 +93,8 @@ class FileSource(Source):
         'file', 'type', 'columns', 'header_rows',
         'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
     )
+
+    NUM_ROWS_PER_CHUNK: int = 1000000
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -166,12 +168,24 @@ class FileSource(Source):
         :return:
         """
         super().execute()
+        # self.logger.debug(
+        #     'File: "{}", Optional: "{}"' \
+        #     .format(self.file, self.optional)
+        # )
 
         try:
             if not self.file and self.optional:
-                self.data = pd.DataFrame(columns = self.columns_list)
+                self.data = pl.LazyFrame(
+                    data  ={col: []  for col in self.columns_list},
+                    schema={col: str for col in self.columns_list}
+                )
             else:
                 self.data = self.read_lambda(self.file, self.config)
+
+            # self.logger.debug(
+            #     'Data: {}' \
+            #     .format(self.data)
+            # )
 
             # Verify the column list provided matches the number of columns in the dataframe.
             if self.columns_list:
@@ -241,8 +255,7 @@ class FileSource(Source):
         ext = file.lower().rsplit('.', 1)[-1]
         return ext_mapping.get(ext)
 
-    @staticmethod
-    def _get_read_lambda(file_type: str, sep: Optional[str] = None):
+    def _get_read_lambda(self, file_type: str, sep: Optional[str] = None):
         """
 
         :param file_type:
@@ -258,20 +271,22 @@ class FileSource(Source):
 
         # We don't want to activate the function inside this helper function.
         read_lambda_mapping = {
-            'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
-            'excel'     : lambda file, config: pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False),
-            'feather'   : lambda file, _     : pd.read_feather(file),
-            'fixedwidth': lambda file, _     : dd.read_fwf(file),
-            'html'      : lambda file, config: pd.read_html(file, match=config.get('match', ".+"), keep_default_na=False)[0],
-            'orc'       : lambda file, _     : dd.read_orc(file),
-            'json'      : lambda file, config: dd.read_json(file, typ=config.get('object_type', "frame"), orient=config.get('orientation', "columns")),
-            'jsonl'     : lambda file, config: dd.read_json(file, lines=True),
-            'parquet'   : lambda file, _     : dd.read_parquet(file),
-            'sas'       : lambda file, config: pd.read_sas(file, encoding=config.get('encoding', "utf-8")),
-            'spss'      : lambda file, _     : pd.read_spss(file),
-            'stata'     : lambda file, _     : pd.read_stata(file),
-            'xml'       : lambda file, config: pd.read_xml(file, xpath=config.get('xpath', "./*")),
-            'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
+            'csv'       : lambda file, config: pl.scan_csv(file, separator=sep, infer_schema_length=0, encoding=config.get('encoding', "utf8"), skip_rows=__get_skiprows(config)),
+            # 'excel'     : lambda file, config: pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False),
+            # 'feather'   : lambda file, _     : pd.read_feather(file),
+            # 'fixedwidth': lambda file, _     : dd.read_fwf(file),
+            # 'html'      : lambda file, config: pd.read_html(file, match=config.get('match', ".+"), keep_default_na=False)[0],
+            # 'orc'       : lambda file, _     : dd.read_orc(file),
+            'json'      : lambda file, config: pl.read_json(file),
+            'jsonl'     : lambda file, config: pl.scan_ndjson(file, n_rows=self.NUM_ROWS_PER_CHUNK),
+            # TODO: polars.read_ods() !! OMG
+            'parquet'   : lambda file, _     : pl.scan_parquet(file),
+            # 'sas'       : lambda file, config: pd.read_sas(file, encoding=config.get('encoding', "utf-8")),
+            # 'spss'      : lambda file, _     : pd.read_spss(file),
+            # 'stata'     : lambda file, _     : pd.read_stata(file),
+            # 'xml'       : lambda file, config: pd.read_xml(file, xpath=config.get('xpath', "./*")),
+            'tsv': lambda file, config: pl.scan_csv(file, separator="\t", infer_schema_length=0, encoding=config.get('encoding', "utf8"), skip_rows=__get_skiprows(config)),
+            # 'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
         }
         return read_lambda_mapping.get(file_type)
 

@@ -119,7 +119,7 @@ class Node:
         if isinstance(self.data, (pd.Series, dask.dataframe.Series)):
             self.num_rows, self.num_cols = self.data.size, 1
         else:
-            self.num_rows, self.num_cols = self.data.shape
+            self.num_rows, self.num_cols = None, len(self.data.columns)
 
         if self.debug:
             self.num_rows = dask.compute(self.num_rows)[0]
@@ -138,7 +138,7 @@ class Node:
         expectation_result_col = "__expectation_result__"
 
         if expectations:
-            result = self.data.copy()
+            result = self.data
 
             for expectation in expectations:
                 template = jinja2.Template("{{" + expectation + "}}")
@@ -162,6 +162,8 @@ class Node:
                     )
 
     def opt_repartition(self, data: 'DataFrame'):
-        if self.partition_size:
-            data = data.repartition(partition_size=self.partition_size)
         return data
+
+        # if self.partition_size:
+        #     data = data.repartition(partition_size=self.partition_size)
+        # return data
