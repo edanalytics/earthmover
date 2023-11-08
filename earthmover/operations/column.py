@@ -1,7 +1,5 @@
 import csv
-import os
 
-import dask
 import pandas as pd
 import polars as pl
 import re
@@ -228,7 +226,7 @@ class RenameColumnsOperation(Operation):
                     f"column {old_col} not present in the dataset"
                 )
 
-        data = data.rename(columns=self.columns_dict)
+        data = data.rename(self.columns_dict)
 
         return data
 
@@ -307,7 +305,7 @@ class KeepColumnsOperation(Operation):
             )
             raise
 
-        data = data[self.header]
+        data = data.select(self.header)
 
         return data
 
@@ -505,16 +503,17 @@ class DateFormatOperation(Operation):
             )
             raise
 
-        for _column in self.columns_list:
+        for col in self.columns_list:
             try:
-                data[_column] = (
-                    dask.dataframe.to_datetime(data[_column], format=self.from_format)
-                        .dt.strftime(self.to_format)
+                data = data.with_columns(
+                    pl.col(col)
+                        .str.to_datetime(format=self.from_format)
+                        .dt.strftime(format=self.to_format)
                 )
 
             except Exception as err:
                 self.error_handler.throw(
-                    f"error during `date_format` operation, `{_column}` column... check format strings? ({err})"
+                    f"error during `date_format` operation, `{col}` column... check format strings? ({err})"
                 )
 
         return data

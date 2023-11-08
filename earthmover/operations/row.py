@@ -55,7 +55,7 @@ class DistinctRowsOperation(Operation):
         if not self.columns_list:
             self.columns_list = data.columns
 
-        return data.drop_duplicates(subset=self.columns_list)
+        return data.unique(subset=self.columns_list)
 
 
 class FilterRowsOperation(Operation):
