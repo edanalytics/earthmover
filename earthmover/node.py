@@ -167,3 +167,31 @@ class Node:
         # if self.partition_size:
         #     data = data.repartition(partition_size=self.partition_size)
         # return data
+
+    @staticmethod
+    def render_jinja_template(row: 'Series', template: jinja2.Template, template_str: str, *,
+                              error_handler: 'ErrorHandler') -> str:
+        """
+
+        :param row:
+        :param template:
+        :param template_str:
+        :param error_handler:
+        :return:
+        """
+        try:
+            return template.render(row)
+
+        except Exception as err:
+            error_handler.ctx.remove('line')
+
+            if dict(row):
+                _joined_keys = "`, `".join(dict(row).keys())
+                variables = f"\n(available variables are `{_joined_keys}`)"
+            else:
+                variables = f"\n(no available variables)"
+
+            error_handler.throw(
+                f"Error rendering Jinja template: ({err}):\n===> {template_str}{variables}"
+            )
+            raise

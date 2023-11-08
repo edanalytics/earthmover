@@ -69,33 +69,6 @@ def contains_jinja(string: str) -> bool:
         return False
 
 
-def render_jinja_template(row: 'Series', template: jinja2.Template, template_str: str, *, error_handler: 'ErrorHandler') -> str:
-    """
-
-    :param row:
-    :param template:
-    :param template_str:
-    :param error_handler:
-    :return:
-    """
-    try:
-        return template.render(row)
-
-    except Exception as err:
-        error_handler.ctx.remove('line')
-
-        if dict(row):
-            _joined_keys = "`, `".join(dict(row).keys())
-            variables = f"\n(available variables are `{_joined_keys}`)"
-        else:
-            variables = f"\n(no available variables)"
-
-        error_handler.throw(
-            f"Error rendering Jinja template: ({err}):\n===> {template_str}{variables}"
-        )
-        raise
-
-
 def jinja2_template_error_lineno():
     """
     function based on https://stackoverflow.com/questions/26967433/how-to-get-line-number-causing-an-exception-other-than-templatesyntaxerror-in
