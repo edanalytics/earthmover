@@ -1,8 +1,13 @@
 import csv
+import os
+
 import dask
 import pandas as pd
+import polars as pl
 import re
 import string
+
+from functools import partial
 
 from earthmover.nodes.operation import Operation
 from earthmover import util
@@ -45,26 +50,27 @@ class AddColumnsOperation(Operation):
 
             # Apply the value as a static string if not obviously Jinja.
             if not util.contains_jinja(val):
-                data[col] = val
-
-            else:
-                try:
-                    template = util.build_jinja_template(val, macros=self.earthmover.macros)
-
-                except Exception as err:
-                    self.error_handler.ctx.remove('line')
-                    self.error_handler.throw(
-                        f"syntax error in Jinja template for column `{col}` of `add_columns` operation ({err}):\n===> {val}"
-                    )
-                    raise
-
-                data[col] = data.apply(
-                    util.render_jinja_template, axis=1,
-                    meta=pd.Series(dtype='str', name=col),
-                    template=template,
-                    template_str=val,
-                    error_handler=self.error_handler
+                data = data.with_columns(
+                    pl.lit(val).alias(col),
                 )
+                continue
+
+            try:
+                template = util.build_jinja_template(val, macros=self.earthmover.macros)
+            except Exception as err:
+                self.error_handler.ctx.remove('line')
+                self.error_handler.throw(
+                    f"syntax error in Jinja template for column `{col}` of `add_columns` operation ({err}):\n===> {val}"
+                )
+                raise
+
+            data[col] = data.apply(
+                util.render_jinja_template, axis=1,
+                meta=pd.Series(dtype='str', name=col),
+                template=template,
+                template_str=val,
+                error_handler=self.error_handler
+            )
 
         return data
 
@@ -77,6 +83,8 @@ class ModifyColumnsOperation(Operation):
         'operation', 'repartition', 
         'columns',
     )
+
+    VALUE_COL: str = "value"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -101,31 +109,38 @@ class ModifyColumnsOperation(Operation):
 
             # Apply the value as a static string if not obviously Jinja.
             if not util.contains_jinja(val):
-                data[col] = val
-
-            else:
-                try:
-                    template = util.build_jinja_template(val, macros=self.earthmover.macros)
-
-                except Exception as err:
-                    self.error_handler.ctx.remove('line')
-                    self.error_handler.throw(
-                        f"syntax error in Jinja template for column `{col}` of `modify_columns` operation ({err}):\n===> {val}"
-                    )
-                    raise
-
-                # TODO: Allow user to specify string that represents current column value.
-                data['value'] = data[col]
-
-                data[col] = data.apply(
-                    util.render_jinja_template, axis=1,
-                    meta=pd.Series(dtype='str', name=col),
-                    template=template,
-                    template_str=val,
-                    error_handler=self.error_handler
+                data = data.with_columns(
+                    pl.lit(val).alias(col),
                 )
+                continue
 
-                del data["value"]
+            # Jinja-time!!
+            try:
+                template = util.build_jinja_template(val, macros=self.earthmover.macros)
+
+            except Exception as err:
+                self.error_handler.ctx.remove('line')
+                self.error_handler.throw(
+                    f"syntax error in Jinja template for column `{col}` of `modify_columns` operation ({err}):\n===> {val}"
+                )
+                raise
+
+            # TODO: Make "VALUE_COL" customizable in config!
+            data = data.with_columns(
+                pl.col(col).alias(self.VALUE_COL),
+            )
+
+            apply_template = partial(self.render_jinja_template,
+                template=template,
+                template_str=val,
+                error_handler=self.error_handler,
+            )
+
+            data = data.with_columns(
+                pl.struct(pl.all()).map_elements(function=apply_template, return_dtype=str).alias(col),
+            )
+
+            data = data.drop(self.VALUE_COL)
 
         return data
 
@@ -531,7 +546,7 @@ class SnakeCaseColumnsOperation(Operation):
                 f"Columns after : {len(set(snake_columns))}"
             )
 
-        data = data.rename(columns=dict(zip(data_columns, snake_columns)))
+        data = data.rename(dict(zip(data_columns, snake_columns)))
         return data
 
     @staticmethod

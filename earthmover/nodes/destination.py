@@ -1,8 +1,11 @@
-import csv
 import jinja2
 import os
-import pandas as pd
+import polars as pl
 import re
+import shutil
+import tempfile
+
+from functools import partial
 
 from earthmover.node import Node
 from earthmover import util
@@ -106,12 +109,18 @@ class FileDestination(Destination):
         """
         super().execute(**kwargs)
 
-        # this renders each row without having to itertuples() (which is much slower)
-        # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
+        apply_template = partial(self.render_jinja_template,
+            template=self.jinja_template,
+            template_str=self.template,
+            error_handler=self.error_handler,
+        )
+
         self.data = (
             self.upstream_sources[self.source].data
-                .fillna('')
-                .map_partitions(lambda x: x.apply(self.render_row, axis=1), meta=pd.Series('str'))
+                .fill_nan('').fill_null('')
+                .select(
+                    pl.struct(pl.all()).map_elements(function=apply_template, return_dtype=str).alias(self.TEMPLATED_COL),
+                )
         )
 
         # Repartition before writing, if specified.
@@ -120,12 +129,37 @@ class FileDestination(Destination):
         # Verify the output directory exists.
         os.makedirs(os.path.dirname(self.file), exist_ok=True)
 
-        # Write the optional header, the JSON lines as CSV (for performance), and the optional footer.
-        self.data.to_csv(
-            filename=self.file, single_file=True, mode='wt', index=False,
-            header=[self.header] if self.header else False,  # We must write the header directly due to aforementioned bug.
-            escapechar="\x01", sep="\x02", quoting=csv.QUOTE_NONE,  # Pretend to be CSV to improve performance
-        )
+        # TODO: Make this less jank!
+        # One must sink using a Write operation, so headers require silly roundabout logic.
+        if not self.header:
+            self.data.sink_csv(
+                path=self.file,
+                has_header=False,
+                separator="\x02",
+                quote_style='never',
+                maintain_order=False,
+            )
+
+        else:
+            with open(self.file, mode="w") as fp:
+                fp.write(self.header)
+
+            temp_sink_file = tempfile.NamedTemporaryFile()
+
+            self.data.sink_csv(
+                path=temp_sink_file.name,
+                has_header=False,
+                separator="\x02",
+                quote_style='never',
+                maintain_order=False,
+            )
+
+            # Rewrite the file contents to its correct location.
+            # https://stackoverflow.com/a/14947384
+            # https://stackoverflow.com/a/15235559
+            with open(temp_sink_file.name, 'r') as in_fp:
+                with open(self.file, 'a') as out_fp:
+                    shutil.copyfileobj(in_fp, out_fp)
 
         if self.footer:
             with open(self.file, 'a', encoding='utf-8') as fp:
@@ -133,18 +167,3 @@ class FileDestination(Destination):
 
         self.logger.debug(f"output `{self.file}` written")
         self.size = os.path.getsize(self.file)
-
-    def render_row(self, row: pd.Series):
-        _data_tuple = row.to_dict()
-        _data_tuple["__row_data__"] = row
-
-        try:
-            json_string = self.jinja_template.render(_data_tuple)
-
-        except Exception as err:
-            self.error_handler.throw(
-                f"error rendering Jinja template in `template` file {self.template} ({err})"
-            )
-            raise
-
-        return json_string
