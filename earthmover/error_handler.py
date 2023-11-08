@@ -115,5 +115,5 @@ class ErrorHandler:
 
     def throw(self, message: str):
         raise Exception(
-            f"{self.ctx} {message})"
+            f"{message}\n{self.ctx})"
         )
