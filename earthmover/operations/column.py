@@ -25,6 +25,8 @@ class AddColumnsOperation(Operation):
         'columns',
     )
 
+    VALUE_COL: str = "value"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.columns_dict: Dict[str, str] = None
@@ -55,6 +57,7 @@ class AddColumnsOperation(Operation):
 
             try:
                 template = util.build_jinja_template(val, macros=self.earthmover.macros)
+
             except Exception as err:
                 self.error_handler.ctx.remove('line')
                 self.error_handler.throw(
@@ -62,13 +65,22 @@ class AddColumnsOperation(Operation):
                 )
                 raise
 
-            data[col] = data.apply(
-                util.render_jinja_template, axis=1,
-                meta=pd.Series(dtype='str', name=col),
+            # TODO: Make "VALUE_COL" customizable in config!
+            data = data.with_columns(
+                pl.col(col).alias(self.VALUE_COL),
+            )
+
+            apply_template = partial(self.render_jinja_template,
                 template=template,
                 template_str=val,
-                error_handler=self.error_handler
+                error_handler=self.error_handler,
             )
+
+            data = data.with_columns(
+                pl.struct(pl.all()).map_elements(function=apply_template, return_dtype=str).alias(col),
+            )
+
+            data = data.drop(self.VALUE_COL)
 
         return data
 
@@ -177,13 +189,14 @@ class DuplicateColumnsOperation(Operation):
                 self.logger.warning(
                     f"Duplicate column operation overwrites existing column `{new_col}`."
                 )
-
             if old_col not in data.columns:
                 self.error_handler.throw(
                     f"column {old_col} not present in the dataset"
                 )
 
-            data[new_col] = data[old_col]
+            data = data.with_columns(
+                pl.col(old_col).alias(new_col)
+            )
 
         return data
 
@@ -217,6 +230,7 @@ class RenameColumnsOperation(Operation):
         super().execute(data, **kwargs)
 
         for old_col, new_col in self.columns_dict.items():
+
             if new_col in data.columns:
                 self.logger.warning(
                     f"Rename column operation overwrites existing column `{new_col}`."
@@ -289,7 +303,6 @@ class KeepColumnsOperation(Operation):
         :return:
         """
         super().compile()
-
         self.header = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
@@ -350,10 +363,8 @@ class CombineColumnsOperation(Operation):
             )
             raise
 
-        data[self.new_column] = data.apply(
-            lambda x: self.separator.join(x[col] for col in self.columns_list),
-            axis=1,
-            meta=pd.Series(dtype='str', name=self.new_column)
+        data = data.with_columns(
+            pl.concat_str(map(pl.col, self.columns_list), separator=self.separator).alias(self.new_column)
         )
 
         return data
@@ -401,7 +412,7 @@ class MapValuesOperation(Operation):
         if _mapping:
             self.mapping = _mapping
         elif _map_file:
-            self.mapping = self._read_map_file(_map_file)
+            self.mapping = self.read_map_file(_map_file)
         else:
             self.error_handler.throw(
                 "must define either `mapping` (list of old_value: new_value) or a `map_file` (two-column CSV or TSV)"
@@ -421,8 +432,10 @@ class MapValuesOperation(Operation):
             )
 
         try:
-            for _column in self.columns_list:
-                data[_column] = data[_column].replace(self.mapping)
+            for column in self.columns_list:
+                data = data.with_columns(
+                    pl.col(column).map_dict(self.mapping, default=pl.Null).alias(column)
+                )
 
         except Exception as _:
             self.error_handler.throw(
@@ -431,7 +444,7 @@ class MapValuesOperation(Operation):
 
         return data
 
-    def _read_map_file(self, file) -> dict:
+    def read_map_file(self, file) -> dict:
         """
 
         :param file:
@@ -439,11 +452,10 @@ class MapValuesOperation(Operation):
         """
         sep = util.get_sep(file)
 
-
         try:
             with open(file, 'r', encoding='utf-8') as fp:
-                _translations_list = list(csv.reader(fp, delimiter=sep))
-                return dict(_translations_list[1:])
+                translations_list = list(csv.reader(fp, delimiter=sep))
+                return dict(translations_list[1:])
         
         except Exception as err:
             self.error_handler.throw(
@@ -546,6 +558,7 @@ class SnakeCaseColumnsOperation(Operation):
             )
 
         data = data.rename(dict(zip(data_columns, snake_columns)))
+
         return data
 
     @staticmethod
