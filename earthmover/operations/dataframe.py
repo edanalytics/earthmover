@@ -1,6 +1,5 @@
 import dask.dataframe as dd
-import numpy as np
-import pandas as pd
+import polars as pl
 
 from earthmover.node import Node
 from earthmover.nodes.operation import Operation
@@ -83,7 +82,7 @@ class JoinOperation(Operation):
             raise
 
         # Collect columns
-        #   - There is a "if keep - elif drop" block in verify, so doesn't matter if both are populated.
+        #   - There is an "if keep - elif drop" block in verify, so doesn't matter if both are populated.
         self.left_keep_cols  = self.error_handler.assert_get_key(self.config, 'left_keep_columns', dtype=list, required=False)
         self.left_drop_cols  = self.error_handler.assert_get_key(self.config, 'left_drop_columns', dtype=list, required=False)
         self.right_keep_cols = self.error_handler.assert_get_key(self.config, 'right_keep_columns', dtype=list, required=False)
@@ -117,7 +116,7 @@ class JoinOperation(Operation):
 
             self.left_cols = list(set(self.left_cols).difference(self.left_drop_cols))
 
-        left_data = data[self.left_cols]
+        left_data = data.select(self.left_cols)
 
         # Iterate each right dataset
         for source in self.sources:
@@ -142,12 +141,12 @@ class JoinOperation(Operation):
 
                 self.right_cols = list(set(self.right_cols).difference(self.right_drop_cols))
 
-            right_data = right_data[self.right_cols]
+            right_data = right_data.select(self.right_cols)
 
             # Complete the merge, using different logic depending on the partitions of the datasets.
             try:
-                left_data = dd.merge(
-                    left_data, right_data, how=self.join_type,
+                left_data = left_data.join(
+                    right_data, how=self.join_type,
                     left_on=self.left_keys, right_on=self.right_keys
                 )
 
@@ -186,13 +185,13 @@ class UnionOperation(Operation):
                 self.error_handler.throw('dataframes to union do not share identical columns')
                 raise
 
-            try:
-                data = dd.concat([data, source_data], ignore_index=True)
-            
-            except Exception as _:
-                self.error_handler.throw(
-                    "error during `union` operation... are sources same shape?"
-                )
-                raise
+        try:
+            data = pl.concat([data, *self.sources], how='vertical_relaxed')
+
+        except Exception as _:
+            self.error_handler.throw(
+                "error during `union` operation... are sources same shape?"
+            )
+            raise
 
         return data
