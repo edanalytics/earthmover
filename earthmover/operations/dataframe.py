@@ -144,10 +144,16 @@ class JoinOperation(Operation):
             right_data = right_data.select(self.right_cols)
 
             # Complete the merge, using different logic depending on the partitions of the datasets.
+            l_keys, r_keys = self.left_keys, self.right_keys
+
+            if self.join_type == 'right':
+                left_data, right_data = right_data, left_data
+                l_keys, r_keys = r_keys, l_keys
+
             try:
                 left_data = left_data.join(
-                    right_data, how=self.join_type,
-                    left_on=self.left_keys, right_on=self.right_keys
+                    right_data, how='left' if self.join_type == 'right' else self.join_type,
+                    left_on=l_keys, right_on=r_keys
                 )
 
             except Exception as _:

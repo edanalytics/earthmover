@@ -1,4 +1,4 @@
-import pandas as pd
+import polars as pl
 import re
 
 from earthmover.nodes.operation import Operation
@@ -7,126 +7,6 @@ from typing import Dict, List, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
-
-class GroupByWithCountOperation(Operation):
-    """
-
-    """
-    allowed_configs: Tuple[str] = (
-        'operation', 'repartition',  
-        'group_by_columns', 'count_column',
-    )
-
-    GROUPED_COL_NAME = "____grouped_col____"
-    GROUPED_COL_SEP = "_____"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.group_by_columns: List[str] = None
-        self.count_column: str = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-        self.group_by_columns = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
-        self.count_column     = self.error_handler.assert_get_key(self.config, 'count_column', dtype=str)
-
-    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
-        """
-
-        :return:
-        """
-        super().execute(data, **kwargs)
-
-        if not set(self.group_by_columns).issubset(data.columns):
-            self.error_handler.throw(
-                "one or more specified group-by columns not in the dataset"
-            )
-            raise
-
-        data[self.GROUPED_COL_NAME] = data.apply(
-            lambda x: self.GROUPED_COL_SEP.join([*self.group_by_columns])
-        , axis=1, meta='str')
-
-        data = (
-            data
-                .groupby(self.GROUPED_COL_NAME, sort=False)
-                .size()
-                .reset_index()
-        )
-
-        data[self.group_by_columns] = data[self.GROUPED_COL_NAME].str.split(
-            self.GROUPED_COL_SEP, n=len(self.group_by_columns), expand=True
-        )
-        del data[self.GROUPED_COL_NAME]
-
-        return data
-
-
-class GroupByWithAggOperation(Operation):
-    """
-
-    """
-    allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
-        'group_by_columns', 'agg_column', 'separator',
-    )
-
-    DEFAULT_AGG_SEP = ","
-    GROUPED_COL_NAME = "____grouped_col____"
-    GROUPED_COL_SEP = "_____"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.group_by_columns: List[str] = None
-        self.agg_column: str = None
-        self.separator: str = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-        self.group_by_columns = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
-        self.agg_column       = self.error_handler.assert_get_key(self.config, 'agg_column', dtype=str)
-
-        self.separator = self.error_handler.assert_get_key(
-            self.config, 'separator', dtype=str,
-            required=False, default=self.DEFAULT_AGG_SEP
-        )
-
-    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
-        """
-
-        :return:
-        """
-        super().execute(data, **kwargs)
-
-        if not set(self.group_by_columns).issubset(data.columns):
-            self.error_handler.throw(
-                "one or more specified group-by columns not in the dataset"
-            )
-            raise
-
-        data[self.GROUPED_COL_NAME] = data.apply(
-            lambda x: self.GROUPED_COL_SEP.join([*self.group_by_columns])
-            , axis=1, meta='str')
-
-        _grouped = data.groupby(self.GROUPED_COL_NAME, sort=False)
-        _grouped = _grouped[[self.agg_column]].agg(self.separator.join)
-
-        data = _grouped.reset_index()
-
-        data[self.group_by_columns] = data[self.GROUPED_COL_NAME].str.split(
-            self.GROUPED_COL_SEP, n=len(self.group_by_columns), expand=True
-        )
-        del data[self.GROUPED_COL_NAME]
-
-        return data
 
 
 class GroupByOperation(Operation):
@@ -179,63 +59,53 @@ class GroupByOperation(Operation):
             )
             raise
 
-        #
-        grouped = data.groupby(self.group_by_columns)
+        agg_expressions: List[pl.Expr] = []
 
-        result = grouped.size().reset_index()
-        result.columns = self.group_by_columns + [self.GROUP_SIZE_COL]
-
-        for new_col_name, func in self.create_columns_dict.items():
-
-            _pieces = re.findall(
-                "([A-Za-z0-9_]*)\(([A-Za-z0-9_]*)?,?(.*)?\)",
-                func
-            )[0]
-
-            # User can pass in 1, 2, or 3 pieces. We want to default undefined pieces to empty strings.
-            _pieces = list(_pieces) + ["", ""]  # Clever logic to simplify unpacking.
-            _agg_type, _col, _sep, *_ = _pieces  # Unpack the pieces, adding blanks as necessary.
+        for new_col_name, func_str in self.create_columns_dict.items():
+            agg_type, col, sep = self.parse_groupby_string(func_str)
 
             #
-            if _agg_type in self.COLUMN_REQ_AGG_TYPES:
+            if agg_type in self.COLUMN_REQ_AGG_TYPES:
 
-                if _col == "":
+                if not col:
                     self.error_handler.throw(
-                        f"aggregation function `{_agg_type}`(column) missing required column"
+                        f"aggregation function `{agg_type}(column)` missing required column"
                     )
 
-                if _col not in data.columns:
+                if col not in data.columns:
                     self.error_handler.throw(
-                        f"aggregation function `{_agg_type}`({_col}) refers to a column {_col} which does not exist"
+                        f"aggregation function `{agg_type}({col})` refers to a column which does not exist"
                     )
 
-            agg_lambda = self._get_agg_lambda(_agg_type, _col, _sep)
-            if not agg_lambda:
+            agg_expr = self.get_agg_expr(agg_type, col, sep)
+            if agg_expr is None:
                 self.error_handler.throw(
-                    f"invalid aggregation function `{_agg_type}` in `group_by` operation"
+                    f"invalid aggregation function `{agg_type}` in `group_by` operation"
                 )
 
-            #
-            # ddf.apply() requires the index be defined, at least in structure.
-            meta = pd.Series(
-                dtype='object',
-                name=new_col_name,
-                index=pd.MultiIndex.from_tuples(
-                    tuples=[(None,) * len(self.group_by_columns)],
-                    names=self.group_by_columns
-                )
-            )
+            agg_expressions.append(agg_expr.alias(new_col_name))
 
-            _computed = grouped.apply(agg_lambda, meta=meta).reset_index()
-            result = result.merge(_computed, how="left", on=self.group_by_columns)
-
-        data = result.query(f"{self.GROUP_SIZE_COL} > 0")
-        del data[self.GROUP_SIZE_COL]
-
-        return data
+        #
+        return data.group_by(self.group_by_columns).agg(*agg_expressions)
 
     @staticmethod
-    def _get_agg_lambda(agg_type: str, column: str = "", separator: str = ""):
+    def parse_groupby_string(func_str: str) -> Tuple[str, str, str]:
+        """
+
+        :param func_str:
+        :return:
+        """
+        func_regex: str = "([A-Za-z0-9_]*)\(([A-Za-z0-9_]*)?,?(.*)?\)"
+
+        pieces = re.findall(func_regex, func_str)[0]
+        pieces = list(pieces) + ["", ""]  # Clever logic to simplify unpacking.
+
+        # User can pass in 1, 2, or 3 pieces. We want to default undefined pieces to empty strings.
+        agg_type, col, sep, *_ = pieces  # Unpack the pieces, adding blanks as necessary.
+        return agg_type, col, sep
+
+    @staticmethod
+    def get_agg_expr(agg_type: str, column: str = "", separator: str = ""):
         """
 
         :param agg_type:
@@ -244,25 +114,25 @@ class GroupByOperation(Operation):
         :return:
         """
         agg_lambda_mapping = {
-            'agg'      : lambda x: separator.join(x[column]),
-            'aggregate': lambda x: separator.join(x[column]),
-            'avg'      : lambda x: pd.to_numeric(x[column]).sum() / max(1, len(x)),
-            'count'    : lambda x: len(x),
-            'max'      : lambda x: pd.to_numeric(x[column]).max(),
-            'maximum'  : lambda x: pd.to_numeric(x[column]).max(),
-            'str_max'      : lambda x: x[column].max(),
-            'str_maximum'  : lambda x: x[column].max(),
-            'mean'     : lambda x: pd.to_numeric(x[column]).sum() / max(1, len(x)),
-            'min'      : lambda x: pd.to_numeric(x[column]).min(),
-            'minimum'  : lambda x: pd.to_numeric(x[column]).min(),
-            'str_min'      : lambda x: x[column].min(),
-            'str_minimum'  : lambda x: x[column].min(),
-            'size'     : lambda x: len(x),
-            'std'      : lambda x: pd.to_numeric(x[column]).std(),
-            'stdev'    : lambda x: pd.to_numeric(x[column]).std(),
-            'stddev'   : lambda x: pd.to_numeric(x[column]).std(),
-            'sum'      : lambda x: pd.to_numeric(x[column]).sum(),
-            'var'      : lambda x: pd.to_numeric(x[column]).var(),
-            'variance' : lambda x: pd.to_numeric(x[column]).var(),
+            'agg'        : pl.concat_str(pl.col(column), separator=separator),
+            'aggregate'  : pl.concat_str(pl.col(column), separator=separator),
+            'avg'        : pl.col(column).mean(),
+            'count'      : pl.all().count(),
+            'max'        : pl.col(column).cast(pl.Int32).max(),
+            'maximum'    : pl.col(column).cast(pl.Int32).max(),
+            'str_max'    : pl.col(column).max(),
+            'str_maximum': pl.col(column).max(),
+            'mean'       : pl.col(column).mean(),
+            'min'        : pl.col(column).cast(pl.Int32).min(),
+            'minimum'    : pl.col(column).cast(pl.Int32).min(),
+            'str_min'    : pl.col(column).min(),
+            'str_minimum': pl.col(column).min(),
+            'size'       : pl.all().count(),
+            'std'        : pl.col(column).cast(pl.Int32).std(),
+            'stdev'      : pl.col(column).cast(pl.Int32).std(),
+            'stddev'     : pl.col(column).cast(pl.Int32).std(),
+            'sum'        : pl.col(column).cast(pl.Int32).sum(),
+            'var'        : pl.col(column).cast(pl.Int32).var(),
+            'variance'   : pl.col(column).cast(pl.Int32).var(),
         }
         return agg_lambda_mapping.get(agg_type)

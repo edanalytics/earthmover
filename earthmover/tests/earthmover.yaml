@@ -67,209 +67,227 @@ transformations:
         columns:
           id: {%raw%}2_{{value}}{%endraw%}
 
-#  fish_species:
-#    source: $sources.fish_species
-#    operations:
-#      - operation: distinct_rows
-#        columns: [ id, name, genus, species ]
-#      - operation: add_columns
-#        columns:
-#          family: fish
-#      - operation: modify_columns
-#        columns:
-#          id: {%raw%}3_{{value}}{%endraw%}
-#
-#  reptile_species:
-#    source: $sources.reptile_species
-#    operations:
-#      - operation: add_columns
-#        columns:
-#          family: reptile
-#      - operation: modify_columns
-#        columns:
-#          id: {%raw%}4_{{value}}{%endraw%}
-#
-#  animal_species:
-#    source: $transformations.mammal_species
-#    operations:
-#      - operation: union
-#        sources:
-#          - $transformations.bird_species
-#          - $transformations.fish_species
-#          - $transformations.reptile_species
-#    debug: True
-#
-#  joined_inventories:
-#    source: $sources.zoo_inventories
-#    operations:
-#      - operation: join
-#        sources:
-#          - $sources.zoos
-#        join_type: inner
-#        left_key: zoo
-#        right_key: id
-#      - operation: duplicate_columns
-#        columns:
-#          name: zoo_name
-#      - operation: drop_columns
-#        columns:
-#          - id
-#          - name
-#      - operation: join
-#        sources:
-#          - $transformations.animal_species
-#        join_type: inner
-#        left_key: animal
-#        right_key: id
-#      - operation: duplicate_columns
-#        columns:
-#          name: species_name
-#      - operation: drop_columns
-#        columns:
-#          - id
-#          - name
-#
-#  species_counts:
-#    source: $sources.zoos
-#    operations:
-#      - operation: join
-#        sources:
-#          - $sources.zoo_inventories
-#        join_type: right
-#        left_key: id
-#        right_key: zoo
-#      - operation: group_by
-#        group_by_columns:
-#          - id
-#        create_columns:
-#          count: count()
-#  species_count_by_zoo:
-#    source: $sources.zoos
-#    operations:
-#      - operation: join
-#        sources:
-#          - $transformations.species_counts
-#        join_type: left
-#        left_key: id
-#        right_key: id
-#        left_keep_columns:
-#          - name
-#        right_keep_columns:
-#          - id
-#          - count
-#      - operation: keep_columns
-#        columns:
-#          - name
-#          - count
-#      - operation: modify_columns
-#        columns:
-#          count: "{%raw%}{% if value!=value %}0.0{% else %}{{value}}{% endif %}{%endraw%}"
-#      - operation: add_columns
-#        columns:
-#          entity: zoo
-#          count_column: species_count
-#
-#  zoo_count_by_species:
-#    source: $transformations.joined_inventories
-#    operations:
-#      - operation: group_by
-#        group_by_columns:
-#          - animal
-#          - species_name
-#        create_columns:
-#          count: count()
-#      - operation: duplicate_columns
-#        columns:
-#          species_name: name
-#      - operation: keep_columns
-#        columns:
-#          - name
-#          - count
-#      - operation: add_columns
-#        columns:
-#          entity: species
-#          count_column: zoo_count
-#
-#  zoo_count_by_year_founded:
-#    source: $sources.zoos
-#    operations:
-#      - operation: date_format
-#        column: date_founded
-#        from_format: "%b %d %Y"
-#        to_format: "%Y-%m-%d"
-#      - operation: modify_columns
-#        columns:
-#          date_founded: "{%raw%}{{value[0:4]}}{%endraw%}"
-#      - operation: rename_columns
-#        columns:
-#          date_founded: year_founded
-#      - operation: keep_columns
-#        columns:
-#          - year_founded
-#      - operation: group_by
-#        group_by_columns:
-#          - year_founded
-#        create_columns:
-#          count: count()
-#      - operation: rename_columns
-#        columns:
-#          year_founded: name
-#      - operation: add_columns
-#        columns:
-#          entity: year
-#          count_column: zoos_founded
-#
-#  big_cats:
-#    source: $transformations.mammal_species
-#    operations:
-#      - operation: filter_rows
-#        query: "name.str.contains('Cheetah') or name.str.contains('Lion') or name.str.contains('Tiger')"
-#        behavior: include
-#      - operation: duplicate_columns
-#        columns:
-#          genus: branch
-#      - operation: map_values
-#        column: branch
-#        mapping:
-#          Acinonyx:
-#          Panthera: panther
-#      - operation: combine_columns
-#        columns:
-#          - genus
-#          - species
-#        new_column: scientific_name
-#        separator: " "
-#
-#  total_of_each_species:
-#    source: $transformations.joined_inventories
-#    operations:
-#      - operation: group_by
-#        # function: sum
-#        group_by_columns:
-#          - animal
-#          - species_name
-#        create_columns:
-#          count: count()
-#      - operation: duplicate_columns
-#        columns:
-#          species_name: name
-#      - operation: keep_columns
-#        columns:
-#          - name
-#          - count
-#      - operation: add_columns
-#        columns:
-#          entity: species
-#          count_column: total_count
+  fish_species:
+    source: $sources.fish_species
+    operations:
+      - operation: distinct_rows
+        columns: [ id, name, genus, species ]
+      - operation: add_columns
+        columns:
+          family: fish
+      - operation: modify_columns
+        columns:
+          id: {%raw%}3_{{value}}{%endraw%}
+
+  reptile_species:
+    source: $sources.reptile_species
+    operations:
+      - operation: add_columns
+        columns:
+          family: reptile
+      - operation: modify_columns
+        columns:
+          id: {%raw%}4_{{value}}{%endraw%}
+
+  animal_species:
+    source: $transformations.mammal_species
+    operations:
+      - operation: union
+        sources:
+          - $transformations.bird_species
+          - $transformations.fish_species
+          - $transformations.reptile_species
+    debug: True
+
+  joined_inventories:
+    source: $sources.zoo_inventories
+    operations:
+      - operation: join
+        sources:
+          - $sources.zoos
+        join_type: inner
+        left_key: zoo
+        right_key: id
+      - operation: duplicate_columns
+        columns:
+          name: zoo_name
+      - operation: drop_columns
+        columns:
+          - id
+          - name
+      - operation: join
+        sources:
+          - $transformations.animal_species
+        join_type: inner
+        left_key: animal
+        right_key: id
+      - operation: duplicate_columns
+        columns:
+          name: species_name
+      - operation: drop_columns
+        columns:
+          - id
+          - name
+
+  species_counts:
+    source: $sources.zoos
+    operations:
+      - operation: join
+        sources:
+          - $sources.zoo_inventories
+        join_type: right
+        left_key: id
+        right_key: zoo
+      - operation: group_by
+        group_by_columns:
+          - id
+        create_columns:
+          count: count()
+  species_count_by_zoo:
+    source: $sources.zoos
+    operations:
+      - operation: join
+        sources:
+          - $transformations.species_counts
+        join_type: left
+        left_key: id
+        right_key: id
+        left_keep_columns:
+          - name
+        right_keep_columns:
+          - id
+          - count
+      - operation: keep_columns
+        columns:
+          - name
+          - count
+      - operation: modify_columns
+        columns:
+          count: "{%raw%}{% if value!=value %}0.0{% else %}{{value}}{% endif %}{%endraw%}"
+      - operation: add_columns
+        columns:
+          entity: zoo
+          count_column: species_count
+
+  zoo_count_by_species:
+    source: $transformations.joined_inventories
+    operations:
+      - operation: group_by
+        group_by_columns:
+          - animal
+          - species_name
+        create_columns:
+          count: count()
+      - operation: duplicate_columns
+        columns:
+          species_name: name
+      - operation: keep_columns
+        columns:
+          - name
+          - count
+      - operation: add_columns
+        columns:
+          entity: species
+          count_column: zoo_count
+
+  zoo_count_by_year_founded:
+    source: $sources.zoos
+    operations:
+      - operation: date_format
+        column: date_founded
+        from_format: "%b %d %Y"
+        to_format: "%Y-%m-%d"
+      - operation: modify_columns
+        columns:
+          date_founded: "{%raw%}{{value[0:4]}}{%endraw%}"
+      - operation: rename_columns
+        columns:
+          date_founded: year_founded
+      - operation: keep_columns
+        columns:
+          - year_founded
+      - operation: group_by
+        group_by_columns:
+          - year_founded
+        create_columns:
+          count: count()
+      - operation: rename_columns
+        columns:
+          year_founded: name
+      - operation: add_columns
+        columns:
+          entity: year
+          count_column: zoos_founded
+
+  big_cats:
+    source: $transformations.mammal_species
+    operations:
+      - operation: filter_rows
+        query: "name.str.contains('Cheetah') or name.str.contains('Lion') or name.str.contains('Tiger')"
+        behavior: include
+      - operation: duplicate_columns
+        columns:
+          genus: branch
+      - operation: map_values
+        column: branch
+        mapping:
+          Acinonyx:
+          Panthera: panther
+      - operation: combine_columns
+        columns:
+          - genus
+          - species
+        new_column: scientific_name
+        separator: " "
+
+  total_of_each_species:
+    source: $transformations.joined_inventories
+    operations:
+      - operation: group_by
+        # function: sum
+        group_by_columns:
+          - animal
+          - species_name
+        create_columns:
+          count: count()
+      - operation: duplicate_columns
+        columns:
+          species_name: name
+      - operation: keep_columns
+        columns:
+          - name
+          - count
+      - operation: add_columns
+        columns:
+          entity: species
+          count_column: total_count
 
 
 
 destinations:
 
   animals:
-    source: $transformations.bird_species   ###
+    source: $transformations.animal_species
     template: ${BASE_DIR}/templates/animal.jsont
     extension: jsonl
     linearize: True
-    header: "Birds of a feather flock together\n"
-    footer: "Or so they say..."
+
+  big_cats:
+    source: $transformations.big_cats
+    template: ${BASE_DIR}/templates/cats.jsont
+    extension: jsonl
+    linearize: True
+
+  {% set count_outputs = [
+      'species_count_by_zoo',
+      'zoo_count_by_species',
+      'zoo_count_by_year_founded',
+      'total_of_each_species',
+  ] %}
+  {% for output_type in count_outputs %}
+  {{ output_type }}:
+    source: $transformations.{{ output_type }}
+    template: ${BASE_DIR}/templates/count.jsont
+    extension: jsonl
+    linearize: True
+  {% endfor %}
