@@ -1,5 +1,5 @@
 [codespell]
 skip = .git,*.pdf,*.svg,go.sum,.codespellrc,*.csv
 check-hidden = true
-# ignore-regex = 
+ignore-regex = \bND\b
 # ignore-words-list =
