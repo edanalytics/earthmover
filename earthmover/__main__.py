@@ -162,7 +162,18 @@ def main(argv=None):
         logger.exception(err, exc_info=True)
         raise  # Avoids linting error
 
-    if args.command == 'compile':
+    if args.command == 'deps':
+        em.logger.info(f"installing packages...")
+        try:
+            if args.selector != '*':
+                em.logger.info("selector is ignored for package install.")
+            em.deps()
+            em.logger.info("done!")
+        except Exception as e:
+            logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
+            raise
+
+    elif args.command == 'compile':
         em.logger.info(f"compiling project...")
         try:
             if args.selector != '*':
