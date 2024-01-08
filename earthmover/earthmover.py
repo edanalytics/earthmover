@@ -10,6 +10,7 @@ import pandas as pd
 
 from earthmover.error_handler import ErrorHandler
 from earthmover.graph import Graph
+from earthmover.package import Package
 from earthmover.runs_file import RunsFile
 from earthmover.nodes.destination import Destination
 from earthmover.nodes.source import Source
@@ -37,6 +38,7 @@ class Earthmover:
         "show_progress": False,
     }
 
+    packages: List[Package] = []
     sources: List[Source] = []
     transformations: List[Transformation] = []
     destinations: List[Destination] = []
@@ -97,6 +99,9 @@ class Earthmover:
 
         # Initialize the NetworkX DiGraph
         self.graph = Graph(error_handler=self.error_handler)
+
+        # Initialize a NetworkX DiGraph for tracking package hierarchy
+        self.package_graph = Graph(error_handler=self.error_handler)
 
         # Initialize a dictionary for tracking run metadata (for structured output)
         self.metadata = {
@@ -383,3 +388,59 @@ class Earthmover:
             if not _expected_df.equals(_outputted_df):
                 self.logger.critical(f"Test output `{_outputted_file}` does not match expected output.")
                 exit(1)
+
+
+    def deps(self):
+        """
+
+        :return:
+        """
+        # Collect packages
+        package_config = self.error_handler.assert_get_key(self.user_configs, 'packages', dtype=dict, required=False, default={})
+        packages_dir = os.path.join(os.getcwd(), 'packages')
+
+        for name, config in package_config.items():
+            package = Package(name, config, earthmover=self)
+            self.packages.append(package)  # Possible TODO: remove this list, track packages via graph only
+            self.package_graph.add_node(name, data=package) 
+
+        # Check that at least one package is defined
+        if not self.packages:
+            self.error_handler.throw("No packages have been defined!")
+
+        # Make a copy of each package (and any nested sub-packages) into the packages directory
+        self.install_packages(self.packages, packages_dir)
+            
+
+    def install_packages(self, root_packages: List[Package], packages_dir: str):
+        """
+
+        :return:
+        """        
+        if not root_packages:
+            return
+        
+        # Create packages directory
+        if not os.path.isdir(packages_dir):
+            self.logger.info(
+                f"creating package directory {packages_dir}"
+            )
+            os.makedirs(packages_dir, exist_ok=True)
+        
+        for package in root_packages:
+            installed_package_yaml = package.install(packages_dir)
+
+            # Check the installed package for additional packages and install recursively
+            installed_package_configs = JinjaEnvironmentYamlLoader.load_config_file(installed_package_yaml, params=self.params, macros=self.macros) #TODO - handling for package params & macros?
+            nested_package_config = self.error_handler.assert_get_key(installed_package_configs, 'packages', dtype=dict, required=False, default={})
+
+            nested_packages: List[Package] = []
+            for name, config in nested_package_config.items():
+                nested_package = Package(name, config, earthmover=self)
+                nested_packages.append(nested_package)
+                self.package_graph.add_node(name, data=nested_package)
+                self.package_graph.add_edge(package.name, name)
+
+            if nested_packages is not None:
+                nested_packages_dir = os.path.join(package.destination_path, 'packages')
+                self.install_packages(nested_packages, nested_packages_dir)
