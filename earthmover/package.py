@@ -43,6 +43,7 @@ class Package:
         self.error_handler: 'ErrorHandler' = earthmover.error_handler
 
         self.destination_path: str = None
+        self.package_config_file: str = None
 
     def install(self, packages_dir):
         """
@@ -61,12 +62,12 @@ class Package:
         """
         Find the Earthmover config file for the installed package.
         TODO: allow the config filepath to be specified for the package rather than requiring a default location and name
-        :return:
         """
         for file in ['earthmover.yaml', 'earthmover.yml']:
             test_file = os.path.join(self.destination_path, file)
             if os.path.isfile(test_file):
-                return test_file
+                self.package_config_file = test_file
+                return
 
         self.error_handler.throw(
             f"config file not found for package '{self.name}'. Ensure the package has a file named 'earthmover.yaml' or 'earthmover.yml' in the root directory."
@@ -103,7 +104,9 @@ class LocalPackage(Package):
         except OSError:
             shutil.copytree(source_path, self.destination_path)
 
-        return super().installed_package_config()
+        super().installed_package_config()
+
+        return self.package_config_file
 
 
 class GitHubPackage(Package):
@@ -141,4 +144,6 @@ class GitHubPackage(Package):
         else:
             git.Repo.clone_from(source_path, self.destination_path)
 
-        return super().installed_package_config()
+        super().installed_package_config()
+
+        return self.package_config_file
