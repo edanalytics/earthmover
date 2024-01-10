@@ -47,6 +47,7 @@ class Operation(Node):
 
             'group_by_with_count': groupby_operations.GroupByWithCountOperation,
             'group_by_with_ag': groupby_operations.GroupByWithAggOperation,
+            'group_by_with_ran': groupby_operations.GroupByWithRankOperation,
             'group_by': groupby_operations.GroupByOperation,
         }
 
