@@ -38,7 +38,6 @@ class Earthmover:
         "show_progress": False,
     }
 
-    packages: List[Package] = []
     sources: List[Source] = []
     transformations: List[Transformation] = []
     destinations: List[Destination] = []
@@ -395,29 +394,40 @@ class Earthmover:
 
         :return:
         """
-        # Collect packages
-        package_config = self.error_handler.assert_get_key(self.user_configs, 'packages', dtype=dict, required=False, default={})
+        self.build_top_level_package_graph()
         packages_dir = os.path.join(os.getcwd(), 'packages')
 
-        for name, config in package_config.items():
-            package = Package(name, config, earthmover=self)
-            self.packages.append(package)  # Possible TODO: remove this list, track packages via graph only
-            self.package_graph.add_node(name, data=package) 
-
         # Check that at least one package is defined
-        if not self.packages:
+        if not self.package_graph.successors('root'):
             self.error_handler.throw("No packages have been defined!")
 
         # Make a copy of each package (and any nested sub-packages) into the packages directory
-        self.install_packages(self.packages, packages_dir)
-            
+        self.install_packages(root_node='root', package_subgraph=self.package_graph, packages_dir=packages_dir)
 
-    def install_packages(self, root_packages: List[Package], packages_dir: str):
+
+    def build_top_level_package_graph(self):
         """
 
         :return:
-        """        
-        if not root_packages:
+        """
+        package_config = self.error_handler.assert_get_key(self.user_configs, 'packages', dtype=dict, required=False, default={})
+
+        # Create a root package to be the root of the packages directed graph
+        root_package = Package('root', self.user_configs, earthmover=self, package_path=os.getcwd(), package_config_file=self.user_configs)
+        self.package_graph.add_node('root', package=root_package)
+
+        for name, config in package_config.items():
+            package = Package(name, config, earthmover=self)
+            self.package_graph.add_node(name, package=package) 
+            self.package_graph.add_edge(root_package.name, name)
+            
+
+    def install_packages(self, root_node: str, package_subgraph: Graph, packages_dir: str):
+        """
+
+        :return:
+        """
+        if not package_subgraph.successors(root_node):
             return
         
         # Create packages directory
@@ -426,21 +436,26 @@ class Earthmover:
                 f"creating package directory {packages_dir}"
             )
             os.makedirs(packages_dir, exist_ok=True)
-        
-        for package in root_packages:
-            installed_package_yaml = package.install(packages_dir)
 
-            # Check the installed package for additional packages and install recursively
-            installed_package_configs = JinjaEnvironmentYamlLoader.load_config_file(installed_package_yaml, params=self.params, macros=self.macros) #TODO - handling for package params & macros?
+        for package_name in package_subgraph.successors(root_node):
+            # Install package
+            package_node = self.package_graph.nodes[package_name]
+            installed_package_yaml = package_node['package'].install(packages_dir)
+            
+            # Check the installed package for additional packages
+            installed_package_configs = JinjaEnvironmentYamlLoader.load_project_configs(installed_package_yaml, params=self.params)
             nested_package_config = self.error_handler.assert_get_key(installed_package_configs, 'packages', dtype=dict, required=False, default={})
 
-            nested_packages: List[Package] = []
+            # Add nested packages to packages_graph
             for name, config in nested_package_config.items():
                 nested_package = Package(name, config, earthmover=self)
-                nested_packages.append(nested_package)
-                self.package_graph.add_node(name, data=nested_package)
-                self.package_graph.add_edge(package.name, name)
+                self.package_graph.add_node(name, package=nested_package)
+                self.package_graph.add_edge(package_name, name)
 
-            if nested_packages is not None:
-                nested_packages_dir = os.path.join(package.destination_path, 'packages')
-                self.install_packages(nested_packages, nested_packages_dir)
+            # Install nested packages by calling this function on the subgraph of the current package node and its successors
+            if self.package_graph.successors(package_name):    
+                nested_package_dir = os.path.join(package_node['package'].package_path, 'packages')
+                nested_package_subgraph = nx.ego_graph(self.package_graph, package_name)
+                self.install_packages(root_node=package_name, package_subgraph=nested_package_subgraph, packages_dir=nested_package_dir)
+
+
