@@ -14,7 +14,7 @@ class Package:
     """
     mode: str = None
 
-    def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover', package_path: Optional[str] = None, package_config_file: Optional[str] = None):
+    def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover', package_path: Optional[str] = None):
         """
         Logic for assigning packages to their respective classes.
 
@@ -37,15 +37,16 @@ class Package:
             )
             raise
     
-    def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover', package_path: Optional[str] = None, package_config_file: Optional[str] = None):
+    def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover', package_path: Optional[str] = None):
         self.name: str = name
         self.config: 'YamlMapping' = config
         self.earthmover: 'Earthmover' = earthmover
         self.package_path: str = package_path
-        self.package_config_file: str = package_config_file
 
         self.logger: 'Logger' = earthmover.logger
         self.error_handler: 'ErrorHandler' = earthmover.error_handler
+
+        self.package_config: dict = None
 
 
     def install(self, packages_dir):
@@ -69,8 +70,7 @@ class Package:
         for file in ['earthmover.yaml', 'earthmover.yml']:
             test_file = os.path.join(self.package_path, file)
             if os.path.isfile(test_file):
-                self.package_config_file = test_file
-                return
+                return test_file
 
         self.error_handler.throw(
             f"config file not found for package '{self.name}'. Ensure the package has a file named 'earthmover.yaml' or 'earthmover.yml' in the root directory."
@@ -117,9 +117,7 @@ class LocalPackage(Package):
         except OSError:
             shutil.copytree(source_path, self.package_path)
 
-        super().installed_package_config()
-
-        return self.package_config_file
+        return super().installed_package_config()
 
 
 class GitHubPackage(Package):
@@ -157,6 +155,4 @@ class GitHubPackage(Package):
         else:
             git.Repo.clone_from(source_path, self.package_path)
 
-        super().installed_package_config()
-
-        return self.package_config_file
+        return super().installed_package_config()
