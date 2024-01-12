@@ -152,7 +152,7 @@ class GroupByWithRankOperation(Operation):
         """
         super().compile()
         self.group_by_columns = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
-        self.count_column = self.error_handler.assert_get_key(self.config, 'rank_column', dtype=str)
+        self.rank_column = self.error_handler.assert_get_key(self.config, 'rank_column', dtype=str)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
@@ -161,27 +161,13 @@ class GroupByWithRankOperation(Operation):
         """
         super().execute(data, **kwargs)
 
-        if not set(self.group_by_column).issubset(data.columns):
+        if not set(self.group_by_columns).issubset(data.columns):
             self.error_handler.throw(
                 "one or more specified group-by columns not in the dataset"
             )
             raise
 
-        data[self.GROUPED_COL_NAME] = data.apply(
-            lambda x: self.GROUPED_COL_SEP.join([*self.group_by_columns])
-            , axis=1, meta='str')
-        
-        data = (
-            data
-                .group_by([self.GROUPED_COL_NAME])
-                .rank(method="first")
-                .reset_index()
-        )
-
-        data[self.group_by_columns] = data[self.GROUPED_COL_NAME].str.split(
-            self.GROUPED_COL_SEP, n=len(self.group_by_columns), expand=True
-        )
-        del data[self.GROUPED_COL_NAME]
+        data[self.rank_column] = data.groupby(self.group_by_columns).cumcount().reset_index(drop=True)
 
         return data
 
