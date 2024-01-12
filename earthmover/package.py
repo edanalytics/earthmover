@@ -21,6 +21,7 @@ class Package:
         :param name:
         :param config:
         :param earthmover:
+        :param package_path:
         """
         if 'local' in config:
             return object.__new__(LocalPackage)
