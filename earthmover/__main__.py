@@ -179,6 +179,7 @@ def main(argv=None):
             if args.selector != '*':
                 em.logger.info("selector is ignored for compile-only run.")
 
+            em.merge_packages()
             em.build_graph()
             em.compile()
             em.logger.info("looks ok")
@@ -191,6 +192,7 @@ def main(argv=None):
             em.logger.warning("[no command specified; proceeding with `run` but we recommend explicitly giving a command]")
         try:
             em.logger.info("starting...")
+            em.merge_packages()
             em.generate(selector=args.selector)
             em.logger.info("done!")
         except Exception as e:
