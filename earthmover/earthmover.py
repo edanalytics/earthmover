@@ -59,6 +59,9 @@ class Earthmover:
         self.config_file = config_file
         self.error_handler = ErrorHandler(file=self.config_file)
 
+        # Set a directory for installing packages
+        self.packages_dir = os.path.join(os.getcwd(), 'packages')
+
         # Parse the user-provided config file and retrieve project-configs, macros, and parameter defaults.
         # Merge the optional user configs into the defaults.
         self.params = json.loads(params) if params else {}
@@ -395,14 +398,13 @@ class Earthmover:
         :return:
         """
         self.build_top_level_package_graph()
-        packages_dir = os.path.join(os.getcwd(), 'packages')
 
         # Check that at least one package is defined
-        if not self.package_graph.successors('root'):
+        if all(False for _ in self.package_graph.successors('root')):
             self.error_handler.throw("No packages have been defined!")
 
-        # Make a copy of each package (and any nested sub-packages) into the packages directory
-        self.install_packages(root_node='root', package_subgraph=self.package_graph, packages_dir=packages_dir)
+        # Install each package (and any nested sub-packages) into the packages directory
+        self.build_package_graph(root_node='root', package_subgraph=self.package_graph, packages_dir=self.packages_dir, install=True)
 
 
     def build_top_level_package_graph(self):
@@ -413,7 +415,8 @@ class Earthmover:
         package_config = self.error_handler.assert_get_key(self.user_configs, 'packages', dtype=dict, required=False, default={})
 
         # Create a root package to be the root of the packages directed graph
-        root_package = Package('root', self.user_configs, earthmover=self, package_path=os.getcwd(), package_config_file=self.user_configs)
+        root_package = Package('root', self.user_configs, earthmover=self, package_path=os.getcwd())
+        root_package.package_config = self.user_configs
         self.package_graph.add_node('root', package=root_package)
 
         for name, config in package_config.items():
@@ -422,7 +425,7 @@ class Earthmover:
             self.package_graph.add_edge(root_package.name, name)
             
 
-    def install_packages(self, root_node: str, package_subgraph: Graph, packages_dir: str):
+    def build_package_graph(self, root_node: str, package_subgraph: Graph, packages_dir: str, install: bool):
         """
 
         :return:
@@ -438,13 +441,30 @@ class Earthmover:
             os.makedirs(packages_dir, exist_ok=True)
 
         for package_name in package_subgraph.successors(root_node):
-            # Install package
             package_node = self.package_graph.nodes[package_name]
-            installed_package_yaml = package_node['package'].install(packages_dir)
+            # Slightly hacky way to bypass the install step for a `compile` or `run` command
+            if install:
+                installed_package_yaml = package_node['package'].install(packages_dir)
+            else:
+                package_node['package'].package_path = os.path.join(packages_dir, package_name)
+                installed_package_yaml = package_node['package'].installed_package_config()
+
+            package_configs = JinjaEnvironmentYamlLoader.load_project_configs(installed_package_yaml, params=self.params)
             
+            # Update project parameter defaults from the package, if any.
+            for key, val in package_configs.get("parameter_defaults", {}).items():
+                self.params.setdefault(key, val)
+            
+            # Overwrite the BUNDLE_DIR param with an absolute path to the package location 
+            # TODO: is there a better way to handle relative paths in bundles?
+            package_params = {**self.params, 'BUNDLE_DIR': package_node['package'].package_path}
+            package_macros = package_configs.get("macros", "").strip()
+
+            # Load the package yaml
+            package_node['package'].package_config = JinjaEnvironmentYamlLoader.load_config_file(installed_package_yaml, params=package_params, macros=package_macros)
+
             # Check the installed package for additional packages
-            installed_package_configs = JinjaEnvironmentYamlLoader.load_project_configs(installed_package_yaml, params=self.params)
-            nested_package_config = self.error_handler.assert_get_key(installed_package_configs, 'packages', dtype=dict, required=False, default={})
+            nested_package_config = self.error_handler.assert_get_key(package_node['package'].package_config, 'packages', dtype=dict, required=False, default={})
 
             # Add nested packages to packages_graph
             for name, config in nested_package_config.items():
@@ -453,9 +473,53 @@ class Earthmover:
                 self.package_graph.add_edge(package_name, name)
 
             # Install nested packages by calling this function on the subgraph of the current package node and its successors
-            if self.package_graph.successors(package_name):    
+            if any(True for _ in self.package_graph.successors(package_name)):    
                 nested_package_dir = os.path.join(package_node['package'].package_path, 'packages')
                 nested_package_subgraph = nx.ego_graph(self.package_graph, package_name)
-                self.install_packages(root_node=package_name, package_subgraph=nested_package_subgraph, packages_dir=nested_package_dir)
+                self.build_package_graph(root_node=package_name, package_subgraph=nested_package_subgraph, packages_dir=nested_package_dir, install=install)
 
 
+    def merge_packages(self):
+        """
+
+        :return:
+        """
+        self.build_top_level_package_graph()
+
+        # If the yaml file doesn't include packages, no need to alter
+        if all(False for _ in self.package_graph.successors('root')):
+            return
+        
+        self.build_package_graph(root_node='root', package_subgraph=self.package_graph, packages_dir=self.packages_dir, install=False)
+
+        # Merge each package yaml into the predecessor yaml, storing the result in the predecessor
+        # Post-order traversal ensures the merges are done with thte correct hierarchy
+        for package_name in nx.dfs_postorder_nodes(self.package_graph):
+            package_node = self.package_graph.nodes[package_name]
+
+            for predecessor_name in self.package_graph.predecessors(package_name): # more elegant way to do this? we know each node will only have one predecessor
+                predecessor_node = self.package_graph.nodes[predecessor_name]
+                merged_yaml = self.merge_yaml(package_node['package'].package_config, predecessor_node['package'].package_config)
+                predecessor_node['package'].package_config = merged_yaml
+
+        # Overwrite with completed merged yaml  
+        self.user_configs = self.package_graph.nodes['root']['package'].package_config
+        
+        # Output merged yaml file
+        with open("./merged_earthmover.yml", "w") as f:
+            json.dump(self.user_configs, f, ensure_ascii=False, indent=4)
+ 
+
+    @staticmethod
+    def merge_yaml(yaml1, yaml2):
+        """
+
+        :return:
+        """ 
+        for key, value in yaml2.items():
+            if key in yaml1 and isinstance(yaml1[key], dict) and isinstance(value, dict):
+                yaml1[key] = Earthmover.merge_yaml(yaml1[key], value)
+            else:
+                yaml1[key] = value
+                
+        return yaml1
