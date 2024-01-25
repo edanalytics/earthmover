@@ -12,8 +12,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
 
-from numpy import NaT
-
 class AddColumnsOperation(Operation):
     """
 
@@ -494,7 +492,7 @@ class DateFormatOperation(Operation):
         for _column in self.columns_list:
             try:
                 data[_column] = (
-                    data[_column].replace('', NaT).mask(data[_column].notnull(), 
+                    data[_column].replace('', pd.NaT).mask(data[_column].notnull(), 
                        dask.dataframe.to_datetime(data[_column], format=self.from_format)
                        .dt.strftime(self.to_format)))
                 
