@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
 
+
 class AddColumnsOperation(Operation):
     """
 
@@ -491,11 +492,12 @@ class DateFormatOperation(Operation):
 
         for _column in self.columns_list:
             try:
-                data[_column] = (
-                    pd.to_datetime(data[_column]).compute().mask(data[_column].notnull(), 
-                       dask.dataframe.to_datetime(data[_column], format=self.from_format)
-                       .dt.strftime(self.to_format)))
-                
+                if data[_column] != '':
+                    data[_column] = (
+                        dask.dataframe.to_datetime(data[_column]z, format=self.from_format)
+                            .dt.strftime(self.to_format)
+                    )
+
             except Exception as err:
                 self.error_handler.throw(
                     f"error during `date_format` operation, `{_column}` column... check format strings? ({err})"
