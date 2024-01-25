@@ -494,7 +494,7 @@ class DateFormatOperation(Operation):
             try:
                 data[_column] = (
                     data[_column].replace('', None).mask(data[_column].notnull(), 
-                       dask.dataframe.to_datetime(data[_column], format=self.from_format)
+                       dask.dataframe.to_datetime(data[_column], format=self.from_format, errors='coerce')
                        .dt.strftime(self.to_format)))
                 
             except Exception as err:
