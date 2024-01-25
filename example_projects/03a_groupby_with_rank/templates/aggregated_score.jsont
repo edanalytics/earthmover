@@ -1,0 +1,8 @@
+{
+    "group_id": {{group_id}},
+    "num_scores": {{num_scores}},
+    "min_score": {{min_score}},
+    "max_score": {{max_score}},
+    "avg_score": {{avg_score}},
+    "item_scores": "{{item_scores}}"
+}

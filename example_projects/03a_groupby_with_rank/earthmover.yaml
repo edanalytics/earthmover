@@ -1,0 +1,46 @@
+version: 2
+
+config:
+  # log_level: DEBUG
+  output_dir: ./output/
+  # show_graph: True
+  # show_stacktrace: True
+
+
+sources:
+  scores:
+    file: ./sources/scores.csv
+
+transformations:
+  grouped_scores:
+    source: $sources.scores
+    operations:
+      - operation: group_by
+        group_by_columns:
+          - group_id
+        create_columns:
+          num_scores: count()
+          min_score: min(score)
+          max_score: max(score)
+          avg_score: mean(score)
+          item_scores: agg(score,,)
+
+  grouped_with_rank:
+    source: $sources.scores
+    operations:
+      - operation: group_by_with_rank
+        group_by_columns:
+          - group_id
+        rank_column: rank
+
+destinations:
+  grouped_score:
+    source: $transformations.grouped_scores
+    template: ./templates/aggregated_score.jsont
+    extension: jsonl
+    linearize: True
+  grouped_score_with_rank:
+    source: $transformations.grouped_with_rank
+    template: ./templates/dev_rank.jsont
+    extension: jsonl
+    linearize: True
