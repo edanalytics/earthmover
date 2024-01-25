@@ -493,9 +493,8 @@ class DateFormatOperation(Operation):
         for _column in self.columns_list:
             try:
                 data[_column] = (
-                    data[_column].replace('', None)
-                        .mask(data[_column].notnull(), 
-                         dask.dataframe.to_datetime(data[_column], format=self.from_format)
+                    data[_column].replace('', None).mask(data[_column].notnull(), 
+                       dask.dataframe.to_datetime(data[_column], format=self.from_format)
                        .dt.strftime(self.to_format)))
                 
             except Exception as err:
