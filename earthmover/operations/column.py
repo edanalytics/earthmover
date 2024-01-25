@@ -492,12 +492,10 @@ class DateFormatOperation(Operation):
 
         for _column in self.columns_list:
             try:
-                if data[_column] != '':
-                    # Convert to datetime and format
-                    data[_column] = (
-                        dask.dataframe.to_datetime(data[_column], format=self.from_format)
+                data[_column] = (
+                    dask.dataframe.to_datetime(data[_column], format=self.from_format, errors='ignore')
                         .dt.strftime(self.to_format)
-                    )
+                )
 
             except Exception as err:
                 self.error_handler.throw(
