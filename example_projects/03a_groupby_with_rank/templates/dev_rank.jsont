@@ -1,7 +1,0 @@
-{
-    "person_id": {{person_id}}, 
-    "group_id": {{group_id}},
-    "score": {{score}},
-    "sequence": {{rank}}
-
-}
