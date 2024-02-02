@@ -446,7 +446,7 @@ class DateFormatOperation(Operation):
     """
     allowed_configs: Tuple[str] = (
         'operation', 'repartition', 
-        'column', 'columns', 'from_format', 'to_format', 'ignore_errors',
+        'column', 'columns', 'from_format', 'to_format', 'ignore_errors', 'exact_match',
     )
 
     def __init__(self, *args, **kwargs):
@@ -455,6 +455,7 @@ class DateFormatOperation(Operation):
         self.from_format: str = None
         self.to_format: str = None
         self.ignore_errors: bool = None
+        self.exact_match: bool = None
 
     def compile(self):
         """
@@ -466,6 +467,7 @@ class DateFormatOperation(Operation):
         self.from_format = self.error_handler.assert_get_key(self.config, 'from_format', dtype=str)
         self.to_format   = self.error_handler.assert_get_key(self.config, 'to_format', dtype=str)
         self.ignore_errors   = self.error_handler.assert_get_key(self.config, 'ignore_errors', dtype=bool, required=False)
+        self.exact_match   = self.error_handler.assert_get_key(self.config, 'exact_match', dtype=bool, required=False)
 
         # Only 'column' or 'columns' can be populated
         _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
@@ -495,7 +497,7 @@ class DateFormatOperation(Operation):
         for _column in self.columns_list:
             try:
                 data[_column] = (
-                    dask.dataframe.to_datetime(data[_column], format=self.from_format, errors='coerce' if self.ignore_errors else 'raise')
+                    dask.dataframe.to_datetime(data[_column], format=self.from_format, exact=True if self.exact_match else False, errors='coerce' if self.ignore_errors else 'raise')
                         .dt.strftime(self.to_format)
                 )
 
