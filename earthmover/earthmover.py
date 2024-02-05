@@ -479,6 +479,14 @@ class Earthmover:
             )
             os.makedirs(packages_dir, exist_ok=True)
 
+        # Check for cycles in the package graph
+        if not nx.is_directed_acyclic_graph(self.package_graph):
+            _cycle = nx.find_cycle(self.package_graph)
+            self.error_handler.throw(
+                f"The package graph has a cycle! Installation stopped. Cycle: {_cycle}"
+            )
+            raise
+
         for package_name in package_subgraph.successors(root_node):
             package_node = self.package_graph.nodes[package_name]
             # Install packages if necessary, or retrieve path to package yaml file
