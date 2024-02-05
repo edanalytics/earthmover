@@ -68,13 +68,18 @@ class Package:
         Find the Earthmover config file for the installed package.
         TODO: allow the config filepath to be specified for the package rather than requiring a default location and name
         """
+        if not os.path.isdir(self.package_path):
+            self.error_handler.throw(
+                f"The package '{self.name}' has not been installed. Run an 'earthmover deps' command to install packages."
+            )
+        
         for file in ['earthmover.yaml', 'earthmover.yml']:
             test_file = os.path.join(self.package_path, file)
             if os.path.isfile(test_file):
                 return test_file
 
         self.error_handler.throw(
-            f"config file not found for package '{self.name}'. Ensure the package has a file named 'earthmover.yaml' or 'earthmover.yml' in the root directory."
+            f"Config file not found for package '{self.name}'. Ensure the package has a file named 'earthmover.yaml' or 'earthmover.yml' in the root directory."
         )
         raise
 
