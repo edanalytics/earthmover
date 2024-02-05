@@ -105,7 +105,7 @@ class LocalPackage(Package):
 
     def install(self, packages_dir):
         """
-        Creates a symlink (if allowed) or makes a copy of a local package directory into <project>/packages.
+        Makes a copy of a local package directory into <project>/packages.
         :return:
         """
         super().install(packages_dir)
@@ -118,10 +118,7 @@ class LocalPackage(Package):
             )
             raise
 
-        try:
-            os.symlink(source_path, self.package_path, target_is_directory=True)
-        except OSError:
-            shutil.copytree(source_path, self.package_path)
+        shutil.copytree(source_path, self.package_path)
 
         return super().installed_package_config()
 
