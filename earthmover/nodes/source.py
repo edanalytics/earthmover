@@ -23,7 +23,7 @@ class Source(Node):
     type: str = 'source'
     mode: str = None  # Documents which class was chosen.
     is_remote: bool = None
-    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional',)
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',)
 
     NUM_ROWS_PER_CHUNK: int = 1000000
 
@@ -59,6 +59,9 @@ class Source(Node):
         # dataframe which is passed through to downstream transformations and destinations.)
         self.optional: bool = self.config.get('optional', False)
 
+        # Optional fields can be defined to be added as null columns if not present in the DataFrame.
+        self.optional_fields: List[str] = self.config.get('optional_fields', [])
+
     def compile(self):
         """
 
@@ -80,6 +83,12 @@ class Source(Node):
             self.data = dd.from_pandas(self.data, chunksize=self.chunksize)
 
         self.data = self.opt_repartition(self.data)  # Repartition if specified.
+
+        # Add missing columns if defined under `optional_fields`.
+        if self.optional_fields:
+            for field in self.optional_fields:
+                if field not in self.data.columns:
+                    self.data[field] = ""  # Default to empty string.
 
         super().post_execute(**kwargs)
 
