@@ -82,7 +82,7 @@ class Source(Node):
             )
             self.data = dd.from_pandas(self.data, chunksize=self.chunksize)
 
-        self.data = self.opt_repartition(self.data)  # Repartition if specified.
+        self.data = self.opt_repartition(self.data).fillna('')  # Repartition if specified; fill NAs with empty strings.
 
         # Add missing columns if defined under `optional_fields`.
         if self.optional_fields:
