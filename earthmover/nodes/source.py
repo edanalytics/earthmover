@@ -88,6 +88,7 @@ class Source(Node):
         if self.optional_fields:
             for field in self.optional_fields:
                 if field not in self.data.columns:
+                    self.logger.debug(f"Optional column will be added to dataset: '{field}'")
                     self.data[field] = ""  # Default to empty string.
 
         super().post_execute(**kwargs)
