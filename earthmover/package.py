@@ -62,6 +62,7 @@ class Package:
                 shutil.rmtree(self.package_path)
             else:
                 os.remove(self.package_path)
+                
 
     def installed_package_config(self):
         """

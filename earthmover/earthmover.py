@@ -7,6 +7,7 @@ import os
 import time
 import datetime
 import pandas as pd
+import yaml
 
 from earthmover.error_handler import ErrorHandler
 from earthmover.graph import Graph
@@ -435,9 +436,8 @@ class Earthmover:
         self.user_configs = self.package_graph.nodes['root']['package'].package_config
         
         # Output merged yaml file
-        # TODO: make this prettier
         with open("./merged_earthmover.yml", "w") as f:
-            json.dump(self.user_configs, f, ensure_ascii=False, indent=4)
+            yaml.safe_dump(json.loads(json.dumps(self.user_configs, ensure_ascii=True)), f, default_flow_style=False)
 
 
     def build_root_package_graph(self):
@@ -462,8 +462,8 @@ class Earthmover:
     def build_package_graph(self, root_node: str, package_subgraph: Graph, packages_dir: str, install: bool):
         """
         Traverses a subgraph of packages, installing them if specified and:
-         - loading their config files with an overwritten BUNDLE_DIR parameter to handle relative file paths
          - updating the instance params with any parameter defaults specified in the packages
+         - prepending their macros to the instance macro string
          - building any nested packages into the instance package_graph
 
         :param root_node:
@@ -497,21 +497,17 @@ class Earthmover:
                 installed_package_yaml = package_node['package'].installed_package_config()
 
             package_configs = JinjaEnvironmentYamlLoader.load_project_configs(installed_package_yaml, params=self.params)
-            
+
             # Update project parameter defaults from the package, if any
             for key, val in package_configs.get("parameter_defaults", {}).items():
                 self.params.setdefault(key, val)
-            
-            # Overwrite the BUNDLE_DIR param with an absolute path to the package location 
-            # TODO: is there a better way to handle relative paths in bundles?
-            package_params = {**self.params, 'BUNDLE_DIR': package_node['package'].package_path}
-            # TODO: think though how macros can/should be shared between packages - not well handled yet
-            package_macros = package_configs.get("macros", "").strip()
 
-            # Load the package yaml
-            package_node['package'].package_config = JinjaEnvironmentYamlLoader.load_config_file(installed_package_yaml, params=package_params, macros=package_macros)
+            # Prepend package macros to the project macro string 
+            # Later macro definitions in the string will overwrite earlier ones 
+            self.macros = package_configs.get("macros", "").strip() + self.macros
 
-            # Check the installed package for additional packages
+            # Load the package yaml and check for additional nested packages
+            package_node['package'].package_config = JinjaEnvironmentYamlLoader.load_config_file(installed_package_yaml, params=self.params, macros=self.macros)
             nested_package_config = self.error_handler.assert_get_key(package_node['package'].package_config, 'packages', dtype=dict, required=False, default={})
 
             # Add nested packages to packages_graph
