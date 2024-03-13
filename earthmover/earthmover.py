@@ -425,15 +425,21 @@ class Earthmover:
         # Merge each package yaml into the predecessor yaml, storing the result in the predecessor
         # Post-order traversal ensures the correct hierarchy of merges
         for package_name in nx.dfs_postorder_nodes(self.package_graph):
-            package_node = self.package_graph.nodes[package_name]
+            node_package = self.package_graph.nodes[package_name]['package']
 
             for predecessor_name in self.package_graph.predecessors(package_name): # more elegant way to do this? we know each node will only have one predecessor
-                predecessor_node = self.package_graph.nodes[predecessor_name]
-                merged_yaml = self.merge_dicts(package_node['package'].package_config, predecessor_node['package'].package_config)
-                predecessor_node['package'].package_config = merged_yaml
+                predecessor_package = self.package_graph.nodes[predecessor_name]['package']
+                
+                # Load package yaml if not yet loaded
+                node_yaml = node_package.package_yaml or node_package.load_package_yaml(self.params, self.macros)
+                predecessor_yaml = predecessor_package.package_yaml or predecessor_package.load_package_yaml(self.params, self.macros)
+
+                merged_yaml = self.merge_dicts(node_yaml, predecessor_yaml)
+                predecessor_package.package_yaml = merged_yaml
+
 
         # Overwrite with completed merged yaml  
-        self.user_configs = self.package_graph.nodes['root']['package'].package_config
+        self.user_configs = self.package_graph.nodes['root']['package'].package_yaml
         
         # Output merged yaml file
         with open("./merged_earthmover.yml", "w") as f:
@@ -448,7 +454,7 @@ class Earthmover:
         """
         # Create a root package to be the root of the packages directed graph
         root_package = Package('root', self.user_configs, earthmover=self, package_path=os.getcwd())
-        root_package.package_config = self.user_configs
+        root_package.config_file = self.config_file
         self.package_graph.add_node('root', package=root_package)
 
         package_config = self.error_handler.assert_get_key(self.user_configs, 'packages', dtype=dict, required=False, default={})
@@ -494,7 +500,7 @@ class Earthmover:
                 installed_package_yaml = package_node['package'].install(packages_dir)
             else:
                 package_node['package'].package_path = os.path.join(packages_dir, package_name)
-                installed_package_yaml = package_node['package'].installed_package_config()
+                installed_package_yaml = package_node['package'].get_installed_config_file()
 
             package_configs = JinjaEnvironmentYamlLoader.load_project_configs(installed_package_yaml, params=self.params)
 
@@ -502,13 +508,12 @@ class Earthmover:
             for key, val in package_configs.get("parameter_defaults", {}).items():
                 self.params.setdefault(key, val)
 
-            # Prepend package macros to the project macro string 
-            # Later macro definitions in the string will overwrite earlier ones 
+            # Prepend package macros to the project macro string. Later macro definitions in the string will overwrite earlier ones 
             self.macros = package_configs.get("macros", "").strip() + self.macros
 
             # Load the package yaml and check for additional nested packages
-            package_node['package'].package_config = JinjaEnvironmentYamlLoader.load_config_file(installed_package_yaml, params=self.params, macros=self.macros)
-            nested_package_config = self.error_handler.assert_get_key(package_node['package'].package_config, 'packages', dtype=dict, required=False, default={})
+            package_config = JinjaEnvironmentYamlLoader.load_config_file(installed_package_yaml, params=self.params, macros=self.macros)
+            nested_package_config = self.error_handler.assert_get_key(package_config, 'packages', dtype=dict, required=False, default={})
 
             # Add nested packages to packages_graph
             for name, config in nested_package_config.items():
