@@ -1,8 +1,6 @@
 import git
 import os
 import shutil
-import yaml
-import json
 from typing import Optional, TYPE_CHECKING
 if TYPE_CHECKING:
     from earthmover.earthmover import Earthmover
@@ -109,9 +107,11 @@ class Package:
 
         # Replace relative paths for any map files in map_values operations
         for transformation in self.error_handler.assert_get_key(yaml_mapping, 'transformations', dtype=dict, required=False, default={}):
-            for operation in self.error_handler.assert_get_key(yaml_mapping[transformation]['operations'], operation, dtype=[dict], required=False, default=[]):
+            operation_num = 0
+            for operation in self.error_handler.assert_get_key(yaml_mapping['transformations'][transformation], 'operations', dtype=list, required=False, default=[]):
                 if operation['operation'] == 'map_values' and not os.path.isabs(operation['map_file']):
-                    yaml_mapping['transformations'][transformation]['operations'][operation]['map_file'] = os.path.join(self.package_path, operation['map_file'].strip('./'))
+                    yaml_mapping['transformations'][transformation]['operations'][operation_num]['map_file'] = os.path.join(self.package_path, operation['map_file'].strip('./'))
+                operation_num += 1
 
         self.package_yaml = yaml_mapping
 
