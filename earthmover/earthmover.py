@@ -442,7 +442,7 @@ class Earthmover:
         self.user_configs = self.package_graph.nodes['root']['package'].package_yaml
         
         # Output merged yaml file
-        with open("./merged_earthmover.yml", "w") as f:
+        with open("./earthmover_composed.yml", "w") as f:
             yaml.safe_dump(json.loads(json.dumps(self.user_configs, ensure_ascii=True)), f, default_flow_style=False)
 
 
