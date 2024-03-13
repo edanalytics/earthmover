@@ -1,12 +1,15 @@
 import git
 import os
 import shutil
+import yaml
+import json
 from typing import Optional, TYPE_CHECKING
 if TYPE_CHECKING:
     from earthmover.earthmover import Earthmover
     from earthmover.yaml_parser import YamlMapping
     from earthmover.error_handler import ErrorHandler
-    from logging import Logger
+from logging import Logger
+from earthmover.yaml_parser import JinjaEnvironmentYamlLoader
 
 class Package:
     """
@@ -47,7 +50,7 @@ class Package:
         self.logger: 'Logger' = earthmover.logger
         self.error_handler: 'ErrorHandler' = earthmover.error_handler
 
-        self.package_config: dict = None
+        self.package_yaml: dict = None
 
 
     def install(self, packages_dir):
@@ -62,9 +65,9 @@ class Package:
                 shutil.rmtree(self.package_path)
             else:
                 os.remove(self.package_path)
-                
 
-    def installed_package_config(self):
+
+    def get_installed_config_file(self):
         """
         Find the Earthmover config file for the installed package.
         TODO: allow the config filepath to be specified for the package rather than requiring a default location and name
@@ -83,6 +86,36 @@ class Package:
             f"Config file not found for package '{self.name}'. Ensure the package has a file named 'earthmover.yaml' or 'earthmover.yml' in the root directory."
         )
         raise
+
+
+    def load_package_yaml(self, params: dict, macros: str):
+        """
+        Loads the config file and replaces all relative filepaths with absolute paths based on the location of the package and stores the resulting mapping in the package_yaml variable.
+
+        TODO: This function is pretty 'brute force' in that it relies on a known list of key names and operations types (map_values) to find all file paths. Can we make it more robust to 
+        ensure it doesn't break if additional keys are used for filepaths in future refactors or additions to earthmover?
+        """
+        config_file = self.get_installed_config_file()
+        yaml_mapping = JinjaEnvironmentYamlLoader.load_config_file(config_file, params, macros)
+
+        # Replace relative paths with absolute paths to installed package location for any filepaths in source or destinations
+        for node_type in ('sources', 'destinations'):
+            for node in self.error_handler.assert_get_key(yaml_mapping, node_type, dtype=dict, required=False, default={}):
+                # These are the current key names that denote filepaths
+                for file_config in ('file', 'template'):
+                    filepath = self.error_handler.assert_get_key(yaml_mapping[node_type][node], file_config, dtype=str, required=False, default=None)
+                    if filepath and not os.path.isabs(filepath):
+                        yaml_mapping[node_type][node][file_config] = os.path.join(self.package_path, filepath.strip('./'))
+
+        # Replace relative paths for any map files in map_values operations
+        for transformation in self.error_handler.assert_get_key(yaml_mapping, 'transformations', dtype=dict, required=False, default={}):
+            for operation in self.error_handler.assert_get_key(yaml_mapping[transformation]['operations'], operation, dtype=[dict], required=False, default=[]):
+                if operation['operation'] == 'map_values' and not os.path.isabs(operation['map_file']):
+                    yaml_mapping['transformations'][transformation]['operations'][operation]['map_file'] = os.path.join(self.package_path, operation['map_file'].strip('./'))
+
+        self.package_yaml = yaml_mapping
+
+        return self.package_yaml
 
 
 class RootPackage(Package):
@@ -121,7 +154,7 @@ class LocalPackage(Package):
 
         shutil.copytree(source_path, self.package_path)
 
-        return super().installed_package_config()
+        return super().get_installed_config_file()
 
 
 class GitHubPackage(Package):
@@ -159,4 +192,4 @@ class GitHubPackage(Package):
         else:
             git.Repo.clone_from(source_path, self.package_path)
 
-        return super().installed_package_config()
+        return super().get_installed_config_file()
