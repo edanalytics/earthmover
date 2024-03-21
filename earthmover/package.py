@@ -175,21 +175,23 @@ class GitHubPackage(Package):
         super().install(packages_dir)
 
         source_path = self.error_handler.assert_get_key(self.config, 'git', dtype=str, required=False)
+        subdirectory = self.error_handler.assert_get_key(self.config, 'subdirectory', dtype=str, required=False, default=None)
+        branch = self.error_handler.assert_get_key(self.config, 'branch', dtype=str, required=False, default=None)
 
-        if 'subdirectory' in self.config:
-            subdirectory = self.error_handler.assert_get_key(self.config, 'subdirectory', dtype=str, required=False)
+        tmp_package_path = os.path.join(packages_dir, 'tmp_git')
+        os.mkdir(tmp_package_path)
 
-            tmp_package_path = os.path.join(packages_dir, 'tmp_git')
-            os.mkdir(tmp_package_path)
-
+        if branch:
+            repo = git.Repo.clone_from(source_path, tmp_package_path, branch=branch)
+        else:  #If branch is not specified, default working branch is used
             repo = git.Repo.clone_from(source_path, tmp_package_path)
 
+        if subdirectory: # Avoids the package being nested in folders
             subdirectory_path = os.path.join(repo.working_tree_dir, subdirectory)
             shutil.copytree(subdirectory_path, self.package_path)
-
-            git.rmtree(repo.working_tree_dir)
-
         else:
-            git.Repo.clone_from(source_path, self.package_path)
+            shutil.copytree(repo.working_tree_dir, self.package_path)
+
+        git.rmtree(repo.working_tree_dir)
 
         return super().get_installed_config_file()
