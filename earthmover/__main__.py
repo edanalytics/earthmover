@@ -162,12 +162,24 @@ def main(argv=None):
         logger.exception(err, exc_info=True)
         raise  # Avoids linting error
 
-    if args.command == 'compile':
+    if args.command == 'deps':
+        em.logger.info(f"installing packages...")
+        try:
+            if args.selector != '*':
+                em.logger.info("selector is ignored for package install.")
+            em.deps()
+            em.logger.info("done!")
+        except Exception as e:
+            logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
+            raise
+
+    elif args.command == 'compile':
         em.logger.info(f"compiling project...")
         try:
             if args.selector != '*':
                 em.logger.info("selector is ignored for compile-only run.")
 
+            em.merge_packages()
             em.build_graph()
             em.compile()
             em.logger.info("looks ok")
@@ -180,6 +192,7 @@ def main(argv=None):
             em.logger.warning("[no command specified; proceeding with `run` but we recommend explicitly giving a command]")
         try:
             em.logger.info("starting...")
+            em.merge_packages()
             em.generate(selector=args.selector)
             em.logger.info("done!")
         except Exception as e:
