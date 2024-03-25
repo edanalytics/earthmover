@@ -12,6 +12,35 @@ from earthmover import util
 class YamlMapping(dict):
     __line__: int = None
 
+    def to_dict(self):
+        """
+        Convert a YAML Mapping to a standard dictionary.
+        """
+        output_dict: dict = {}
+        for key, val in self.items():
+
+            if isinstance(val, YamlMapping):
+                output_dict[key] = val.to_dict()
+
+            elif isinstance(val, (list, tuple)):
+                output_list = []
+                for item in val:
+                    if isinstance(item, YamlMapping):
+                        output_list.append(item.to_dict())
+                    else:
+                        output_list.append(item)
+                output_dict[key] = output_list
+
+            else:
+                output_dict[key] = val
+
+        return output_dict
+
+    def to_disk(self, path: str):
+        """ Write the YamlMapping as a YAML file. """
+        with open(path, 'w') as outfile:
+            yaml.dump(self.to_dict(), outfile, default_flow_style=False)
+
 
 class JinjaEnvironmentYamlLoader(yaml.SafeLoader):
     """
