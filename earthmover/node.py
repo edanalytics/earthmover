@@ -158,7 +158,7 @@ class Node:
                 num_failed = len(result.query(f"{expectation_result_col}=='False'").index)
                 if num_failed > 0:
                     self.error_handler.throw(
-                        f"Source `${self.type}s.{self.name}` failed expectation `{expectation}` ({num_failed} rows fail)"
+                        f"Source `${self.full_name}` failed expectation `{expectation}` ({num_failed} rows fail)"
                     )
                 else:
                     self.logger.info(
@@ -169,3 +169,8 @@ class Node:
         if self.partition_size:
             data = data.repartition(partition_size=self.partition_size)
         return data
+
+    def set_upstream_source(self, source_name: str, node: 'Node'):
+        if source_name not in self.upstream_sources:
+            self.error_handler.throw(f"Source {source_name} not found in Node sources list.")
+        self.upstream_sources[source_name] = node
