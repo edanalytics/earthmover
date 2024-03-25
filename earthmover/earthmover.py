@@ -1,4 +1,5 @@
 import dask
+import itertools
 import json
 import logging
 import tempfile
@@ -69,9 +70,7 @@ class Earthmover:
         for key, val in project_configs.get("parameter_defaults", {}).items():
             self.params.setdefault(key, val)
 
-        # Complete a full-parse of the user config file.
-        self.user_configs = JinjaEnvironmentYamlLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
-
+        # Overload state_configs with defaults, YAML configs, then CLI configs
         self.state_configs = {
             **self.config_defaults,
             **project_configs,
@@ -107,45 +106,74 @@ class Earthmover:
             "row_counts": {}
         }
 
-    
-    def build_graph(self):
+
+    def compile(self):
         """
+        Parse the Earthmover.yaml file, iterate the node configs, and compile each Node.
+        Save the Nodes to their `Earthmover.{node_type}` objects.
+
+        :return:
+        """
+        node_types = [
+            ('sources', Source, self.sources),
+            ('transformations', Transformation, self.transformations),
+            ('destinations', Destination, self.destinations),
+        ]
+
+        ### Build the graph type-by-type.
+        # Complete a full-parse of the user config file.
+        full_configs = JinjaEnvironmentYamlLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
+
+        # TODO: Output Jinja-processed config file here.
+
+        for node_type, node_class, node_collection in node_types:
+            node_configs = self.error_handler.assert_get_key(full_configs, node_type, dtype=dict, required=False, default={})
+
+            # Initialize and compile the nodes.
+            for name, config in node_configs.items():
+                node = node_class(name, config, earthmover=self)
+                node_collection.append(node)
+                node.compile()
+
+        ### Confirm that at least one source is defined.
+        if not self.sources:
+            self.error_handler.throw("No sources have been defined!")
+
+
+    def build_graph(self, selector: str = "*"):
+        """
+        Iterate the `Earthmover.{node_type}` objects and update `Earthmover.graph` with nodes and edges.
+        Update `Node.upstream_sources` references with their actual node class.
 
         :return:
         """
         self.logger.debug("building dataflow graph")
 
-        node_types = {
-            'sources': Source,
-            'transformations': Transformation,
-            'destinations': Destination,
-        }
+        ### Build the first-pass of the graph before filtering.
+        all_nodes = list(itertools.chain(self.sources, self.transformations, self.destinations))
 
-        ### Build the graph type-by-type
-        for node_type, node_class in node_types.items():
-            nodes = self.error_handler.assert_get_key(self.user_configs, node_type, dtype=dict, required=False, default={})
+        # Add compiled nodes to the graph.
+        for node in all_nodes:
+            self.graph.add_node(node.full_name, data=node)
 
-            # Place the nodes
-            for name, config in nodes.items():
-                node = node_class(name, config, earthmover=self)
-                self.graph.add_node(f"${node_type}.{name}", data=node)
+        # Add edges and update upstream source references when defined.
+        for node in all_nodes:
+            for source in node.upstream_sources:
+                try:
+                    self.graph.add_edge(source, node.full_name)
+                    node.set_upstream_source(source, self.graph.ref(source))
+                except KeyError:
+                    self.error_handler.throw(f"invalid source {source}")
 
-                # Place edges for transformations and destinations
-                for source in node.upstream_sources:
-                    try:
-                        node.upstream_sources[source] = self.graph.ref(source)
-                        self.graph.add_edge(source, f"${node_type}.{name}")
-                    except KeyError:
-                        self.error_handler.throw(f"invalid source {source}")
-
-        ### Confirm that the graph is a DAG
-        self.logger.debug("checking dataflow graph")
+        # Confirm that the graph is a DAG
         if not nx.is_directed_acyclic_graph(self.graph):
             _cycle = nx.find_cycle(self.graph)
-            self.error_handler.throw(
-                f"the graph is not a DAG! it has the cycle {_cycle}"
-            )
-            raise
+            self.error_handler.throw(f"the graph is not a DAG! it has the cycle {_cycle}")
+
+        # Filter on the selector if specified.
+        if selector != "*":
+            self.logger.info(f"filtering dataflow graph using selector `{selector}`")
+            self.graph = self.graph.select_subgraph(selector)
 
         ### Delete all nodes not connected to a destination.
         while True:  # Iterate until no nodes are removed.
@@ -164,8 +192,40 @@ class Earthmover:
             if set(terminal_nodes) == set(self.graph.get_terminal_nodes()):
                 break
 
+        ### Draw the graph, regardless of whether a run is completed.
+        if self.state_configs['show_graph']:
+            self.graph.draw()
 
-    def hash_graph_to_runs_file(self, subgraph: Graph):
+        return self.graph
+
+
+    def execute(self):
+        """
+        Iterate subgraphs in `Earthmover.graph` and execute each Node in order.
+
+        :return:
+        """
+        for idx, component in enumerate( nx.weakly_connected_components(self.graph) ):
+            self.logger.debug(f"processing component {idx}")
+
+            # Load subgraphs (in topological sort order).
+            subgraph = self.graph.subgraph(component)
+            for node_name in itertools.chain(*nx.topological_generations(subgraph)):
+                node = self.graph.ref(node_name)
+
+                # Execute only if not already processed.
+                if node.data:
+                    continue
+
+                # Set self.data in each node.
+                node.execute()
+                node.post_execute()
+
+                if self.results_file:
+                    self.metadata["row_counts"].update({node_name: len(node.data)})
+
+
+    def hash_graph_to_runs_file(self):
         """
 
         :return:
@@ -192,7 +252,7 @@ class Earthmover:
 
                 # Find the latest run that matched our selector(s)...
                 most_recent_run = runs_file.get_newest_compatible_run(
-                    active_nodes=subgraph.get_node_data()
+                    active_nodes=self.graph.get_node_data()
                 )
 
                 if most_recent_run is None:
@@ -222,55 +282,15 @@ class Earthmover:
         return runs_file
 
 
-    def compile(self, subgraph: Optional[Graph] = None):
-        """
-
-        :param subgraph:
-        :return:
-        """
-        if subgraph is None:
-            subgraph = self.graph
-
-        for layer in list(nx.topological_generations(subgraph)):
-
-            for node_name in layer:
-                node = self.graph.ref(node_name)
-                node.compile()
-
-                # Add the active nodes to the class attribute lists for the hashing file.
-                if node.type == 'source':
-                    self.sources.append(node)
-
-                elif node.type == 'transformation':
-                    self.transformations.append(node)
-
-                elif node.type == 'destination':
-                    self.destinations.append(node)
-
-        ### Confirm that at least one source is defined.
-        if not self.sources:
-            self.error_handler.throw("No sources have been defined!")
-
-
-    def execute(self, subgraph: Graph):
-        """
-
-        :param subgraph:
-        :return:
-        """
-        for layer in list(nx.topological_generations(subgraph)):
-            for node_name in layer:
-                node = self.graph.ref(node_name)
-                if not node.data:
-                    node.execute()  # Sets self.data in each node.
-                    node.post_execute()
-                    if self.results_file:
-                        self.metadata["row_counts"].update({f"${node.type}s.{node.name}": len(node.data)})
-
-
     def generate(self, selector: str):
         """
-        Build DAG from YAML configs
+        Build DAG from YAML configs.
+
+        Order of operations:
+        1. Compile: template YAML and verify arguments for all nodes
+        2. Build_Graph: add nodes and edges, set upstream sources with their nodes, and draw the graph
+        3. Execute: iterate subgraphs and build Dask execution graph
+        4. Optional Miscellaneous: add row to runs file, redraw graph with counts, and write results file
 
         Build subgraph to process based on the selector. We always run through from sources to destinations
         (so all ancestors and descendants of selected nodes are also selected) but here we allow processing
@@ -281,36 +301,20 @@ class Earthmover:
         :param selector:
         :return:
         """
-        self.build_graph()
+        ### Compile and execute all Nodes in Dask.
+        # Compile the YAML file and build a subgraph based on the selector.
+        self.compile()
+        self.build_graph(selector)
 
-        if selector != "*":
-            self.logger.info(f"filtering dataflow graph using selector `{selector}`")
-
-        active_graph = self.graph.select_subgraph(selector)
-        self.compile(active_graph)
-
-
-        ### Hashing requires an entire class mixin and multiple additional steps.
-        runs_file = self.hash_graph_to_runs_file(active_graph)
-
-
-        ### Draw the graph, regardless of whether a run is completed.
-        if self.state_configs['show_graph']:
-            active_graph.draw()
+        # Hashing requires an entire class mixin and multiple additional steps.
+        runs_file = self.hash_graph_to_runs_file()
 
         # Unchanged runs are avoided unless the user forces the run.
         if not self.do_generate:
             exit(99) # Operation canceled
 
-
-        ### Process the graph
-        for idx, component in enumerate( nx.weakly_connected_components(active_graph) ):
-            self.logger.debug(f"processing component {idx}")
-
-            # load all sources! (in topological sort order)
-            _subgraph = active_graph.subgraph(component)
-            self.execute(_subgraph)
-
+        # Iterate the graph and execute each Node.
+        self.execute()
 
         ### Save run log only after a successful run! (in case of errors)
         # Note: `runs_file` is only defined in certain circumstances.
@@ -321,11 +325,9 @@ class Earthmover:
             if selector == "*":
                 destinations = "*"
             else:
-                _active_destinations = active_graph.get_node_data().keys()
-                destinations = "|".join(_active_destinations)
+                destinations = "|".join(self.graph.get_node_data().keys())
 
             runs_file.write_row(selector=destinations)
-
 
         ### Draw the graph again, this time add metadata about rows/cols/size at each node
         if self.state_configs['show_graph']:
@@ -340,7 +342,7 @@ class Earthmover:
                 node = self.graph.ref(node_name)
                 node.num_rows = num_rows
 
-            active_graph.draw()
+            self.graph.draw()
         
         ### Create structured output results_file if necessary
         if self.results_file:
