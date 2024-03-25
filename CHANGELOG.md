@@ -1,3 +1,9 @@
+### v0.2.1
+<details>
+<summary>Released TODO</summary>
+* feature: `SortRowsOperation` sorts the dataset by `columns`
+</details>
+
 ### v0.2.0
 <details>
 <summary>Released 2023-09-11</summary>
