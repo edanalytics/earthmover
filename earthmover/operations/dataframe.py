@@ -147,7 +147,7 @@ class JoinOperation(Operation):
             # Complete the merge, using different logic depending on the partitions of the datasets.
             try:
                 left_data = dd.merge(
-                    left_data.astype('string'), right_data.astype('string'), how=self.join_type,
+                    left_data, right_data, how=self.join_type,
                     left_on=self.left_keys, right_on=self.right_keys
                 )
 
