@@ -12,6 +12,31 @@ from earthmover import util
 class YamlMapping(dict):
     __line__: int = None
 
+    def to_dict(self):
+        """
+        Convert a YAML Mapping to a standard dictionary.
+        """
+        def recurse_mapping(item):
+            if isinstance(item, YamlMapping):
+                return item.to_dict()
+            else:
+                return item
+
+        output_dict: dict = {}
+
+        for key, val in self.items():
+            if isinstance(val, (list, tuple)):
+                output_dict[key] = list(map(recurse_mapping, val))
+            else:
+                output_dict[key] = recurse_mapping(val)
+
+        return output_dict
+
+    def to_disk(self, path: str):
+        """ Write the YamlMapping as a YAML file. """
+        with open(path, 'w') as outfile:
+            yaml.dump(self.to_dict(), outfile, default_flow_style=False, sort_keys=False)
+
 
 class JinjaEnvironmentYamlLoader(yaml.SafeLoader):
     """

@@ -114,17 +114,19 @@ class Earthmover:
 
         :return:
         """
+        # Complete a full-parse of the user config file.
+        full_configs = JinjaEnvironmentYamlLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
+
+        # Write the Jinja-templated file to disk (using .yamlt) file extension.
+        templated_filepath = self.config_file + 't'
+        full_configs.to_disk(templated_filepath)
+
+        # Build the graph type-by-type.
         node_types = [
             ('sources', Source, self.sources),
             ('transformations', Transformation, self.transformations),
             ('destinations', Destination, self.destinations),
         ]
-
-        ### Build the graph type-by-type.
-        # Complete a full-parse of the user config file.
-        full_configs = JinjaEnvironmentYamlLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
-
-        # TODO: Output Jinja-processed config file here.
 
         for node_type, node_class, node_collection in node_types:
             node_configs = self.error_handler.assert_get_key(full_configs, node_type, dtype=dict, required=False, default={})
@@ -135,7 +137,7 @@ class Earthmover:
                 node_collection.append(node)
                 node.compile()
 
-        ### Confirm that at least one source is defined.
+        # Confirm that at least one source is defined.
         if not self.sources:
             self.error_handler.throw("No sources have been defined!")
 
