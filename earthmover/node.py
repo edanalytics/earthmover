@@ -54,6 +54,10 @@ class Node:
         self.show_progress: bool = self.config.get('show_progress', self.earthmover.state_configs["show_progress"])
         self.progress_bar: ProgressBar = ProgressBar(minimum=10, dt=5.0)  # Always instantiate, but only use if `show_progress is True`.
 
+    @property
+    def full_name(self):
+        return f"${self.type}s.{self.name}"
+
     @abc.abstractmethod
     def compile(self):
         """
