@@ -17,10 +17,7 @@ class YamlMapping(dict):
         Convert a YAML Mapping to a standard dictionary.
         """
         def recurse_mapping(item):
-            if isinstance(item, YamlMapping):
-                return item.to_dict()
-            else:
-                return item
+            return item.to_dict() if isinstance(item, YamlMapping) else item
 
         output_dict: dict = {}
 
