@@ -2,7 +2,7 @@ import dask.dataframe as dd
 import numpy as np
 import pandas as pd
 
-from earthmover.node import Node
+from earthmover.nodes.node import Node
 from earthmover.operations.operation import Operation
 
 from typing import Dict, List, Tuple
