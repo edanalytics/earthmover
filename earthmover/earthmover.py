@@ -184,6 +184,11 @@ class Earthmover:
                     "forcing regenerate, since some sources are remote (and we cannot know if they changed)"
                 )
 
+            elif any(hasattr(source, 'file') and os.path.isdir(source.file) for source in self.sources):
+                self.logger.info(
+                    "forcing regenerate, since some file sources are directories (and cannot be efficiently hashed)"
+                )
+
             elif self.force:
                 self.logger.info("forcing regenerate")
 
