@@ -23,9 +23,10 @@ setuptools.setup (
     include_package_data=True,
     install_requires = all_reqs,
     extras_require = {
+        'graph': ['matplotlib'],
         'parquet': ['pyarrow'],
         'sql': ['sqlalchemy', 'psycopg2'],
-        'graph': ['matplotlib'],
+        'xml': ['pyarrow', 'lxml'],
     },
     python_requires = '>=3',
     entry_points = '''
