@@ -497,7 +497,7 @@ class DateFormatOperation(Operation):
         for _column in self.columns_list:
             try:
                 data[_column] = (
-                    dask.dataframe.to_datetime(data[_column], format=self.from_format, exact=True if self.exact_match else False, errors='coerce' if self.ignore_errors else 'raise')
+                    dask.dataframe.to_datetime(data[_column], format=self.from_format, exact=bool(self.exact_match), errors='coerce' if self.ignore_errors else 'raise')
                         .dt.strftime(self.to_format)
                 )
 
