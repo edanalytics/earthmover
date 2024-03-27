@@ -4,7 +4,7 @@ import pandas as pd
 import re
 import string
 
-from earthmover.nodes.operation import Operation
+from earthmover.operations.operation import Operation
 from earthmover import util
 
 from typing import Dict, List, Tuple

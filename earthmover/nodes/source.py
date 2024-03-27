@@ -5,7 +5,7 @@ import os
 import pandas as pd
 import re
 
-from earthmover.node import Node
+from earthmover.nodes.node import Node
 from earthmover import util
 
 from typing import Callable, List, Optional, Tuple

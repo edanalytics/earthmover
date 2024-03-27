@@ -1,7 +1,7 @@
 import pandas as pd
 import re
 
-from earthmover.nodes.operation import Operation
+from earthmover.operations.operation import Operation
 
 from typing import Dict, List, Tuple
 from typing import TYPE_CHECKING

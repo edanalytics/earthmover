@@ -1,6 +1,6 @@
 import abc
 
-from earthmover.node import Node
+from earthmover.nodes.node import Node
 
 from typing import Dict, Tuple
 from typing import TYPE_CHECKING

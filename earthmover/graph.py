@@ -8,7 +8,7 @@ from typing import Dict, Iterable, Optional
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from earthmover.error_handler import ErrorHandler
-    from earthmover.node import Node
+    from earthmover.nodes.node import Node
 
 
 class Graph(nx.DiGraph):
