@@ -1,7 +1,9 @@
 import abc
 import dask
 import jinja2
+import logging
 import pandas as pd
+import warnings
 
 from dask.diagnostics import ProgressBar
 
@@ -45,7 +47,7 @@ class Node:
         self.num_cols: int = None
 
         self.expectations: List[str] = None
-        self.debug: bool = False
+        self.debug: bool = (self.logger.level <= logging.DEBUG)  # Default to Logger's level.
 
         # Internal Dask configs
         self.partition_size: Union[str, int] = self.config.get('repartition')
@@ -73,7 +75,7 @@ class Node:
                 )
 
         # Always check for debug and expectations
-        self.debug = self.config.get('debug', False)
+        self.debug = self.debug or self.config.get('debug', False)
         self.expectations = self.error_handler.assert_get_key(self.config, 'expect', dtype=list, required=False)
 
         pass
@@ -121,12 +123,17 @@ class Node:
         else:
             self.num_rows, self.num_cols = self.data.shape
 
+        # Display row-count and dataframe shape if debug is enabled.
         if self.debug:
-            self.num_rows = dask.compute(self.num_rows)[0]
-            self.logger.debug(
-                f"Node {self.name}: {self.num_rows} rows; {self.num_cols} columns\n"
-                f"Header: {self.data.columns if hasattr(self.data, 'columns') else 'No header'}"
-            )
+            with warnings.catch_warnings():  # Turn off UserWarnings when the number of rows is less than the head-size.
+                warnings.filterwarnings("ignore", message="Insufficient elements for `head`")
+
+                # Complete all computes at once to reduce duplicate computation.
+                self.num_rows, data_head = dask.compute([self.num_rows, self.data.head(5)])[0]
+                self.logger.info(
+                    f"Node {self.name}: {self.num_rows} rows; {self.num_cols} columns\n{data_head}"
+                )
+                # TODO: This outputs twice due to multiple optimization passes: https://github.com/dask/dask/issues/7545
 
         pass
 
