@@ -252,7 +252,7 @@ Each source must have a name (which is how it is referenced by transformations a
 * Database sources are supported via [SQLAlchemy](https://www.sqlalchemy.org/). They must specify a database `connection` string and SQL `query` to run.
 * FTP file sources are supported via [ftplib](https://docs.python.org/3/library/ftplib.html). They must specify an FTP `connection` string.
 
-For any source, optionally specify conditions you `expect` data to meet which, if not true for any row, will cause the run to fail with an error. (This can be useful for detecing and rejecting NULL or missing values before processing the data.) The format must be a Jinja expression that returns a boolean value. This is enables casting values (which are all treated as strings) to numeric formats like int and float for numeric comparisons.
+For any source, optionally specify conditions you `expect` data to meet which, if not true for any row, will cause the run to fail with an error. (This can be useful for detecting and rejecting NULL or missing values before processing the data.) The format must be a Jinja expression that returns a boolean value. This is enables casting values (which are all treated as strings) to numeric formats like int and float for numeric comparisons.
 
 The examples above show `user:pass` in the `connection` string, but if you are version-controlling your YAML you must avoid publishing such credentials. Typically this is done via [environment variables](#environment-variable-references) or [command line parameters](#command-line-parameters), which are both supported by this tool. Such environment variable references may be used throughout your YAML (not just in the `sources` section), and are parsed at load time.
 
@@ -557,8 +557,8 @@ Reduce the number of rows by grouping, and add columns with values calculated ov
 ```
 Valid aggregation functions are
 * `count()` or `size()` - the number of rows in each group
-* `min(column)` - the minumum (numeric) value in `column` for each group
-* `str_min(column)` - the minumum (string) value in `column` for each group
+* `min(column)` - the minimum (numeric) value in `column` for each group
+* `str_min(column)` - the minimum (string) value in `column` for each group
 * `max(column)` - the maximum (numeric) value in `column` for each group
 * `str_max(column)` - the maximum (string) value in `column` for each group
 * `sum(column)` - the sum of (numeric) values in `column` for each group
@@ -873,7 +873,7 @@ Generally you should separate the mappings, transformations, and structure of yo
 
 When dealing with sensitive source data, you may have to comply with security protocols, such as referencing sensitive data from a network storage location rather than copying it to your own computer. In this situation, option 2 above is a good choice.
 
-To facilitate [operationalization]($operationalization-practices), we recommended using [environment vairables](#environment-variable-references) or [command-line parameters](#command-line-parameters) to pass input and output directories and filenames to `earthmover`, rather than hard-coding them into `earthmover.yaml`. For example, rather than
+To facilitate [operationalization]($operationalization-practices), we recommended using [environment variables](#environment-variable-references) or [command-line parameters](#command-line-parameters) to pass input and output directories and filenames to `earthmover`, rather than hard-coding them into `earthmover.yaml`. For example, rather than
 ```yaml
 config:
   output_dir: path/to/outputs/
@@ -952,7 +952,7 @@ When developing your transformations, it can be helpful to
 You can remove these settings once your `earthmover` project is ready for operationalization.
 
 ## Operationalization practices
-Typically `earthmover` is used when the same (or simlar) data transformations must be done repeatedly. (A one-time data transformation task may be more easily done with [SQLite](https://www.sqlite.org/index.html) or a similar tool.) When deploying/operationalizing `earthmover`, whether with a simple scheduler like [cron](https://en.wikipedia.org/wiki/Cron) or an orchestration tool like [Airflow](https://airflow.apache.org/) or [Dagster](https://dagster.io/), consider
+Typically `earthmover` is used when the same (or similar) data transformations must be done repeatedly. (A one-time data transformation task may be more easily done with [SQLite](https://www.sqlite.org/index.html) or a similar tool.) When deploying/operationalizing `earthmover`, whether with a simple scheduler like [cron](https://en.wikipedia.org/wiki/Cron) or an orchestration tool like [Airflow](https://airflow.apache.org/) or [Dagster](https://dagster.io/), consider
 * specifying conditions you `expect` your [sources](#sources) to meet, so `earthmover` will fail on source data errors
 * specifying `config` &raquo; `log_level: INFO` and monitoring logs for phrases like
   > `distinct_rows` operation removed NN duplicate rows
