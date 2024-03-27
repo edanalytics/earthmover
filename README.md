@@ -480,8 +480,17 @@ Change the format of a date column.
           - date_column_3
         from_format: "%b %d %Y %H:%M%p"
         to_format: "%Y-%m-%d"
+        ignore_errors: False  # Default False
+        exact_match: False    # Default False
 ```
 The `from_format` and `to_format` must follow [Python's strftime() and strptime() formats](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).
+
+When `ignore_errors` is set to True, empty strings will be replaced with Pandas NaT (not-a-time) datatypes.
+This ensures column-consistency and prevents a mix of empty strings and timestamps.
+
+When `exact_match` is set to True, the operation will only run successfully if the `from_format` input exactly matches the format of the date column.
+When False, the operation allows the format to partially-match the target string.
+
 </details>
 
 

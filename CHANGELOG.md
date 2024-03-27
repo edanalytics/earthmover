@@ -2,6 +2,9 @@
 <details>
 <summary>Released TODO</summary>
 * feature: `SortRowsOperation` sorts the dataset by `columns`
+* feature: add `optional_fields` key to all Sources to add optional empty columns when missing from schema
+* internal: force-cast a dataframe to string-type after loading a Source
+* internal: force-cast a dataframe to string-type before writing as a Destination
 </details>
 
 ### v0.2.0
