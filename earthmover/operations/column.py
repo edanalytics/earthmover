@@ -533,7 +533,7 @@ class SnakeCaseColumnsOperation(Operation):
                 f"Snake case operation creates duplicate columns!\n"
                 f"Columns before: {len(set(data_columns))}\n"
                 f"Columns after : {len(set(snake_columns))}"
-                f"Columns after typed : {snake_columns}"
+                f"Columns after typed : {set(snake_columns)}"
             )
 
         data = data.rename(columns=dict(zip(data_columns, snake_columns)))
