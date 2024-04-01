@@ -55,6 +55,7 @@ class Node:
         # Optional variables for displaying progress and diagnostics.
         self.show_progress: bool = self.config.get('show_progress', self.earthmover.state_configs["show_progress"])
         self.progress_bar: ProgressBar = ProgressBar(minimum=10, dt=5.0)  # Always instantiate, but only use if `show_progress is True`.
+        self.head_was_displayed: bool = False  # Workaround to prevent displaying the head twice when debugging.
 
     @abc.abstractmethod
     def compile(self):
@@ -125,17 +126,29 @@ class Node:
 
         # Display row-count and dataframe shape if debug is enabled.
         if self.debug:
-            with warnings.catch_warnings():  # Turn off UserWarnings when the number of rows is less than the head-size.
-                warnings.filterwarnings("ignore", message="Insufficient elements for `head`")
-
-                # Complete all computes at once to reduce duplicate computation.
-                self.num_rows, data_head = dask.compute([self.num_rows, self.data.head(5)])[0]
-                self.logger.info(
-                    f"Node {self.name}: {self.num_rows} rows; {self.num_cols} columns\n{data_head}"
-                )
-                # TODO: This outputs twice due to multiple optimization passes: https://github.com/dask/dask/issues/7545
+            self.display_head()
 
         pass
+
+    def display_head(self, nrows: int = 5):
+        """
+        Originally, this outputted twice due to multiple optimization passes: https://github.com/dask/dask/issues/7545
+        """
+        if self.head_was_displayed:
+            return None
+
+        # Turn off UserWarnings when the number of rows is less than the head-size.
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message="Insufficient elements for `head`")
+
+            # Complete all computes at once to reduce duplicate computation.
+            self.num_rows, data_head = dask.compute([self.num_rows, self.data.head(nrows)])[0]
+
+            self.logger.info(f"Node {self.name}: {self.num_rows} rows; {self.num_cols} columns")
+            with pd.option_context('display.max_columns', None, 'display.width', None):
+                print(f"\n{data_head.to_string(index=False)}\n")
+
+            self.head_was_displayed = True  # Mark that state was shown to avoid double-logging.
 
     def check_expectations(self, expectations: List[str]):
         """
