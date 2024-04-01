@@ -5,6 +5,7 @@
 * feature: add `optional_fields` key to all Sources to add optional empty columns when missing from schema
 * internal: force-cast a dataframe to string-type after loading a Source
 * internal: force-cast a dataframe to string-type before writing as a Destination
+* internal: refactor project to standardize import paths for Node and Operation
 </details>
 
 ### v0.2.0

@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from earthmover.earthmover import Earthmover
-    from earthmover.node import Node
+    from earthmover.nodes.node import Node
     from logging import Logger
 
 
