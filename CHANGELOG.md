@@ -2,6 +2,7 @@
 <details>
 <summary>Released TODO</summary>
 * feature: `SortRowsOperation` sorts the dataset by `columns`
+* feature: setting `log_level: DEBUG` in template configs or setting `debug: True` for a node displays the head of the node mid-run 
 </details>
 
 ### v0.2.0
