@@ -1,7 +1,9 @@
 import abc
 import dask
 import jinja2
+import logging
 import pandas as pd
+import warnings
 
 from dask.diagnostics import ProgressBar
 
@@ -45,7 +47,7 @@ class Node:
         self.num_cols: int = None
 
         self.expectations: List[str] = None
-        self.debug: bool = False
+        self.debug: bool = (self.logger.level <= logging.DEBUG)  # Default to Logger's level.
 
         # Internal Dask configs
         self.partition_size: Union[str, int] = self.config.get('repartition')
@@ -53,6 +55,7 @@ class Node:
         # Optional variables for displaying progress and diagnostics.
         self.show_progress: bool = self.config.get('show_progress', self.earthmover.state_configs["show_progress"])
         self.progress_bar: ProgressBar = ProgressBar(minimum=10, dt=5.0)  # Always instantiate, but only use if `show_progress is True`.
+        self.head_was_displayed: bool = False  # Workaround to prevent displaying the head twice when debugging.
 
     @abc.abstractmethod
     def compile(self):
@@ -73,7 +76,7 @@ class Node:
                 )
 
         # Always check for debug and expectations
-        self.debug = self.config.get('debug', False)
+        self.debug = self.debug or self.config.get('debug', False)
         self.expectations = self.error_handler.assert_get_key(self.config, 'expect', dtype=list, required=False)
 
         pass
@@ -121,14 +124,31 @@ class Node:
         else:
             self.num_rows, self.num_cols = self.data.shape
 
+        # Display row-count and dataframe shape if debug is enabled.
         if self.debug:
-            self.num_rows = dask.compute(self.num_rows)[0]
-            self.logger.debug(
-                f"Node {self.name}: {self.num_rows} rows; {self.num_cols} columns\n"
-                f"Header: {self.data.columns if hasattr(self.data, 'columns') else 'No header'}"
-            )
+            self.display_head()
 
         pass
+
+    def display_head(self, nrows: int = 5):
+        """
+        Originally, this outputted twice due to multiple optimization passes: https://github.com/dask/dask/issues/7545
+        """
+        if self.head_was_displayed:
+            return None
+
+        # Turn off UserWarnings when the number of rows is less than the head-size.
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message="Insufficient elements for `head`")
+
+            # Complete all computes at once to reduce duplicate computation.
+            self.num_rows, data_head = dask.compute([self.num_rows, self.data.head(nrows)])[0]
+
+            self.logger.info(f"Node {self.name}: {self.num_rows} rows; {self.num_cols} columns")
+            with pd.option_context('display.max_columns', None, 'display.width', None):
+                print(f"\n{data_head.to_string(index=False)}\n")
+
+            self.head_was_displayed = True  # Mark that state was shown to avoid double-logging.
 
     def check_expectations(self, expectations: List[str]):
         """
