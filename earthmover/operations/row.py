@@ -1,6 +1,6 @@
 import dask
 
-from earthmover.nodes.operation import Operation
+from earthmover.operations.operation import Operation
 
 from typing import List, Tuple
 from typing import TYPE_CHECKING

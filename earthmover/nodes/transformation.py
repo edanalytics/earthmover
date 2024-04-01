@@ -1,5 +1,5 @@
-from earthmover.node import Node
-from earthmover.nodes.operation import Operation
+from earthmover.nodes.node import Node
+from earthmover.operations.operation import Operation
 
 from typing import List, Tuple
 

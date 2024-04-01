@@ -6,6 +6,7 @@
 * feature: add optional `ignore_errors` and `exact_match` boolean flags to `DateFormatOperation`
 * internal: force-cast a dataframe to string-type after loading a Source
 * internal: force-cast a dataframe to string-type before writing as a Destination
+* internal: refactor project to standardize import paths for Node and Operation
 </details>
 
 ### v0.2.0
