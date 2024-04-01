@@ -529,10 +529,11 @@ class SnakeCaseColumnsOperation(Operation):
         snake_columns = list(map(self.to_snake_case, data_columns))
 
         if len(set(data_columns)) != len(set(snake_columns)):
-            self.error_handler.throw(
+            self.logger.warning(
                 f"Snake case operation creates duplicate columns!\n"
                 f"Columns before: {len(set(data_columns))}\n"
                 f"Columns after : {len(set(snake_columns))}"
+                f"Columns after typed : {snake_columns}"
             )
 
         data = data.rename(columns=dict(zip(data_columns, snake_columns)))
