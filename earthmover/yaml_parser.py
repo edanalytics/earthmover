@@ -12,6 +12,45 @@ from earthmover import util
 class YamlMapping(dict):
     __line__: int = None
 
+    def update(self, _dict: 'YamlMapping'):
+        """
+        Inspired by Tom Reitz's Bifrost (https://github.com/edanalytics/bifrost/blob/main/build-swagger.py).
+        Includes merging of line and file dunders.
+
+        :param _dict:
+        :return:
+        """
+        for key, val in _dict.items():
+            if key in self and isinstance(self[key], type(self)) and isinstance(val, type(self)):
+                self[key] = self[key].update(val)
+                self[key].__line__ = val.__line__
+            else:
+                self[key] = val
+        return self
+
+    def to_dict(self):
+        """
+        Convert a YAML Mapping to a standard dictionary.
+        """
+        output_dict: dict = {}
+
+        for key, val in self.items():
+            if isinstance(val, (list, tuple)):
+                output_dict[key] = list(map(_recurse_to_dict, val))
+            else:
+                output_dict[key] = _recurse_to_dict(val)
+
+        return output_dict
+
+    @staticmethod
+    def _recurse_to_dict(item):
+        return item.to_dict() if isinstance(item, YamlMapping) else item
+
+    def to_disk(self, path: str):
+        """ Write the YamlMapping as a YAML file. """
+        with open(path, 'w') as outfile:
+            yaml.dump(self.to_dict(), outfile, default_flow_style=False, sort_keys=False)
+
 
 class JinjaEnvironmentYamlLoader(yaml.SafeLoader):
     """
