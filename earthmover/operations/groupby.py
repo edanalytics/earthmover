@@ -53,7 +53,7 @@ class GroupByWithCountOperation(Operation):
 
         data = (
             data
-                .groupby(self.GROUPED_COL_NAME, sort=False)
+                .groupby(self.GROUPED_COL_NAME, sort=False, observed=True)
                 .size()
                 .reset_index()
         )
@@ -116,7 +116,7 @@ class GroupByWithAggOperation(Operation):
             lambda x: self.GROUPED_COL_SEP.join([*self.group_by_columns])
             , axis=1, meta='str')
 
-        _grouped = data.groupby(self.GROUPED_COL_NAME, sort=False)
+        _grouped = data.groupby(self.GROUPED_COL_NAME, sort=False, observed=True)
         _grouped = _grouped[[self.agg_column]].agg(self.separator.join)
 
         data = _grouped.reset_index()
@@ -180,7 +180,7 @@ class GroupByOperation(Operation):
             raise
 
         #
-        grouped = data.groupby(self.group_by_columns)
+        grouped = data.groupby(self.group_by_columns, observed=True)
 
         result = grouped.size().reset_index()
         result.columns = self.group_by_columns + [self.GROUP_SIZE_COL]
