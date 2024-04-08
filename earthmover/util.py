@@ -1,5 +1,6 @@
 import jinja2
 import hashlib
+import json
 import os
 
 from sys import exc_info
@@ -129,5 +130,6 @@ def build_jinja_template(template_string: str, macros: str = ""):
     ).from_string(macros.strip() + template_string)
 
     template.globals['md5'] = lambda x: hashlib.md5(x.encode('utf-8')).hexdigest()
+    template.globals['fromjson'] = lambda x: json.loads(x)
 
     return template
