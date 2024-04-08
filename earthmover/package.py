@@ -109,7 +109,7 @@ class Package:
         for transformation in self.error_handler.assert_get_key(yaml_mapping, 'transformations', dtype=dict, required=False, default={}):
             operation_num = 0
             for operation in self.error_handler.assert_get_key(yaml_mapping['transformations'][transformation], 'operations', dtype=list, required=False, default=[]):
-                if operation['operation'] == 'map_values' and not os.path.isabs(operation['map_file']):
+                if operation['operation'] == 'map_values' and 'map_file' in operation and not os.path.isabs(operation['map_file']):
                     yaml_mapping['transformations'][transformation]['operations'][operation_num]['map_file'] = os.path.join(self.package_path, operation['map_file'].strip('./'))
                 operation_num += 1
 
