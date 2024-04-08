@@ -1,7 +1,11 @@
 ### v0.2.1
 <details>
-<summary>Released TODO</summary>
-* feature: `SortRowsOperation` sorts the dataset by `columns`
+<summary>Released 2024-04-08</summary>
+
+* feature: [adding fromjson() function to Jinja](https://github.com/edanalytics/earthmover/pull/75)
+* feature: [fix docs typos](https://github.com/edanalytics/earthmover/pull/68)
+* feature: [`SortRowsOperation` sorts the dataset by `columns`](https://github.com/edanalytics/earthmover/pull/56)
+
 </details>
 
 ### v0.2.0
