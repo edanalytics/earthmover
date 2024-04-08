@@ -62,5 +62,12 @@ earthmover run -f
 rm -rf outputs/*
 echo "  ... done!"
 
+echo "  running 11_composition..."
+cd ../11_composition/
+earthmover deps
+earthmover run -f
+rm -rf outputs/*, packages/*
+echo "  ... done!"
+
 cd ../
 echo "all examples have run, goodbye"

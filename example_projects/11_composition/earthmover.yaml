@@ -1,0 +1,36 @@
+version: 2
+
+config:
+  log_level: DEBUG
+  output_dir: ./output/
+
+
+packages: 
+  edfi_example_project:
+    local: '../09_edfi/'
+
+
+sources:
+  # this is fake data!
+  schools:
+    file: ./sources/schools.csv
+    header_rows: 1
+    columns:
+      - district_id
+      - school_id
+      - school_name
+      - low_grade
+      - high_grade
+      - address
+      - city
+      - state
+      - zip
+      - telephone
+
+
+destinations:
+  schools:
+    source: $sources.schools
+    template: ./templates/school.jsont
+    extension: jsonl
+    linearize: True
