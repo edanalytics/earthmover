@@ -36,9 +36,9 @@ class YamlMapping(dict):
 
         for key, val in self.items():
             if isinstance(val, (list, tuple)):
-                output_dict[key] = list(map(_recurse_to_dict, val))
+                output_dict[key] = list(map(self._recurse_to_dict, val))
             else:
-                output_dict[key] = _recurse_to_dict(val)
+                output_dict[key] = self._recurse_to_dict(val)
 
         return output_dict
 
