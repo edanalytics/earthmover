@@ -24,6 +24,7 @@ class YamlMapping(dict):
             if key in self and isinstance(self[key], type(self)) and isinstance(val, type(self)):
                 self[key] = self[key].update(val)
                 self[key].__line__ = val.__line__
+                self[key].__file__ = val.__file__
             else:
                 self[key] = val
         return self
@@ -63,6 +64,7 @@ class JinjaEnvironmentYamlLoader(yaml.SafeLoader):
         - See https://stackoverflow.com/questions/52412297
     """
     num_macros_lines: int = 0
+    file: str = None
 
     def construct_yaml_map(self, node):
         """
@@ -73,7 +75,8 @@ class JinjaEnvironmentYamlLoader(yaml.SafeLoader):
         :return:
         """
         data = YamlMapping()  # Originally `data = {}`
-        data.__line__ = node.start_mark.line + + self.num_macros_lines
+        data.__line__ = node.start_mark.line + self.num_macros_lines
+        data.__file__ = self.file
         yield data
 
         value = self.construct_mapping(node)
@@ -195,6 +198,7 @@ class JinjaEnvironmentYamlLoader(yaml.SafeLoader):
         full_params = {**params, **os.environ.copy()}
         full_params = {k: str(v) for k, v in full_params.items()}  # Force values to strings before templating.
 
+        JinjaEnvironmentYamlLoader.file = filepath
         with open(filepath, "r", encoding='utf-8') as stream:
             content_string = stream.read()  # Force to a string to apply templating and expand Jinja
 

@@ -79,7 +79,7 @@ class Operation(Node):
         :return:
         """
         self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
+            file=self.config.__file__, line=self.config.__line__, node=self, operation=None
         )
 
         pass
