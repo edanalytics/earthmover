@@ -100,7 +100,7 @@ class FileSource(Source):
     mode: str = 'file'
     is_remote: bool = False
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional',
+        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
         'file', 'type', 'columns', 'header_rows',
         'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
     )
@@ -294,7 +294,7 @@ class FtpSource(Source):
     mode: str = 'ftp'
     is_remote: bool = True
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional',
+        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
         'connection', 'query',
     )
 
@@ -366,7 +366,7 @@ class SqlSource(Source):
     mode: str = 'sql'
     is_remote: bool = True
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional',
+        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
         'connection', 'query',
     )
 
