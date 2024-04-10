@@ -14,7 +14,7 @@ class Operation(Node):
     """
 
     """
-    type: str = "operation"
+    type: str = "transformation"
     allowed_configs: Tuple[str] = ('operation', 'repartition',)
 
     def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
