@@ -82,7 +82,6 @@ class Source(Node):
             )
             self.data = dd.from_pandas(self.data, chunksize=self.chunksize)
 
-        self.data = self.data.astype("string")  # Force to string type to prevent datatype mismatches.
         self.data = self.opt_repartition(self.data)  # Repartition if specified.
 
         # Add missing columns if defined under `optional_fields`.
