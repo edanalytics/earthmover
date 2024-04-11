@@ -434,16 +434,12 @@ class Earthmover:
                 node_yaml = node_package.package_yaml or node_package.load_package_yaml(self.params, self.macros)
                 predecessor_yaml = predecessor_package.package_yaml or predecessor_package.load_package_yaml(self.params, self.macros)
 
-                merged_yaml = self.merge_dicts(node_yaml, predecessor_yaml)
+                merged_yaml = node_yaml.update(predecessor_yaml)
                 predecessor_package.package_yaml = merged_yaml
 
-
-        # Overwrite with completed merged yaml  
+        # Overwrite with completed merged yaml and output to disk
         self.user_configs = self.package_graph.nodes['root']['package'].package_yaml
-        
-        # Output merged yaml file
-        with open("./earthmover_composed.yml", "w") as f:
-            yaml.safe_dump(json.loads(json.dumps(self.user_configs, ensure_ascii=True)), f, default_flow_style=False)
+        self.user_configs.to_disk("./earthmover_composed.yml")
 
 
     def build_root_package_graph(self):
@@ -525,21 +521,4 @@ class Earthmover:
             if any(True for _ in self.package_graph.successors(package_name)):    
                 nested_package_dir = os.path.join(package_node['package'].package_path, 'packages')
                 nested_package_subgraph = nx.ego_graph(self.package_graph, package_name)
-
                 self.build_package_graph(root_node=package_name, package_subgraph=nested_package_subgraph, packages_dir=nested_package_dir, install=install)
-
-
-    @staticmethod
-    def merge_dicts(dict1, dict2):
-        """
-        Courtesy of Tom Reitz's Bifrost (https://github.com/edanalytics/bifrost/blob/main/build-swagger.py)
-        :param dict1:
-        :param dict2:
-        :return:
-        """     
-        for key, value in dict2.items():
-            if key in dict1 and isinstance(dict1[key], dict) and isinstance(value, dict):
-                dict1[key] = Earthmover.merge_dicts(dict1[key], value)
-            else:
-                dict1[key] = value
-        return dict1
