@@ -181,7 +181,7 @@ class FileSource(Source):
 
         try:
             if not self.file and self.optional:
-                self.data = pd.DataFrame(columns = self.columns_list)
+                self.data = pd.DataFrame(columns=self.columns_list, dtype="string")
             else:
                 self.data = self.read_lambda(self.file, self.config)
 
