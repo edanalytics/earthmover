@@ -190,8 +190,8 @@ def main(argv=None):
 
         try:
             em.merge_packages()
-            em.build_graph()
             em.compile()
+            em.build_graph()
             em.logger.info("looks ok")
 
         except Exception as e:

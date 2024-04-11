@@ -61,6 +61,12 @@ class Node:
     def full_name(self):
         return f"${self.type}s.{self.name}"
 
+    def set_upstream_source(self, source_name: str, node: 'Node'):
+        """ Upstream sources initialize as strings and are replaced during Earthmover.build_graph(). """
+        if source_name not in self.upstream_sources:
+            self.error_handler.throw(f"Source {source_name} not found in Node sources list.")
+        self.upstream_sources[source_name] = node
+
     @abc.abstractmethod
     def compile(self):
         """
