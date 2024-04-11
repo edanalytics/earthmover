@@ -57,6 +57,10 @@ class Node:
         self.progress_bar: ProgressBar = ProgressBar(minimum=10, dt=5.0)  # Always instantiate, but only use if `show_progress is True`.
         self.head_was_displayed: bool = False  # Workaround to prevent displaying the head twice when debugging.
 
+    @property
+    def full_name(self):
+        return f"${self.type}s.{self.name}"
+
     @abc.abstractmethod
     def compile(self):
         """
