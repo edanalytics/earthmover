@@ -23,6 +23,7 @@ setuptools.setup (
     include_package_data=True,
     install_requires = all_reqs,
     extras_require = {
+        'excel': ['openpyxl'],
         'graph': ['matplotlib'],
         'parquet': ['pyarrow'],
         'sql': ['sqlalchemy', 'psycopg2'],
