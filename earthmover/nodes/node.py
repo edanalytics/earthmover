@@ -35,7 +35,7 @@ class Node:
         self.error_handler: 'ErrorHandler' = earthmover.error_handler
 
         self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
+            file=self.config.__file__, line=self.config.__line__, node=self, operation=None
         )
 
         self.upstream_sources: Dict[str, Optional['Node']] = {}
@@ -64,7 +64,7 @@ class Node:
         :return:
         """
         self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
+            file=self.config.__file__, line=self.config.__line__, node=self, operation=None
         )
 
         # Verify all configs provided by the user are specified for the node.
@@ -90,7 +90,7 @@ class Node:
         :return:
         """
         self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
+            file=self.config.__file__, line=self.config.__line__, node=self, operation=None
         )
 
         # Turn on the progress bar manually.

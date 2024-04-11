@@ -7,9 +7,11 @@ import os
 import time
 import datetime
 import pandas as pd
+import yaml
 
 from earthmover.error_handler import ErrorHandler
 from earthmover.graph import Graph
+from earthmover.package import Package
 from earthmover.runs_file import RunsFile
 from earthmover.nodes.destination import Destination
 from earthmover.nodes.source import Source
@@ -58,6 +60,9 @@ class Earthmover:
         self.config_file = config_file
         self.error_handler = ErrorHandler(file=self.config_file)
 
+        # Set a directory for installing packages
+        self.packages_dir = os.path.join(os.getcwd(), 'packages')
+
         # Parse the user-provided config file and retrieve project-configs, macros, and parameter defaults.
         # Merge the optional user configs into the defaults.
         self.params = json.loads(params) if params else {}
@@ -97,6 +102,9 @@ class Earthmover:
 
         # Initialize the NetworkX DiGraph
         self.graph = Graph(error_handler=self.error_handler)
+
+        # Initialize a NetworkX DiGraph for tracking package hierarchy
+        self.package_graph = Graph(error_handler=self.error_handler)
 
         # Initialize a dictionary for tracking run metadata (for structured output)
         self.metadata = {
@@ -388,3 +396,134 @@ class Earthmover:
             if not _expected_df.equals(_outputted_df):
                 self.logger.critical(f"Test output `{_outputted_file}` does not match expected output.")
                 exit(1)
+
+
+    def deps(self):
+        """
+        Installs all packages specified in the config file and any nested packages.
+        :return:
+        """
+        self.build_root_package_graph()
+
+        # Check that at least one package is defined
+        if all(False for _ in self.package_graph.successors('root')):
+            self.error_handler.throw("No packages have been defined!")
+
+        # Install each package (and any nested sub-packages) into the packages directory
+        self.build_package_graph(root_node='root', package_subgraph=self.package_graph, packages_dir=self.packages_dir, install=True)
+
+
+    def merge_packages(self):
+        """
+        Traverses the packages graph, merging yaml config from successors into predecessors.
+        Saves the final result as the instance user_configs.
+        :return:
+        """
+        self.build_root_package_graph()
+
+        # If the yaml file doesn't include packages, no need to alter
+        if all(False for _ in self.package_graph.successors('root')):
+            return
+        
+        self.build_package_graph(root_node='root', package_subgraph=self.package_graph, packages_dir=self.packages_dir, install=False)
+
+        # Merge each package yaml into the predecessor yaml, storing the result in the predecessor
+        # Post-order traversal ensures the correct hierarchy of merges
+        for package_name in nx.dfs_postorder_nodes(self.package_graph):
+            node_package = self.package_graph.nodes[package_name]['package']
+
+            for predecessor_name in self.package_graph.predecessors(package_name): # more elegant way to do this? we know each node will only have one predecessor
+                predecessor_package = self.package_graph.nodes[predecessor_name]['package']
+                
+                # Load package yaml if not yet loaded
+                node_yaml = node_package.package_yaml or node_package.load_package_yaml(self.params, self.macros)
+                predecessor_yaml = predecessor_package.package_yaml or predecessor_package.load_package_yaml(self.params, self.macros)
+
+                merged_yaml = node_yaml.update(predecessor_yaml)
+                predecessor_package.package_yaml = merged_yaml
+
+        # Overwrite with completed merged yaml and output to disk
+        self.user_configs = self.package_graph.nodes['root']['package'].package_yaml
+        self.user_configs.to_disk("./earthmover_composed.yml")
+
+
+    def build_root_package_graph(self):
+        """
+        Builds a directed graph of the packages specified in the root user config.
+        If no packages, the graph will contain a single root node.
+        :return:
+        """
+        # Create a root package to be the root of the packages directed graph
+        root_package = Package('root', self.user_configs, earthmover=self, package_path=os.getcwd())
+        root_package.config_file = self.config_file
+        self.package_graph.add_node('root', package=root_package)
+
+        package_config = self.error_handler.assert_get_key(self.user_configs, 'packages', dtype=dict, required=False, default={})
+
+        for name, config in package_config.items():
+            package = Package(name, config, earthmover=self)
+            self.package_graph.add_node(name, package=package) 
+            self.package_graph.add_edge(root_package.name, name)
+            
+
+    def build_package_graph(self, root_node: str, package_subgraph: Graph, packages_dir: str, install: bool):
+        """
+        Traverses a subgraph of packages, installing them if specified and:
+         - updating the instance params with any parameter defaults specified in the packages
+         - prepending their macros to the instance macro string
+         - building any nested packages into the instance package_graph
+
+        :param root_node:
+        :param package_subgraph:
+        :param packages_dir:
+        :param install:
+        :return:
+        """        
+        # Create packages directory
+        if not os.path.isdir(packages_dir):
+            self.logger.info(
+                f"creating package directory {packages_dir}"
+            )
+            os.makedirs(packages_dir, exist_ok=True)
+
+        # Check for cycles in the package graph
+        if not nx.is_directed_acyclic_graph(self.package_graph):
+            _cycle = nx.find_cycle(self.package_graph)
+            self.error_handler.throw(
+                f"The package graph has a cycle! Installation stopped. Cycle: {_cycle}"
+            )
+            raise
+
+        for package_name in package_subgraph.successors(root_node):
+            package_node = self.package_graph.nodes[package_name]
+            # Install packages if necessary, or retrieve path to package yaml file
+            if install:
+                installed_package_yaml = package_node['package'].install(packages_dir)
+            else:
+                package_node['package'].package_path = os.path.join(packages_dir, package_name)
+                installed_package_yaml = package_node['package'].get_installed_config_file()
+
+            package_configs = JinjaEnvironmentYamlLoader.load_project_configs(installed_package_yaml, params=self.params)
+
+            # Update project parameter defaults from the package, if any
+            for key, val in package_configs.get("parameter_defaults", {}).items():
+                self.params.setdefault(key, val)
+
+            # Prepend package macros to the project macro string. Later macro definitions in the string will overwrite earlier ones 
+            self.macros = package_configs.get("macros", "").strip() + self.macros
+
+            # Load the package yaml and check for additional nested packages
+            package_config = JinjaEnvironmentYamlLoader.load_config_file(installed_package_yaml, params=self.params, macros=self.macros)
+            nested_package_config = self.error_handler.assert_get_key(package_config, 'packages', dtype=dict, required=False, default={})
+
+            # Add nested packages to packages_graph
+            for name, config in nested_package_config.items():
+                nested_package = Package(name, config, earthmover=self)
+                self.package_graph.add_node(name, package=nested_package)
+                self.package_graph.add_edge(package_name, name)
+
+            # Install nested packages by calling this function on a subgraph containing the current package node and its successors
+            if any(True for _ in self.package_graph.successors(package_name)):    
+                nested_package_dir = os.path.join(package_node['package'].package_path, 'packages')
+                nested_package_subgraph = nx.ego_graph(self.package_graph, package_name)
+                self.build_package_graph(root_node=package_name, package_subgraph=nested_package_subgraph, packages_dir=nested_package_dir, install=install)

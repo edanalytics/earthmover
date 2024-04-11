@@ -14,7 +14,7 @@ class Operation(Node):
     """
 
     """
-    type: str = "operation"
+    type: str = "transformation"
     allowed_configs: Tuple[str] = ('operation', 'repartition',)
 
     def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
@@ -81,7 +81,7 @@ class Operation(Node):
         :return:
         """
         self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
+            file=self.config.__file__, line=self.config.__line__, node=self, operation=None
         )
 
         pass
