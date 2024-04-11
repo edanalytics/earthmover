@@ -1,7 +1,7 @@
 import pandas as pd
 import re
 
-from earthmover.nodes.operation import Operation
+from earthmover.operations.operation import Operation
 
 from typing import Dict, List, Tuple
 from typing import TYPE_CHECKING
@@ -125,6 +125,49 @@ class GroupByWithAggOperation(Operation):
             self.GROUPED_COL_SEP, n=len(self.group_by_columns), expand=True
         )
         del data[self.GROUPED_COL_NAME]
+
+        return data
+
+
+class GroupByWithRankOperation(Operation):
+    """
+    
+    """
+    allowed_configs: Tuple[str] = (
+        'operation', 'group_by_columns', 'rank_column',
+    )
+
+    GROUPED_COL_NAME = "____grouped_col____"
+    GROUPED_COL_SEP = "_____"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.group_by_columns: str = None
+        self.rank_column: str = None
+
+    def compile(self):
+        """
+
+        :return:
+        """
+        super().compile()
+        self.group_by_columns = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
+        self.rank_column = self.error_handler.assert_get_key(self.config, 'rank_column', dtype=str)
+
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
+        """
+
+        :return:
+        """
+        super().execute(data, **kwargs)
+
+        if not set(self.group_by_columns).issubset(data.columns):
+            self.error_handler.throw(
+                "one or more specified group-by columns not in the dataset"
+            )
+            raise
+
+        data[self.rank_column] = data.groupby(self.group_by_columns).cumcount().reset_index(drop=True)
 
         return data
 
@@ -266,3 +309,4 @@ class GroupByOperation(Operation):
             'variance' : lambda x: pd.to_numeric(x[column]).var(),
         }
         return agg_lambda_mapping.get(agg_type)
+

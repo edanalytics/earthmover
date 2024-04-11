@@ -4,7 +4,7 @@ import os
 import pandas as pd
 import re
 
-from earthmover.node import Node
+from earthmover.nodes.node import Node
 from earthmover import util
 
 from typing import Tuple
@@ -110,7 +110,6 @@ class FileDestination(Destination):
         # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
         self.data = (
             self.upstream_sources[self.source].data
-                .fillna('')
                 .map_partitions(lambda x: x.apply(self.render_row, axis=1), meta=pd.Series('str'))
         )
 
@@ -135,6 +134,7 @@ class FileDestination(Destination):
         self.size = os.path.getsize(self.file)
 
     def render_row(self, row: pd.Series):
+        row = row.astype("string").fillna('')
         _data_tuple = row.to_dict()
         _data_tuple["__row_data__"] = row
 

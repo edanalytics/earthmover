@@ -1,6 +1,6 @@
 import dask
 
-from earthmover.nodes.operation import Operation
+from earthmover.operations.operation import Operation
 
 from typing import List, Tuple
 from typing import TYPE_CHECKING
@@ -113,3 +113,42 @@ class FilterRowsOperation(Operation):
             raise
 
         return data
+
+class SortRowsOperation(Operation):
+        """
+
+        """
+        allowed_configs: Tuple[str] = (
+            'operation', 'repartition',
+            'columns', 'descending',
+        )
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.columns_list: List[str] = None
+            self.descending: bool = None
+
+        def compile(self):
+            """
+
+            :return:
+            """
+            super().compile()
+
+            self.columns_list = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
+            self.descending = self.error_handler.assert_get_key(self.config, 'descending', required=False, default=False)
+
+        def execute(self, data: 'DataFrame', **kwargs):
+            """
+
+            :return:
+            """
+            super().execute(data, **kwargs)
+
+            if not set(self.columns_list).issubset(data.columns):
+                self.error_handler.throw(
+                    "one or more columns for sorting are undefined in the dataset"
+                )
+                raise
+
+            return data.sort_values(by=self.columns_list, ascending=(not self.descending))

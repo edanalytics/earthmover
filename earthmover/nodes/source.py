@@ -5,7 +5,7 @@ import os
 import pandas as pd
 import re
 
-from earthmover.node import Node
+from earthmover.nodes.node import Node
 from earthmover import util
 
 from typing import Callable, List, Optional, Tuple
@@ -23,7 +23,7 @@ class Source(Node):
     type: str = 'source'
     mode: str = None  # Documents which class was chosen.
     is_remote: bool = None
-    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional',)
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',)
 
     NUM_ROWS_PER_CHUNK: int = 1000000
 
@@ -59,6 +59,9 @@ class Source(Node):
         # dataframe which is passed through to downstream transformations and destinations.)
         self.optional: bool = self.config.get('optional', False)
 
+        # Optional fields can be defined to be added as null columns if not present in the DataFrame.
+        self.optional_fields: List[str] = self.config.get('optional_fields', [])
+
     def compile(self):
         """
 
@@ -81,6 +84,13 @@ class Source(Node):
 
         self.data = self.opt_repartition(self.data)  # Repartition if specified.
 
+        # Add missing columns if defined under `optional_fields`.
+        if self.optional_fields:
+            for field in self.optional_fields:
+                if field not in self.data.columns:
+                    self.logger.debug(f"Optional column will be added to dataset: '{field}'")
+                    self.data[field] = ""  # Default to empty string.
+
         super().post_execute(**kwargs)
 
 
@@ -91,7 +101,7 @@ class FileSource(Source):
     mode: str = 'file'
     is_remote: bool = False
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional',
+        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
         'file', 'type', 'columns', 'header_rows',
         'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
     )
@@ -171,7 +181,7 @@ class FileSource(Source):
 
         try:
             if not self.file and self.optional:
-                self.data = pd.DataFrame(columns = self.columns_list)
+                self.data = pd.DataFrame(columns=self.columns_list, dtype="string")
             else:
                 self.data = self.read_lambda(self.file, self.config)
 
@@ -285,7 +295,7 @@ class FtpSource(Source):
     mode: str = 'ftp'
     is_remote: bool = True
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional',
+        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
         'connection', 'query',
     )
 
@@ -357,7 +367,7 @@ class SqlSource(Source):
     mode: str = 'sql'
     is_remote: bool = True
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional',
+        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
         'connection', 'query',
     )
 
