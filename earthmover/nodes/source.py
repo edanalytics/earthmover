@@ -160,6 +160,9 @@ class FileSource(Source):
         """
         super().execute()
 
+        # Verify necessary packages are installed.
+        self._verify_packages(self.file_type)
+
         try:
             if not self.file and self.optional:
                 self.data = pd.DataFrame(columns=self.columns_list, dtype="string")
@@ -184,10 +187,6 @@ class FileSource(Source):
             )
 
         # error handling:
-        except ImportError:
-            self.error_handler.throw(
-                f"processing .{self.file_type} file {self.file} requires the pyarrow library... please `pip install pyarrow`"
-            )
         except FileNotFoundError:
             self.error_handler.throw(
                 f"source file {self.file} not found"
@@ -267,6 +266,38 @@ class FileSource(Source):
             'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
         }
         return read_lambda_mapping.get(file_type)
+    
+    @staticmethod
+    def _verify_packages(file_type: str):
+        """
+        Verify necessary packages are installed before attempting load.
+        """
+        if file_type == 'parquet':
+            try:
+                import pyarrow
+            except ImportError:
+                self.error_handler.throw(
+                    "loading a Parquet source requires additional libraries... please install using `pip install earthmover[parquet]`"
+                )
+                raise
+        elif file_type == 'excel':
+            try:
+                import pyarrow
+                import openpyxl
+            except ImportError:
+                self.error_handler.throw(
+                    "loading an Excel source requires additional libraries... please install using `pip install earthmover[excel]`"
+                )
+                raise
+        elif file_type == 'xml':
+            try:
+                import pyarrow
+                import lxml
+            except ImportError:
+                self.error_handler.throw(
+                    "loading an XML source requires additional libraries... please install using `pip install earthmover[xml]`"
+                )
+                raise
 
 
 class FtpSource(Source):
