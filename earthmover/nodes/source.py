@@ -266,9 +266,8 @@ class FileSource(Source):
             'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
         }
         return read_lambda_mapping.get(file_type)
-    
-    @staticmethod
-    def _verify_packages(file_type: str):
+
+    def _verify_packages(self, file_type: str):
         """
         Verify necessary packages are installed before attempting load.
         """
