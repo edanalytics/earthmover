@@ -135,7 +135,7 @@ class Graph(nx.DiGraph):
 
             node_labels[node_id] = node.name
 
-            _node_size_label = f"{node.num_rows} rows; {node.num_cols} cols"
+            _node_size_label = f"{int(node.num_rows)} rows; {node.num_cols} cols"
             if node.size:
                 _node_size_label += f"; {util.human_size(node.size)}"
 

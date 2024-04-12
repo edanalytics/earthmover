@@ -144,7 +144,7 @@ class Node:
             # Complete all computes at once to reduce duplicate computation.
             self.num_rows, data_head = dask.compute([self.num_rows, self.data.head(nrows)])[0]
 
-            self.logger.info(f"Node {self.name}: {self.num_rows} rows; {self.num_cols} columns")
+            self.logger.info(f"Node {self.name}: {int(self.num_rows)} rows; {self.num_cols} columns")
             with pd.option_context('display.max_columns', None, 'display.width', None):
                 print(f"\n{data_head.to_string(index=False)}\n")
 
