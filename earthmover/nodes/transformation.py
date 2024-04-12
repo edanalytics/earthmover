@@ -25,19 +25,15 @@ class Transformation(Node):
             operation = Operation(self.name, operation_config, earthmover=self.earthmover)
             self.operations.append(operation)
 
+            # Only used by DataFrame Operations. Consider moving into those inits.
             if hasattr(operation, 'sources'):
                 for source in operation.sources:
                     self.upstream_sources[source] = None
 
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-
-        for operation in self.operations:
-            operation.compile()
+        # Force error-handler reset before graph is built.
+        self.error_handler.ctx.update(
+            file=self.config.__file__, line=self.config.__line__, node=self, operation=None
+        )
 
     def execute(self):
         """

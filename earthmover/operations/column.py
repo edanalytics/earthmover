@@ -24,14 +24,6 @@ class AddColumnsOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_dict: Dict[str, str] = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
@@ -80,14 +72,6 @@ class ModifyColumnsOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_dict: Dict[str, str] = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
@@ -141,14 +125,6 @@ class DuplicateColumnsOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_dict: Dict[str, str] = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
@@ -186,14 +162,6 @@ class RenameColumnsOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_dict: Dict[str, str] = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
@@ -229,14 +197,6 @@ class DropColumnsOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_to_drop: List[str] = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.columns_to_drop = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
@@ -268,15 +228,6 @@ class KeepColumnsOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.header: List[str] = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-
         self.header = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
@@ -308,20 +259,8 @@ class CombineColumnsOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_list: List[str] = None
-        self.new_column: str = None
-        self.separator: str = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-
         self.columns_list = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
         self.new_column   = self.error_handler.assert_get_key(self.config, 'new_column', dtype=str)
-
         self.separator = self.config.get('separator', "")
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
@@ -358,16 +297,6 @@ class MapValuesOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_list: List[str] = None
-        self.map_file: str = None
-        self.mapping: Dict[str, str] = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
 
         # Only 'column' or 'columns' can be populated
         _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
@@ -451,19 +380,6 @@ class DateFormatOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_list: List[str] = None
-        self.from_format: str = None
-        self.to_format: str = None
-        self.ignore_errors: bool = None
-        self.exact_match: bool = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-
         self.from_format = self.error_handler.assert_get_key(self.config, 'from_format', dtype=str)
         self.to_format   = self.error_handler.assert_get_key(self.config, 'to_format', dtype=str)
         self.ignore_errors   = self.error_handler.assert_get_key(self.config, 'ignore_errors', dtype=bool, required=False)

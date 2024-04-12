@@ -34,9 +34,7 @@ def main(argv=None):
     :param argv:
     :return:
     """
-    if argv is None:
-        argv = sys.argv
-    
+    ### Prepare and initialize the parser with defaults.
     description = """Efficient data transformer: converts tablular data from files
         or database connections into JSON, XML, and other text-based formats via
         instructions from a YAML configuration file. Supports joins, unions,
@@ -96,12 +94,18 @@ def main(argv=None):
         type=str,
         help='produces a JSON output file with structured information about run results'
     )
-    
-    _defaults = { "selector":"*", "params": "", "results_file": "" }
-    parser.set_defaults(**_defaults)
 
+    # Set empty defaults in case they've not been populated by the user.
+    parser.set_defaults(**{
+        "selector": "*",
+        "params": "",
+        "results_file": "",
+    })
+
+    ### Parse the user-inputs and run Earthmover, depending on the command and subcommand passed.
     args, remaining_argv = parser.parse_known_args()
-    
+
+    # Command: Version
     if args.version:
         em_dir = os.path.dirname(os.path.abspath(__file__))
         version_file = os.path.join(em_dir, 'VERSION.txt')
@@ -110,6 +114,7 @@ def main(argv=None):
             print(f"earthmover, version {VERSION}")
         exit(0)
 
+    # Command: Test
     if args.test:
         tests_dir = os.path.join( os.path.realpath(os.path.dirname(__file__)), "tests" )
         
@@ -125,6 +130,7 @@ def main(argv=None):
         em.logger.info('tests passed successfully.')
         exit(0)
 
+    ### Otherwise, initialize Earthmover for a main run.
     if not args.config_file:
         for file in DEFAULT_CONFIG_FILES:
             test_file = os.path.join(".", file)
@@ -158,45 +164,51 @@ def main(argv=None):
             cli_state_configs=cli_state_configs,
             results_file=args.results_file
         )
+
     except Exception as err:
         logger.exception(err, exc_info=True)
         raise  # Avoids linting error
 
+    # Subcommand: deps (parse Earthmover YAML and compile listed packages)
     if args.command == 'deps':
         em.logger.info(f"installing packages...")
+        if args.selector != '*':
+            em.logger.info("selector is ignored for package install.")
+
         try:
-            if args.selector != '*':
-                em.logger.info("selector is ignored for package install.")
             em.deps()
             em.logger.info("done!")
         except Exception as e:
             logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
             raise
 
+    # Subcommand: compile (parse Earthmover YAML and build graph)
     elif args.command == 'compile':
         em.logger.info(f"compiling project...")
-        try:
-            if args.selector != '*':
-                em.logger.info("selector is ignored for compile-only run.")
+        if args.selector != '*':
+            em.logger.info("selector is ignored for compile-only run.")
 
-            em.merge_packages()
-            em.build_graph()
+        try:
             em.compile()
             em.logger.info("looks ok")
+
         except Exception as e:
             logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
             raise
 
+    # Subcommand: run (compile + execute)
+    # This is the default if none is specified.
     elif args.command == 'run' or not args.command:
         if not args.command:
             em.logger.warning("[no command specified; proceeding with `run` but we recommend explicitly giving a command]")
+
         try:
             em.logger.info("starting...")
-            em.merge_packages()
             em.generate(selector=args.selector)
             em.logger.info("done!")
-        except Exception as e:
-            logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
+
+        except Exception as err:
+            logger.exception(err, exc_info=em.state_configs['show_stacktrace'])
             raise
 
     else:
