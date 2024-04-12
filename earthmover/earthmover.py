@@ -129,7 +129,7 @@ class Earthmover:
         return configs
 
 
-    def compile(self, selector: str = "*"):
+    def compile(self):
         """
         Parse optional packages, iterate the node configs, compile each Node, and build the graph.
         Save the Nodes to their `Earthmover.{node_type}` objects.
@@ -165,30 +165,11 @@ class Earthmover:
             _cycle = nx.find_cycle(self.graph)
             self.error_handler.throw(f"the graph is not a DAG! it has the cycle {_cycle}")
 
-        # Filter on the selector if specified.
-        if selector != "*":
-            self.logger.info(f"filtering dataflow graph using selector `{selector}`")
-            self.graph = self.graph.select_subgraph(selector)
-
-        # Delete all nodes not connected to a destination.
-        while True:  # Iterate until no nodes are removed.
-            terminal_nodes = self.graph.get_terminal_nodes()
-            for node_name in terminal_nodes:
-                node = self.graph.ref(node_name)
-                if node.type != 'destination':
-                    self.graph.remove_node(node_name)
-                    self.logger.warning(
-                        f"{node.type} node `{node.name}` will not be generated because it is not connected to a destination"
-                    )
-            # Iterate until no nodes are removed.
-            if set(terminal_nodes) == set(self.graph.get_terminal_nodes()):
-                break
-
         # Draw the graph, regardless of whether a run is completed.
         if self.state_configs['show_graph']:
             self.graph.draw()
 
-    def compile_node_configs(self, node_configs: 'YamlMapping', node_class: 'Node'):
+    def compile_node_configs(self, node_configs: 'YamlMapping', node_class: 'Node') -> List['Node']:
         """
         Helper method to keep code DRY, yet flexible to new node types.
         """
@@ -211,18 +192,45 @@ class Earthmover:
 
 
     ### Earthmover Run Methods
-    def execute(self):
+    def filter_graph_on_selector(self, graph: Graph, selector: str) -> Graph:
+        """
+        Filter a graph on an optional selector, and remove disconnected nodes.
+        """
+
+        active_graph = graph.copy()
+
+        if selector != "*":
+            self.logger.info(f"filtering dataflow graph using selector `{selector}`")
+            active_graph = active_graph.select_subgraph(selector)
+
+        # Delete all nodes not connected to a destination.
+        while True:  # Iterate until no nodes are removed.
+            terminal_nodes = active_graph.get_terminal_nodes()
+            for node_name in terminal_nodes:
+                node = active_graph.ref(node_name)
+                if node.type != 'destination':
+                    active_graph.remove_node(node_name)
+                    self.logger.warning(
+                        f"{node.type} node `{node.name}` will not be run because it is not connected to a destination"
+                    )
+            # Iterate until no nodes are removed.
+            if set(terminal_nodes) == set(active_graph.get_terminal_nodes()):
+                break
+
+        return active_graph
+
+    def execute(self, graph: Graph):
         """
         Iterate subgraphs in `Earthmover.graph` and execute each Node in order.
         :return:
         """
-        for idx, component in enumerate(nx.weakly_connected_components(self.graph)):
+        for idx, component in enumerate(nx.weakly_connected_components(graph)):
             self.logger.debug(f"processing component {idx}")
 
             # Load subgraphs (in topological sort order).
-            subgraph = self.graph.subgraph(component)
+            subgraph = graph.subgraph(component)
             for node_name in itertools.chain(*nx.topological_generations(subgraph)):
-                node = self.graph.ref(node_name)
+                node = graph.ref(node_name)
 
                 # Execute only if not already processed.
                 if node.data:
@@ -236,7 +244,7 @@ class Earthmover:
                     self.metadata["row_counts"].update({node_name: len(node.data)})
 
 
-    def hash_graph_to_runs_file(self):
+    def hash_graph_to_runs_file(self, graph: Graph) -> RunsFile:
         """
 
         :return:
@@ -268,7 +276,7 @@ class Earthmover:
 
                 # Find the latest run that matched our selector(s)...
                 most_recent_run = runs_file.get_newest_compatible_run(
-                    active_nodes=self.graph.get_node_data()
+                    active_nodes=graph.get_node_data()
                 )
 
                 if most_recent_run is None:
@@ -298,14 +306,15 @@ class Earthmover:
         return runs_file
 
 
-    def generate(self, selector: str):
+    def generate(self, selector: str = "*"):
         """
         Build DAG from YAML configs
 
         Order of operations:
-        1. Compile: compile nodes and build the graph
-        2. Execute: iterate subgraphs and build Dask execution graph
-        3. Optional Miscellaneous: add row to runs file, redraw graph with counts, and write results file
+        1. Compile: compile nodes and build the full graph
+        2. Filter to active graph on optional selector
+        3. Execute: iterate subgraphs and build Dask execution graph
+        4. Optional Miscellaneous: add row to runs file, redraw graph with counts, and write results file
 
         Build subgraph to process based on the selector. We always run through from sources to destinations
         (so all ancestors and descendants of selected nodes are also selected) but here we allow processing
@@ -316,19 +325,22 @@ class Earthmover:
         :param selector:
         :return:
         """
-        ### Compile and execute all Nodes in Dask.
-        # Compile the YAML file and build a subgraph based on the selector.
-        self.compile(selector)
+        ### Compile and execute selected Nodes in Dask.
+        # Compile the YAML file and build the full graph.
+        self.compile()
 
-        ### Hashing requires an entire class mixin and multiple additional steps.
-        runs_file = self.hash_graph_to_runs_file()
+        # Filter the graph to only selected nodes.
+        active_graph = self.filter_graph_on_selector(self.graph, selector=selector)
+
+        # Hashing requires an entire class mixin and multiple additional steps.
+        runs_file = self.hash_graph_to_runs_file(active_graph)
 
         # Unchanged runs are avoided unless the user forces the run.
         if not self.do_generate:
             exit(99) # Operation canceled
 
         # Iterate the graph and execute each Node.
-        self.execute()
+        self.execute(active_graph)
 
         ### Save run log only after a successful run! (in case of errors)
         # Note: `runs_file` is only defined in certain circumstances.
@@ -339,7 +351,7 @@ class Earthmover:
             if selector == "*":
                 destinations = "*"
             else:
-                destinations = "|".join(self.graph.get_node_data().keys())
+                destinations = "|".join(active_graph.get_node_data().keys())
 
             runs_file.write_row(selector=destinations)
 
@@ -350,14 +362,14 @@ class Earthmover:
 
             # Compute all row number values at once for performance, then update the nodes.
             computed_node_rows = dask.compute(
-                {node_name: node.num_rows for node_name, node in self.graph.get_node_data().items()}
+                {node_name: node.num_rows for node_name, node in active_graph.get_node_data().items()}
             )[0]
 
             for node_name, num_rows in computed_node_rows.items():
-                node = self.graph.ref(node_name)
+                node = active_graph.ref(node_name)
                 node.num_rows = num_rows
 
-            self.graph.draw()
+            active_graph.draw()
         
         ### Create structured output results_file if necessary
         if self.results_file:
