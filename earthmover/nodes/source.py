@@ -395,9 +395,11 @@ class SqlSource(Source):
         """
         super().execute()
 
+        # Verify necessary packages are installed.
+        self._verify_packages(self.connection)
+
         try:
             self.data = self.load_sql_dataframe()
-
 
             self.logger.debug(
                 f"source `{self.name}` loaded (via SQL)"
@@ -426,3 +428,25 @@ class SqlSource(Source):
 
             with sqlalchemy.create_engine(self.connection).connect() as engine_cloud:
                 return pd.DataFrame(engine_cloud.execute(sqlalchemy.text(self.query)))
+
+    def _verify_packages(self, connection: str):
+        """
+        Verify necessary packages are installed before attempting load.
+        """
+        if connection.startswith('postgres'):
+            try:
+                import sqlalchemy
+                import psycopg2
+            except ImportError:
+                self.error_handler.throw(
+                    "connecting to a Postgres database requires additional libraries... please install using `pip install earthmover[postgres]`"
+                )
+                raise
+        else:
+            try:
+                import sqlalchemy
+            except ImportError:
+                self.error_handler.throw(
+                    "connecting to a database requires additional libraries... please install using `pip install earthmover[sql]`"
+                )
+                raise
