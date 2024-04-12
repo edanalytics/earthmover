@@ -58,16 +58,6 @@ class Node:
         self.progress_bar: ProgressBar = ProgressBar(minimum=10, dt=5.0)  # Always instantiate, but only use if `show_progress is True`.
         self.head_was_displayed: bool = False  # Workaround to prevent displaying the head twice when debugging.
 
-    @abc.abstractmethod
-    def compile(self):
-        """
-
-        :return:
-        """
-        self.error_handler.ctx.update(
-            file=self.config.__file__, line=self.config.__line__, node=self, operation=None
-        )
-
         # Verify all configs provided by the user are specified for the node.
         # (This ensures the user doesn't pass in unexpected or misspelled configs.)
         for _config in self.config:
