@@ -15,6 +15,7 @@
 * internal: add `Node.full_name` attribute and `Node.set_upstream_source()` method
 * internal: unify graph-building into compilation
 * internal: refactor compilation and execution code for cleanliness
+* internal: unify `Node.compile()` into initialization to ease Node development
 
 </details>
 
