@@ -29,6 +29,7 @@ class Node:
     def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         self.name: str = name
         self.config: 'YamlMapping' = config
+        self.full_name: str = f"${self.type}s.{self.name}"
 
         self.earthmover: 'Earthmover' = earthmover
         self.logger: 'Logger' = earthmover.logger
@@ -79,7 +80,6 @@ class Node:
         self.debug = self.debug or self.config.get('debug', False)
         self.expectations = self.error_handler.assert_get_key(self.config, 'expect', dtype=list, required=False)
 
-        pass
 
     @abc.abstractmethod
     def execute(self, **kwargs):
@@ -185,3 +185,9 @@ class Node:
         if self.partition_size:
             data = data.repartition(partition_size=self.partition_size)
         return data
+
+    def set_upstream_source(self, source_name: str, node: 'Node'):
+        """ Upstream sources initialize as strings and are replaced during Earthmover.build_graph(). """
+        if source_name not in self.upstream_sources:
+            self.error_handler.throw(f"Source {source_name} not found in Node sources list.")
+        self.upstream_sources[source_name] = node

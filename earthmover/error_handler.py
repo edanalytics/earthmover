@@ -62,7 +62,7 @@ class ErrorContext:
             log += f"`{self.file}` "
 
         if self.node:
-            log += f"in `${self.node.type}s.{self.node.name}` "
+            log += f"in `{self.node.full_name}` "
 
         if self.operation:
             log += f"operation `{self.operation.type}` "

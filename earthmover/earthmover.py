@@ -1,4 +1,5 @@
 import dask
+import itertools
 import json
 import logging
 import tempfile
@@ -63,20 +64,15 @@ class Earthmover:
         # Set a directory for installing packages
         self.packages_dir = os.path.join(os.getcwd(), 'packages')
 
-        # Parse the user-provided config file and retrieve project-configs, macros, and parameter defaults.
-        # Merge the optional user configs into the defaults.
+        ### Parse the user-provided config file and retrieve project-configs, macros, and parameter defaults.
         self.params = json.loads(params) if params else {}
+        self.macros: str = ""
 
-        project_configs = JinjaEnvironmentYamlLoader.load_project_configs(self.config_file, params=self.params)
-        self.macros = project_configs.get("macros", "").strip()
+        project_configs = self.load_project_configs(self.config_file)  # Merge the optional user configs into the defaults.
+        # TODO: Unify add params to state_configs.
 
-        # Update parameter defaults, if any.
-        for key, val in project_configs.get("parameter_defaults", {}).items():
-            self.params.setdefault(key, val)
-
-        # Complete a full-parse of the user config file.
-        self.user_configs = JinjaEnvironmentYamlLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
-
+        ### Update environment with state-config settings.
+        # Overload state_configs with defaults, YAML configs, then CLI configs
         self.state_configs = {
             **self.config_defaults,
             **project_configs,
@@ -100,13 +96,7 @@ class Earthmover:
         # Set the temporary directory in cases of disk-spillage.
         dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
 
-        # Initialize the NetworkX DiGraph
-        self.graph = Graph(error_handler=self.error_handler)
-
-        # Initialize a NetworkX DiGraph for tracking package hierarchy
-        self.package_graph = Graph(error_handler=self.error_handler)
-
-        # Initialize a dictionary for tracking run metadata (for structured output)
+        ### Initialize a dictionary for tracking run metadata (for structured output)
         self.metadata = {
             "started_at": self.start_timestamp.isoformat(timespec='microseconds'),
             "working_dir": os.getcwd(),
@@ -115,65 +105,145 @@ class Earthmover:
             "row_counts": {}
         }
 
-    
-    def build_graph(self):
-        """
+        ### Prepare objects that are initialized during compile and deps.
+        self.user_configs: 'YamlMapping' = None
+        self.package_graph: Graph = None
+        self.graph: Graph = None
 
+
+    ### Template-Parsing Methods
+    def load_project_configs(self, filepath: str):
+        """
+        Load the project config file and update global attributes.
+        Return the raw JSON.
+        """
+        configs = JinjaEnvironmentYamlLoader.load_project_configs(filepath, params=self.params)
+
+        # Update project parameter defaults from the template, if any
+        for key, val in configs.get("parameter_defaults", {}).items():
+            self.params.setdefault(key, val)
+
+        # Prepend package macros to the project macro string. Later macro definitions in the string will overwrite earlier ones
+        self.macros = configs.get("macros", "").strip() + self.macros
+
+        return configs
+
+
+    def compile(self):
+        """
+        Parse optional packages, iterate the node configs, compile each Node, and build the graph.
+        Save the Nodes to their `Earthmover.{node_type}` objects.
         :return:
         """
-        self.logger.debug("building dataflow graph")
+        ### Process the config_file and prepare for compilation.
+        self.user_configs = JinjaEnvironmentYamlLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
+        self.package_graph = self.build_root_package_graph(self.user_configs)
+        self.graph = Graph(error_handler=self.error_handler)
 
-        node_types = {
-            'sources': Source,
-            'transformations': Transformation,
-            'destinations': Destination,
-        }
+        ### Optionally merge packages to update user-configs and write the composed YAML to disk.
+        self.user_configs = self.merge_packages() or self.user_configs
+        self.user_configs.to_disk("./earthmover_compiled.yaml")
 
-        ### Build the graph type-by-type
-        for node_type, node_class in node_types.items():
-            nodes = self.error_handler.assert_get_key(self.user_configs, node_type, dtype=dict, required=False, default={})
+        ### Compile the nodes and add to the graph type-by-type.
+        self.sources = self.compile_node_configs(
+            self.error_handler.assert_get_key(self.user_configs, 'sources', dtype=dict, required=True),
+            node_class=Source
+        )
 
-            # Place the nodes
-            for name, config in nodes.items():
-                node = node_class(name, config, earthmover=self)
-                self.graph.add_node(f"${node_type}.{name}", data=node)
+        self.transformations = self.compile_node_configs(
+            self.error_handler.assert_get_key(self.user_configs, 'transformations', dtype=dict, required=False, default={}),
+            node_class=Transformation
+        )
 
-                # Place edges for transformations and destinations
-                for source in node.upstream_sources:
-                    try:
-                        node.upstream_sources[source] = self.graph.ref(source)
-                        self.graph.add_edge(source, f"${node_type}.{name}")
-                    except KeyError:
-                        self.error_handler.throw(f"invalid source {source}")
+        self.destinations = self.compile_node_configs(
+            self.error_handler.assert_get_key(self.user_configs, 'destinations', dtype=dict, required=True),
+            node_class=Destination
+        )
 
-        ### Confirm that the graph is a DAG
-        self.logger.debug("checking dataflow graph")
+        # Confirm that the graph is a DAG
         if not nx.is_directed_acyclic_graph(self.graph):
             _cycle = nx.find_cycle(self.graph)
-            self.error_handler.throw(
-                f"the graph is not a DAG! it has the cycle {_cycle}"
-            )
-            raise
+            self.error_handler.throw(f"the graph is not a DAG! it has the cycle {_cycle}")
 
-        ### Delete all nodes not connected to a destination.
+        # Draw the graph, regardless of whether a run is completed.
+        if self.state_configs['show_graph']:
+            self.graph.draw()
+
+    def compile_node_configs(self, node_configs: 'YamlMapping', node_class: 'Node') -> List['Node']:
+        """
+        Helper method to keep code DRY, yet flexible to new node types.
+        """
+        compiled_nodes = []
+
+        for name, config in node_configs.items():
+            node = node_class(name, config, earthmover=self)
+            compiled_nodes.append(node)
+
+            # Add the node and any source edges to the graph.
+            self.graph.add_node(node.full_name, data=node)
+            for source in node.upstream_sources:
+                try:
+                    self.graph.add_edge(source, node.full_name)
+                    node.set_upstream_source(source, self.graph.ref(source))
+                except KeyError:
+                    self.error_handler.throw(f"invalid source {source}")
+
+        return compiled_nodes
+
+
+    ### Earthmover Run Methods
+    def filter_graph_on_selector(self, graph: Graph, selector: str) -> Graph:
+        """
+        Filter a graph on an optional selector, and remove disconnected nodes.
+        """
+        active_graph = graph.copy()
+
+        if selector != "*":
+            self.logger.info(f"filtering dataflow graph using selector `{selector}`")
+            active_graph = active_graph.select_subgraph(selector)
+
+        # Delete all nodes not connected to a destination.
         while True:  # Iterate until no nodes are removed.
-            terminal_nodes = self.graph.get_terminal_nodes()
-
+            terminal_nodes = active_graph.get_terminal_nodes()
             for node_name in terminal_nodes:
-                node = self.graph.ref(node_name)
-
+                node = active_graph.ref(node_name)
                 if node.type != 'destination':
-                    self.graph.remove_node(node_name)
+                    active_graph.remove_node(node_name)
                     self.logger.warning(
-                        f"{node.type} node `{node.name}` will not be generated because it is not connected to a destination"
+                        f"{node.type} node `{node.name}` will not be run because it is not connected to a destination"
                     )
-
             # Iterate until no nodes are removed.
-            if set(terminal_nodes) == set(self.graph.get_terminal_nodes()):
+            if set(terminal_nodes) == set(active_graph.get_terminal_nodes()):
                 break
 
+        return active_graph
 
-    def hash_graph_to_runs_file(self, subgraph: Graph):
+    def execute(self, graph: Graph):
+        """
+        Iterate subgraphs in `Earthmover.graph` and execute each Node in order.
+        :return:
+        """
+        for idx, component in enumerate(nx.weakly_connected_components(graph)):
+            self.logger.debug(f"processing component {idx}")
+
+            # Load subgraphs (in topological sort order).
+            subgraph = graph.subgraph(component)
+            for node_name in itertools.chain(*nx.topological_generations(subgraph)):
+                node = graph.ref(node_name)
+
+                # Execute only if not already processed.
+                if node.data:
+                    continue
+
+                # Set self.data in each node.
+                node.execute()
+                node.post_execute()
+
+                if self.results_file:
+                    self.metadata["row_counts"].update({node_name: len(node.data)})
+
+
+    def hash_graph_to_runs_file(self, graph: Graph) -> RunsFile:
         """
 
         :return:
@@ -205,7 +275,7 @@ class Earthmover:
 
                 # Find the latest run that matched our selector(s)...
                 most_recent_run = runs_file.get_newest_compatible_run(
-                    active_nodes=subgraph.get_node_data()
+                    active_nodes=graph.get_node_data()
                 )
 
                 if most_recent_run is None:
@@ -235,55 +305,15 @@ class Earthmover:
         return runs_file
 
 
-    def compile(self, subgraph: Optional[Graph] = None):
-        """
-
-        :param subgraph:
-        :return:
-        """
-        if subgraph is None:
-            subgraph = self.graph
-
-        for layer in list(nx.topological_generations(subgraph)):
-
-            for node_name in layer:
-                node = self.graph.ref(node_name)
-                node.compile()
-
-                # Add the active nodes to the class attribute lists for the hashing file.
-                if node.type == 'source':
-                    self.sources.append(node)
-
-                elif node.type == 'transformation':
-                    self.transformations.append(node)
-
-                elif node.type == 'destination':
-                    self.destinations.append(node)
-
-        ### Confirm that at least one source is defined.
-        if not self.sources:
-            self.error_handler.throw("No sources have been defined!")
-
-
-    def execute(self, subgraph: Graph):
-        """
-
-        :param subgraph:
-        :return:
-        """
-        for layer in list(nx.topological_generations(subgraph)):
-            for node_name in layer:
-                node = self.graph.ref(node_name)
-                if not node.data:
-                    node.execute()  # Sets self.data in each node.
-                    node.post_execute()
-                    if self.results_file:
-                        self.metadata["row_counts"].update({f"${node.type}s.{node.name}": len(node.data)})
-
-
-    def generate(self, selector: str):
+    def generate(self, selector: str = "*"):
         """
         Build DAG from YAML configs
+
+        Order of operations:
+        1. Compile: compile nodes and build the full graph
+        2. Filter to active graph on optional selector
+        3. Execute: iterate subgraphs and build Dask execution graph
+        4. Optional Miscellaneous: add row to runs file, redraw graph with counts, and write results file
 
         Build subgraph to process based on the selector. We always run through from sources to destinations
         (so all ancestors and descendants of selected nodes are also selected) but here we allow processing
@@ -294,36 +324,22 @@ class Earthmover:
         :param selector:
         :return:
         """
-        self.build_graph()
+        ### Compile and execute selected Nodes in Dask.
+        # Compile the YAML file and build the full graph.
+        self.compile()
 
-        if selector != "*":
-            self.logger.info(f"filtering dataflow graph using selector `{selector}`")
+        # Filter the graph to only selected nodes.
+        active_graph = self.filter_graph_on_selector(self.graph, selector=selector)
 
-        active_graph = self.graph.select_subgraph(selector)
-        self.compile(active_graph)
-
-
-        ### Hashing requires an entire class mixin and multiple additional steps.
+        # Hashing requires an entire class mixin and multiple additional steps.
         runs_file = self.hash_graph_to_runs_file(active_graph)
-
-
-        ### Draw the graph, regardless of whether a run is completed.
-        if self.state_configs['show_graph']:
-            active_graph.draw()
 
         # Unchanged runs are avoided unless the user forces the run.
         if not self.do_generate:
             exit(99) # Operation canceled
 
-
-        ### Process the graph
-        for idx, component in enumerate( nx.weakly_connected_components(active_graph) ):
-            self.logger.debug(f"processing component {idx}")
-
-            # load all sources! (in topological sort order)
-            _subgraph = active_graph.subgraph(component)
-            self.execute(_subgraph)
-
+        # Iterate the graph and execute each Node.
+        self.execute(active_graph)
 
         ### Save run log only after a successful run! (in case of errors)
         # Note: `runs_file` is only defined in certain circumstances.
@@ -334,8 +350,7 @@ class Earthmover:
             if selector == "*":
                 destinations = "*"
             else:
-                _active_destinations = active_graph.get_node_data().keys()
-                destinations = "|".join(_active_destinations)
+                destinations = "|".join(active_graph.get_node_data().keys())
 
             runs_file.write_row(selector=destinations)
 
@@ -346,11 +361,11 @@ class Earthmover:
 
             # Compute all row number values at once for performance, then update the nodes.
             computed_node_rows = dask.compute(
-                {node_name: node.num_rows for node_name, node in self.graph.get_node_data().items()}
+                {node_name: node.num_rows for node_name, node in active_graph.get_node_data().items()}
             )[0]
 
             for node_name, num_rows in computed_node_rows.items():
-                node = self.graph.ref(node_name)
+                node = active_graph.ref(node_name)
                 node.num_rows = num_rows
 
             active_graph.draw()
@@ -371,8 +386,8 @@ class Earthmover:
     def test(self, tests_dir: str):
         # delete files in tests/output/
         output_dir = os.path.join(tests_dir, "outputs")
-        for f in os.listdir(output_dir):
-            os.remove(os.path.join(output_dir, f))
+        for fp in os.listdir(output_dir):
+            os.remove(os.path.join(output_dir, fp))
 
         # run earthmover!
         self.generate(selector="*")
@@ -383,13 +398,13 @@ class Earthmover:
             # load expected and outputted content as dataframes, and sort them
             # because dask may shuffle output order
             _expected_file  = os.path.join(tests_dir, 'expected', filename)
-            with open(_expected_file, "r", encoding='utf-8') as f:
-                _expected_df = pd.DataFrame([l.strip() for l in f.readlines()])
+            with open(_expected_file, "r", encoding='utf-8') as fp:
+                _expected_df = pd.DataFrame([l.strip() for l in fp.readlines()])
                 _expected_df = _expected_df.sort_values(by=_expected_df.columns.tolist()).reset_index(drop=True)
 
             _outputted_file = os.path.join(tests_dir, 'outputs', filename)
-            with open(_outputted_file, "r", encoding='utf-8') as f:
-                _outputted_df = pd.DataFrame([l.strip() for l in f.readlines()])
+            with open(_outputted_file, "r", encoding='utf-8') as fp:
+                _outputted_df = pd.DataFrame([l.strip() for l in fp.readlines()])
                 _outputted_df = _outputted_df.sort_values(by=_outputted_df.columns.tolist()).reset_index(drop=True)
             
             # compare sorted contents
@@ -398,29 +413,30 @@ class Earthmover:
                 exit(1)
 
 
+    ### Packaging Methods
     def deps(self):
         """
         Installs all packages specified in the config file and any nested packages.
         :return:
         """
-        self.build_root_package_graph()
+        ### Process the config_file and prepare to extract the packages.
+        self.user_configs = JinjaEnvironmentYamlLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
+        self.package_graph = self.build_root_package_graph(self.user_configs)
 
         # Check that at least one package is defined
         if all(False for _ in self.package_graph.successors('root')):
-            self.error_handler.throw("No packages have been defined!")
+            self.logger.warning("No packages have been defined!")
 
         # Install each package (and any nested sub-packages) into the packages directory
         self.build_package_graph(root_node='root', package_subgraph=self.package_graph, packages_dir=self.packages_dir, install=True)
 
 
-    def merge_packages(self):
+    def merge_packages(self) -> Optional['YamlMapping']:
         """
         Traverses the packages graph, merging yaml config from successors into predecessors.
         Saves the final result as the instance user_configs.
         :return:
         """
-        self.build_root_package_graph()
-
         # If the yaml file doesn't include packages, no need to alter
         if all(False for _ in self.package_graph.successors('root')):
             return
@@ -443,28 +459,29 @@ class Earthmover:
                 predecessor_package.package_yaml = merged_yaml
 
         # Overwrite with completed merged yaml and output to disk
-        self.user_configs = self.package_graph.nodes['root']['package'].package_yaml
-        self.user_configs.to_disk("./earthmover_composed.yml")
+        return self.package_graph.nodes['root']['package'].package_yaml
 
 
-    def build_root_package_graph(self):
+    def build_root_package_graph(self, configs: 'YamlMapping') -> Graph:
         """
         Builds a directed graph of the packages specified in the root user config.
         If no packages, the graph will contain a single root node.
         :return:
         """
+        package_graph = Graph(error_handler=self.error_handler)  # Tracks package hierarchy
+
         # Create a root package to be the root of the packages directed graph
-        root_package = Package('root', self.user_configs, earthmover=self, package_path=os.getcwd())
+        root_package = Package('root', configs, earthmover=self, package_path=os.getcwd())
         root_package.config_file = self.config_file
-        self.package_graph.add_node('root', package=root_package)
+        package_graph.add_node('root', package=root_package)
 
-        package_config = self.error_handler.assert_get_key(self.user_configs, 'packages', dtype=dict, required=False, default={})
-
+        package_config = self.error_handler.assert_get_key(configs, 'packages', dtype=dict, required=False, default={})
         for name, config in package_config.items():
             package = Package(name, config, earthmover=self)
-            self.package_graph.add_node(name, package=package) 
-            self.package_graph.add_edge(root_package.name, name)
-            
+            package_graph.add_node(name, package=package)
+            package_graph.add_edge(root_package.name, name)
+
+        return package_graph
 
     def build_package_graph(self, root_node: str, package_subgraph: Graph, packages_dir: str, install: bool):
         """
@@ -495,22 +512,15 @@ class Earthmover:
             raise
 
         for package_name in package_subgraph.successors(root_node):
-            package_node = self.package_graph.nodes[package_name]
             # Install packages if necessary, or retrieve path to package yaml file
+            package_node = self.package_graph.nodes[package_name]
             if install:
                 installed_package_yaml = package_node['package'].install(packages_dir)
             else:
                 package_node['package'].package_path = os.path.join(packages_dir, package_name)
                 installed_package_yaml = package_node['package'].get_installed_config_file()
 
-            package_configs = JinjaEnvironmentYamlLoader.load_project_configs(installed_package_yaml, params=self.params)
-
-            # Update project parameter defaults from the package, if any
-            for key, val in package_configs.get("parameter_defaults", {}).items():
-                self.params.setdefault(key, val)
-
-            # Prepend package macros to the project macro string. Later macro definitions in the string will overwrite earlier ones 
-            self.macros = package_configs.get("macros", "").strip() + self.macros
+            self.load_project_configs(installed_package_yaml)
 
             # Load the package yaml and check for additional nested packages
             package_config = JinjaEnvironmentYamlLoader.load_config_file(installed_package_yaml, params=self.params, macros=self.macros)
