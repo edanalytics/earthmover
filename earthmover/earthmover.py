@@ -197,6 +197,7 @@ class Earthmover:
         for name, config in node_configs.items():
             node = node_class(name, config, earthmover=self)
             node.compile()
+            compiled_nodes.append(node)
 
             # Add the node and any source edges to the graph.
             self.graph.add_node(node.full_name, data=node)
@@ -206,8 +207,6 @@ class Earthmover:
                     node.set_upstream_source(source, self.graph.ref(source))
                 except KeyError:
                     self.error_handler.throw(f"invalid source {source}")
-
-                compiled_nodes.append(node)
 
         return compiled_nodes
 
