@@ -142,7 +142,7 @@ class Earthmover:
 
         ### Optionally merge packages to update user-configs and write the composed YAML to disk.
         self.user_configs = self.merge_packages() or self.user_configs
-        self.user_configs.to_disk("./earthmover_composed.yml")
+        self.user_configs.to_disk("./earthmover_compiled.yaml")
 
         ### Compile the nodes and add to the graph type-by-type.
         self.sources = self.compile_node_configs(
@@ -196,7 +196,6 @@ class Earthmover:
         """
         Filter a graph on an optional selector, and remove disconnected nodes.
         """
-
         active_graph = graph.copy()
 
         if selector != "*":
@@ -426,13 +425,13 @@ class Earthmover:
 
         # Check that at least one package is defined
         if all(False for _ in self.package_graph.successors('root')):
-            self.error_handler.throw("No packages have been defined!")
+            self.logger.warning("No packages have been defined!")
 
         # Install each package (and any nested sub-packages) into the packages directory
         self.build_package_graph(root_node='root', package_subgraph=self.package_graph, packages_dir=self.packages_dir, install=True)
 
 
-    def merge_packages(self) -> 'YamlMapping':
+    def merge_packages(self) -> Optional['YamlMapping']:
         """
         Traverses the packages graph, merging yaml config from successors into predecessors.
         Saves the final result as the instance user_configs.
