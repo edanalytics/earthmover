@@ -196,7 +196,6 @@ class Earthmover:
 
         for name, config in node_configs.items():
             node = node_class(name, config, earthmover=self)
-            node.compile()
             compiled_nodes.append(node)
 
             # Add the node and any source edges to the graph.

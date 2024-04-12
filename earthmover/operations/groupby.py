@@ -22,15 +22,6 @@ class GroupByWithCountOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.group_by_columns: List[str] = None
-        self.count_column: str = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.group_by_columns = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
         self.count_column     = self.error_handler.assert_get_key(self.config, 'count_column', dtype=str)
 
@@ -81,16 +72,6 @@ class GroupByWithAggOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.group_by_columns: List[str] = None
-        self.agg_column: str = None
-        self.separator: str = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.group_by_columns = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
         self.agg_column       = self.error_handler.assert_get_key(self.config, 'agg_column', dtype=str)
 
@@ -142,15 +123,6 @@ class GroupByWithRankOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.group_by_columns: str = None
-        self.rank_column: str = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.group_by_columns = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
         self.rank_column = self.error_handler.assert_get_key(self.config, 'rank_column', dtype=str)
 
@@ -195,15 +167,6 @@ class GroupByOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.group_by_columns: List[str] = None
-        self.create_columns_dict: Dict[str, str] = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.group_by_columns    = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
         self.create_columns_dict = self.error_handler.assert_get_key(self.config, 'create_columns', dtype=dict)
 
