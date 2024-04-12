@@ -11,6 +11,7 @@ from earthmover import util
 @dataclasses.dataclass
 class YamlMapping(dict):
     __line__: int = None
+    __file__: str = None
 
     def update(self, _dict: 'YamlMapping'):
         """
