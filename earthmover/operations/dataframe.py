@@ -96,7 +96,7 @@ class JoinOperation(Operation):
                 )
                 raise
 
-            left_cols = list(set(left_cols).difference(left_drop_cols))
+            left_cols = list(set(left_cols).difference(self.left_drop_cols))
 
         left_data = data[left_cols]
 
