@@ -64,20 +64,14 @@ class Earthmover:
         # Set a directory for installing packages
         self.packages_dir = os.path.join(os.getcwd(), 'packages')
 
-        # Parse the user-provided config file and retrieve project-configs, macros, and parameter defaults.
-        # Merge the optional user configs into the defaults.
+        ### Parse the user-provided config file and retrieve project-configs, macros, and parameter defaults.
         self.params = json.loads(params) if params else {}
+        self.macros: str = ""
 
-        project_configs = JinjaEnvironmentYamlLoader.load_project_configs(self.config_file, params=self.params)
-        self.macros = project_configs.get("macros", "").strip()
+        project_configs = self.load_project_configs(self.config_file)  # Merge the optional user configs into the defaults.
+        # TODO: Unify add params to state_configs.
 
-        # Update parameter defaults, if any.
-        for key, val in project_configs.get("parameter_defaults", {}).items():
-            self.params.setdefault(key, val)
-
-        # Complete a full-parse of the user config file.
-        self.user_configs = JinjaEnvironmentYamlLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
-
+        ### Update environment with state-config settings.
         # Overload state_configs with defaults, YAML configs, then CLI configs
         self.state_configs = {
             **self.config_defaults,
@@ -117,8 +111,28 @@ class Earthmover:
             "row_counts": {}
         }
 
+        ### Prepare objects that are initialized during compile and deps.
+        self.user_configs: 'YamlMapping' = None
+        self.package_graph: Graph = None
+        self.graph: Graph = None
 
-    def compile(self):
+
+    def load_project_configs(self, filepath: str):
+        """
+        Load the project config file and update global attributes.
+        Return the raw JSON.
+        """
+        configs = JinjaEnvironmentYamlLoader.load_project_configs(filepath, params=self.params)
+
+        # Update project parameter defaults from the template, if any
+        for key, val in configs.get("parameter_defaults", {}).items():
+            self.params.setdefault(key, val)
+
+        # Prepend package macros to the project macro string. Later macro definitions in the string will overwrite earlier ones
+        self.macros = configs.get("macros", "").strip() + self.macros
+
+        return configs
+
         """
         Parse the Earthmover.yaml file, iterate the node configs, and compile each Node.
         Save the Nodes to their `Earthmover.{node_type}` objects.
@@ -127,7 +141,7 @@ class Earthmover:
         # Always write the Jinja-templated file to disk.
         self.user_configs.to_disk("./earthmover_composed.yml")
 
-        # Build the graph type-by-type.
+        ### Compile the nodes and add to the graph type-by-type.
         node_types = [
             ('sources', Source, self.sources),
             ('transformations', Transformation, self.transformations),
@@ -181,7 +195,7 @@ class Earthmover:
             self.logger.info(f"filtering dataflow graph using selector `{selector}`")
             self.graph = self.graph.select_subgraph(selector)
 
-        ### Delete all nodes not connected to a destination.
+        # Delete all nodes not connected to a destination.
         while True:  # Iterate until no nodes are removed.
             terminal_nodes = self.graph.get_terminal_nodes()
             for node_name in terminal_nodes:
@@ -195,7 +209,7 @@ class Earthmover:
             if set(terminal_nodes) == set(self.graph.get_terminal_nodes()):
                 break
 
-        ### Draw the graph, regardless of whether a run is completed.
+        # Draw the graph, regardless of whether a run is completed.
         if self.state_configs['show_graph']:
             self.graph.draw()
 
@@ -490,6 +504,7 @@ class Earthmover:
             raise
 
         for package_name in package_subgraph.successors(root_node):
+            # Install packages if necessary, or retrieve path to package yaml file
             package_node = self.package_graph.nodes[package_name]
             # Install packages if necessary, or retrieve path to package yaml file
             if install:
@@ -498,14 +513,7 @@ class Earthmover:
                 package_node['package'].package_path = os.path.join(packages_dir, package_name)
                 installed_package_yaml = package_node['package'].get_installed_config_file()
 
-            package_configs = JinjaEnvironmentYamlLoader.load_project_configs(installed_package_yaml, params=self.params)
-
-            # Update project parameter defaults from the package, if any
-            for key, val in package_configs.get("parameter_defaults", {}).items():
-                self.params.setdefault(key, val)
-
-            # Prepend package macros to the project macro string. Later macro definitions in the string will overwrite earlier ones 
-            self.macros = package_configs.get("macros", "").strip() + self.macros
+            self.load_project_configs(installed_package_yaml)
 
             # Load the package yaml and check for additional nested packages
             package_config = JinjaEnvironmentYamlLoader.load_config_file(installed_package_yaml, params=self.params, macros=self.macros)
