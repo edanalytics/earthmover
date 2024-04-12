@@ -80,7 +80,6 @@ class Node:
         self.debug = self.debug or self.config.get('debug', False)
         self.expectations = self.error_handler.assert_get_key(self.config, 'expect', dtype=list, required=False)
 
-        pass
 
     @abc.abstractmethod
     def execute(self, **kwargs):

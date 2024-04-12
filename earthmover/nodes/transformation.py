@@ -30,16 +30,6 @@ class Transformation(Node):
                 for source in operation.sources:
                     self.upstream_sources[source] = None
 
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-
-        for operation in self.operations:
-            operation.compile()
-
         # Force error-handler reset before graph is built.
         self.error_handler.ctx.update(
             file=self.config.__file__, line=self.config.__line__, node=self, operation=None

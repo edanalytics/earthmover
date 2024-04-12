@@ -52,7 +52,7 @@ class Source(Node):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.chunksize: int = None
+        self.chunksize: int = self.error_handler.assert_get_key(self.config, 'chunksize', dtype=int, required=False, default=self.NUM_ROWS_PER_CHUNK)
 
         # A source can be blank if `optional=True` is specified in its configs.
         # (In this case, `columns` must be specified, and are used to construct an empty
@@ -61,14 +61,6 @@ class Source(Node):
 
         # Optional fields can be defined to be added as null columns if not present in the DataFrame.
         self.optional_fields: List[str] = self.config.get('optional_fields', [])
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-        self.chunksize = self.error_handler.assert_get_key(self.config, 'chunksize', dtype=int, required=False, default=self.NUM_ROWS_PER_CHUNK)
 
     def post_execute(self, **kwargs):
         """
@@ -108,17 +100,6 @@ class FileSource(Source):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.file: str = None
-        self.file_type: str = None
-        self.read_lambda: Callable = None
-        self.columns_list: List[str] = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.file = self.error_handler.assert_get_key(self.config, 'file', dtype=str, required=False)
 
         #
@@ -301,16 +282,6 @@ class FtpSource(Source):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.connection: str = None
-        self.ftp: ftplib.FTP = None
-        self.file: str = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.connection = self.error_handler.assert_get_key(self.config, 'connection', dtype=str)
 
         # There's probably a network builtin to simplify this.
@@ -373,15 +344,6 @@ class SqlSource(Source):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.connection: str = None
-        self.query: str = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.connection = self.error_handler.assert_get_key(self.config, 'connection', dtype=str)
         self.query = self.error_handler.assert_get_key(self.config, 'query', dtype=str)
 
