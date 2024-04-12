@@ -120,7 +120,7 @@ class Graph(nx.DiGraph):
         except ImportError:
             self.error_handler.ctx.remove('node', 'line', 'file')
             self.error_handler.throw(
-                "drawing the graph requires the matplotlib and pygraphviz libraries... please install using `pip install earthmover[graph]`"
+                "drawing the graph requires additional libraries... please install using `pip install earthmover[graph]`"
             )
             raise  # Never called; avoids linting errors
 
