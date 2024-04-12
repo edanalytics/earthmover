@@ -25,7 +25,6 @@ setuptools.setup (
     extras_require = {
         'excel': ['openpyxl'],
         'graph': ['matplotlib', 'pygraphviz'],
-        'git': ['GitPython'],
         'parquet': ['pyarrow'],
         'postgres': ['sqlalchemy', 'psycopg2'],
         'xml': ['pyarrow', 'lxml'],
