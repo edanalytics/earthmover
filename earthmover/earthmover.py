@@ -111,6 +111,7 @@ class Earthmover:
         self.graph: Graph = None
 
 
+    ### Template-Parsing Methods
     def load_project_configs(self, filepath: str):
         """
         Load the project config file and update global attributes.
@@ -202,6 +203,7 @@ class Earthmover:
             self.graph.draw()
 
 
+    ### Earthmover Run Methods
     def execute(self):
         """
         Iterate subgraphs in `Earthmover.graph` and execute each Node in order.
@@ -366,8 +368,8 @@ class Earthmover:
     def test(self, tests_dir: str):
         # delete files in tests/output/
         output_dir = os.path.join(tests_dir, "outputs")
-        for f in os.listdir(output_dir):
-            os.remove(os.path.join(output_dir, f))
+        for fp in os.listdir(output_dir):
+            os.remove(os.path.join(output_dir, fp))
 
         # run earthmover!
         self.generate(selector="*")
@@ -378,13 +380,13 @@ class Earthmover:
             # load expected and outputted content as dataframes, and sort them
             # because dask may shuffle output order
             _expected_file  = os.path.join(tests_dir, 'expected', filename)
-            with open(_expected_file, "r", encoding='utf-8') as f:
-                _expected_df = pd.DataFrame([l.strip() for l in f.readlines()])
+            with open(_expected_file, "r", encoding='utf-8') as fp:
+                _expected_df = pd.DataFrame([l.strip() for l in fp.readlines()])
                 _expected_df = _expected_df.sort_values(by=_expected_df.columns.tolist()).reset_index(drop=True)
 
             _outputted_file = os.path.join(tests_dir, 'outputs', filename)
-            with open(_outputted_file, "r", encoding='utf-8') as f:
-                _outputted_df = pd.DataFrame([l.strip() for l in f.readlines()])
+            with open(_outputted_file, "r", encoding='utf-8') as fp:
+                _outputted_df = pd.DataFrame([l.strip() for l in fp.readlines()])
                 _outputted_df = _outputted_df.sort_values(by=_outputted_df.columns.tolist()).reset_index(drop=True)
             
             # compare sorted contents
@@ -393,6 +395,7 @@ class Earthmover:
                 exit(1)
 
 
+    ### Packaging Methods
     def deps(self):
         """
         Installs all packages specified in the config file and any nested packages.
@@ -455,14 +458,12 @@ class Earthmover:
         package_graph.add_node('root', package=root_package)
 
         package_config = self.error_handler.assert_get_key(configs, 'packages', dtype=dict, required=False, default={})
-
         for name, config in package_config.items():
             package = Package(name, config, earthmover=self)
             package_graph.add_node(name, package=package)
             package_graph.add_edge(root_package.name, name)
 
         return package_graph
-            
 
     def build_package_graph(self, root_node: str, package_subgraph: Graph, packages_dir: str, install: bool):
         """
