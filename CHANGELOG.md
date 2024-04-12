@@ -4,6 +4,7 @@
 <summary>Released TODO</summary>
 
 * feature: add project composition using `packages` keyword in template file (see README)
+* feature: add installation extras for optional libraries, and improve error logging to notify which is missing
 * feature: `GroupByWithRankOperation` cumulatively sums record counts by group-by columns
 * feature: setting `log_level: DEBUG` in template configs or setting `debug: True` for a node displays the head of the node mid-run 
 * feature: add `optional_fields` key to all Sources to add optional empty columns when missing from schema
