@@ -29,6 +29,7 @@ class Node:
     def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         self.name: str = name
         self.config: 'YamlMapping' = config
+        self.full_name: str = f"${self.type}s.{self.name}"
 
         self.earthmover: 'Earthmover' = earthmover
         self.logger: 'Logger' = earthmover.logger
@@ -56,16 +57,6 @@ class Node:
         self.show_progress: bool = self.config.get('show_progress', self.earthmover.state_configs["show_progress"])
         self.progress_bar: ProgressBar = ProgressBar(minimum=10, dt=5.0)  # Always instantiate, but only use if `show_progress is True`.
         self.head_was_displayed: bool = False  # Workaround to prevent displaying the head twice when debugging.
-
-    @property
-    def full_name(self):
-        return f"${self.type}s.{self.name}"
-
-    def set_upstream_source(self, source_name: str, node: 'Node'):
-        """ Upstream sources initialize as strings and are replaced during Earthmover.build_graph(). """
-        if source_name not in self.upstream_sources:
-            self.error_handler.throw(f"Source {source_name} not found in Node sources list.")
-        self.upstream_sources[source_name] = node
 
     @abc.abstractmethod
     def compile(self):
@@ -195,3 +186,9 @@ class Node:
         if self.partition_size:
             data = data.repartition(partition_size=self.partition_size)
         return data
+
+    def set_upstream_source(self, source_name: str, node: 'Node'):
+        """ Upstream sources initialize as strings and are replaced during Earthmover.build_graph(). """
+        if source_name not in self.upstream_sources:
+            self.error_handler.throw(f"Source {source_name} not found in Node sources list.")
+        self.upstream_sources[source_name] = node
