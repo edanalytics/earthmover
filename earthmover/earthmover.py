@@ -145,34 +145,20 @@ class Earthmover:
         self.user_configs.to_disk("./earthmover_composed.yml")
 
         ### Compile the nodes and add to the graph type-by-type.
-        node_types = [
-            ('sources', Source, self.sources),
-            ('transformations', Transformation, self.transformations),
-            ('destinations', Destination, self.destinations),
-        ]
+        self.sources = self.compile_node_configs(
+            self.error_handler.assert_get_key(self.user_configs, 'sources', dtype=dict, required=True),
+            node_class=Source
+        )
 
-        for node_type, node_class, node_collection in node_types:
-            node_configs = self.error_handler.assert_get_key(self.user_configs, node_type, dtype=dict, required=False, default={})
+        self.transformations = self.compile_node_configs(
+            self.error_handler.assert_get_key(self.user_configs, 'transformations', dtype=dict, required=False, default={}),
+            node_class=Transformation
+        )
 
-            # Initialize and compile the nodes.
-            for name, config in node_configs.items():
-                node = node_class(name, config, earthmover=self)
-                node_collection.append(node)
-                node.compile()
-
-                # Add the node and any source edges to the graph.
-                self.graph.add_node(node.full_name, data=node)
-                for source in node.upstream_sources:
-                    try:
-                        self.graph.add_edge(source, node.full_name)
-                        node.set_upstream_source(source, self.graph.ref(source))
-                    except KeyError:
-                        self.error_handler.throw(f"invalid source {source}")
-
-        ### Make checks to verify graph integrity.
-        # Confirm that at least one source is defined.
-        if not self.sources:
-            self.error_handler.throw("No sources have been defined!")
+        self.destinations = self.compile_node_configs(
+            self.error_handler.assert_get_key(self.user_configs, 'destinations', dtype=dict, required=True),
+            node_class=Destination
+        )
 
         # Confirm that the graph is a DAG
         if not nx.is_directed_acyclic_graph(self.graph):
@@ -201,6 +187,29 @@ class Earthmover:
         # Draw the graph, regardless of whether a run is completed.
         if self.state_configs['show_graph']:
             self.graph.draw()
+
+    def compile_node_configs(self, node_configs: 'YamlMapping', node_class: 'Node'):
+        """
+        Helper method to keep code DRY, yet flexible to new node types.
+        """
+        compiled_nodes = []
+
+        for name, config in node_configs.items():
+            node = node_class(name, config, earthmover=self)
+            node.compile()
+
+            # Add the node and any source edges to the graph.
+            self.graph.add_node(node.full_name, data=node)
+            for source in node.upstream_sources:
+                try:
+                    self.graph.add_edge(source, node.full_name)
+                    node.set_upstream_source(source, self.graph.ref(source))
+                except KeyError:
+                    self.error_handler.throw(f"invalid source {source}")
+
+                compiled_nodes.append(node)
+
+        return compiled_nodes
 
 
     ### Earthmover Run Methods
