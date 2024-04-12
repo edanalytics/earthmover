@@ -96,13 +96,7 @@ class Earthmover:
         # Set the temporary directory in cases of disk-spillage.
         dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
 
-        # Initialize the NetworkX DiGraph
-        self.graph = Graph(error_handler=self.error_handler)
-
-        # Initialize a NetworkX DiGraph for tracking package hierarchy
-        self.package_graph = Graph(error_handler=self.error_handler)
-
-        # Initialize a dictionary for tracking run metadata (for structured output)
+        ### Initialize a dictionary for tracking run metadata (for structured output)
         self.metadata = {
             "started_at": self.start_timestamp.isoformat(timespec='microseconds'),
             "working_dir": os.getcwd(),
@@ -133,12 +127,20 @@ class Earthmover:
 
         return configs
 
+
+    def compile(self, selector: str = "*"):
         """
-        Parse the Earthmover.yaml file, iterate the node configs, and compile each Node.
+        Parse optional packages, iterate the node configs, compile each Node, and build the graph.
         Save the Nodes to their `Earthmover.{node_type}` objects.
         :return:
         """
-        # Always write the Jinja-templated file to disk.
+        ### Process the config_file and prepare for compilation.
+        self.user_configs = JinjaEnvironmentYamlLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
+        self.package_graph = self.build_root_package_graph(self.user_configs)
+        self.graph = Graph(error_handler=self.error_handler)
+
+        ### Optionally merge packages to update user-configs and write the composed YAML to disk.
+        self.user_configs = self.merge_packages() or self.user_configs
         self.user_configs.to_disk("./earthmover_composed.yml")
 
         ### Compile the nodes and add to the graph type-by-type.
@@ -157,33 +159,19 @@ class Earthmover:
                 node_collection.append(node)
                 node.compile()
 
+                # Add the node and any source edges to the graph.
+                self.graph.add_node(node.full_name, data=node)
+                for source in node.upstream_sources:
+                    try:
+                        self.graph.add_edge(source, node.full_name)
+                        node.set_upstream_source(source, self.graph.ref(source))
+                    except KeyError:
+                        self.error_handler.throw(f"invalid source {source}")
+
+        ### Make checks to verify graph integrity.
         # Confirm that at least one source is defined.
         if not self.sources:
             self.error_handler.throw("No sources have been defined!")
-
-    def build_graph(self, selector: str = "*"):
-        """
-        Iterate the `Earthmover.{node_type}` objects and update `Earthmover.graph` with nodes and edges.
-        Update `Node.upstream_sources` references with their actual node class.
-        :return:
-        """
-        self.logger.debug("building dataflow graph")
-
-        ### Build the first-pass of the graph before filtering.
-        all_nodes = list(itertools.chain(self.sources, self.transformations, self.destinations))
-
-        # Add compiled nodes to the graph.
-        for node in all_nodes:
-            self.graph.add_node(node.full_name, data=node)
-
-        # Add edges and update upstream source references when defined.
-        for node in all_nodes:
-            for source in node.upstream_sources:
-                try:
-                    self.graph.add_edge(source, node.full_name)
-                    node.set_upstream_source(source, self.graph.ref(source))
-                except KeyError:
-                    self.error_handler.throw(f"invalid source {source}")
 
         # Confirm that the graph is a DAG
         if not nx.is_directed_acyclic_graph(self.graph):
@@ -213,7 +201,6 @@ class Earthmover:
         if self.state_configs['show_graph']:
             self.graph.draw()
 
-        return self.graph
 
     def execute(self):
         """
@@ -307,10 +294,9 @@ class Earthmover:
         Build DAG from YAML configs
 
         Order of operations:
-        1. Compile: template YAML and verify arguments for all nodes
-        2. Build_Graph: add nodes and edges, set upstream sources with their nodes, and draw the graph
-        3. Execute: iterate subgraphs and build Dask execution graph
-        4. Optional Miscellaneous: add row to runs file, redraw graph with counts, and write results file
+        1. Compile: compile nodes and build the graph
+        2. Execute: iterate subgraphs and build Dask execution graph
+        3. Optional Miscellaneous: add row to runs file, redraw graph with counts, and write results file
 
         Build subgraph to process based on the selector. We always run through from sources to destinations
         (so all ancestors and descendants of selected nodes are also selected) but here we allow processing
@@ -323,8 +309,7 @@ class Earthmover:
         """
         ### Compile and execute all Nodes in Dask.
         # Compile the YAML file and build a subgraph based on the selector.
-        self.compile()
-        self.build_graph(selector)
+        self.compile(selector)
 
         ### Hashing requires an entire class mixin and multiple additional steps.
         runs_file = self.hash_graph_to_runs_file()
@@ -413,7 +398,9 @@ class Earthmover:
         Installs all packages specified in the config file and any nested packages.
         :return:
         """
-        self.build_root_package_graph()
+        ### Process the config_file and prepare to extract the packages.
+        self.user_configs = JinjaEnvironmentYamlLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
+        self.package_graph = self.build_root_package_graph(self.user_configs)
 
         # Check that at least one package is defined
         if all(False for _ in self.package_graph.successors('root')):
@@ -423,14 +410,12 @@ class Earthmover:
         self.build_package_graph(root_node='root', package_subgraph=self.package_graph, packages_dir=self.packages_dir, install=True)
 
 
-    def merge_packages(self):
+    def merge_packages(self) -> 'YamlMapping':
         """
         Traverses the packages graph, merging yaml config from successors into predecessors.
         Saves the final result as the instance user_configs.
         :return:
         """
-        self.build_root_package_graph()
-
         # If the yaml file doesn't include packages, no need to alter
         if all(False for _ in self.package_graph.successors('root')):
             return
@@ -453,26 +438,30 @@ class Earthmover:
                 predecessor_package.package_yaml = merged_yaml
 
         # Overwrite with completed merged yaml and output to disk
-        self.user_configs = self.package_graph.nodes['root']['package'].package_yaml
+        return self.package_graph.nodes['root']['package'].package_yaml
 
 
-    def build_root_package_graph(self):
+    def build_root_package_graph(self, configs: 'YamlMapping') -> Graph:
         """
         Builds a directed graph of the packages specified in the root user config.
         If no packages, the graph will contain a single root node.
         :return:
         """
-        # Create a root package to be the root of the packages directed graph
-        root_package = Package('root', self.user_configs, earthmover=self, package_path=os.getcwd())
-        root_package.config_file = self.config_file
-        self.package_graph.add_node('root', package=root_package)
+        package_graph = Graph(error_handler=self.error_handler)  # Tracks package hierarchy
 
-        package_config = self.error_handler.assert_get_key(self.user_configs, 'packages', dtype=dict, required=False, default={})
+        # Create a root package to be the root of the packages directed graph
+        root_package = Package('root', configs, earthmover=self, package_path=os.getcwd())
+        root_package.config_file = self.config_file
+        package_graph.add_node('root', package=root_package)
+
+        package_config = self.error_handler.assert_get_key(configs, 'packages', dtype=dict, required=False, default={})
 
         for name, config in package_config.items():
             package = Package(name, config, earthmover=self)
-            self.package_graph.add_node(name, package=package) 
-            self.package_graph.add_edge(root_package.name, name)
+            package_graph.add_node(name, package=package)
+            package_graph.add_edge(root_package.name, name)
+
+        return package_graph
             
 
     def build_package_graph(self, root_node: str, package_subgraph: Graph, packages_dir: str, install: bool):
@@ -506,7 +495,6 @@ class Earthmover:
         for package_name in package_subgraph.successors(root_node):
             # Install packages if necessary, or retrieve path to package yaml file
             package_node = self.package_graph.nodes[package_name]
-            # Install packages if necessary, or retrieve path to package yaml file
             if install:
                 installed_package_yaml = package_node['package'].install(packages_dir)
             else:

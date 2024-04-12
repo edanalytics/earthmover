@@ -189,9 +189,7 @@ def main(argv=None):
             em.logger.info("selector is ignored for compile-only run.")
 
         try:
-            em.merge_packages()
             em.compile()
-            em.build_graph()
             em.logger.info("looks ok")
 
         except Exception as e:
@@ -206,7 +204,6 @@ def main(argv=None):
 
         try:
             em.logger.info("starting...")
-            em.merge_packages()
             em.generate(selector=args.selector)
             em.logger.info("done!")
 
