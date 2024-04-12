@@ -20,6 +20,12 @@ earthmover run -f
 rm -f output/*
 echo "  ... done!"
 
+echo "  running 03a_groupby_with_rank..."
+cd ../03a_groupby_with_rank/
+earthmover run -f
+rm -f output/*
+echo "  ... done!"
+
 echo "  running 04_sqlalchemy..."
 cd ../04_sqlalchemy/
 earthmover run -f
@@ -60,6 +66,13 @@ echo "  running 10_jinja..."
 cd ../10_jinja/
 earthmover run -f
 rm -rf outputs/*
+echo "  ... done!"
+
+echo "  running 11_composition..."
+cd ../11_composition/
+earthmover deps
+earthmover run -f
+rm -rf outputs/*, packages/*
 echo "  ... done!"
 
 cd ../

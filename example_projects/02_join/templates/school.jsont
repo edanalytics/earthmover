@@ -19,8 +19,10 @@ endmacro %}
       "addressTypeDescriptor": "uri://ed-fi.org/AddressTypeDescriptor#Physical",
       "stateAbbreviationDescriptor": "uri://ed-fi.org/StateAbbreviationDescriptor#{{ physical_address_state }}",
       "city": "{{ physical_address_city }}",
-      "postalCode": {{ physical_address_zip }},
-      "streetNumberName": "{{ physical_address_street }}"
+      {% if physical_address_street %}
+        "streetNumberName": "{{ physical_address_street }}",
+      {% endif %}
+      "postalCode": {{ physical_address_zip }}
     },
     {
       "addressTypeDescriptor": "uri://ed-fi.org/AddressTypeDescriptor#Mailing",

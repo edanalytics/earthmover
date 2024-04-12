@@ -107,6 +107,7 @@ The general structure of the YAML involves the following sections:
 1. `version`, with required value `2` (Earthmover 0.2.x and later)
 1. [`config`](#config), which specifies options like the logging level and parameter defaults
 1. [`definitions`](#definitions) is an *optional* way to specify reusable values and blocks
+1. [`packages`](#packages), an *optional* way to import and build on existing projects
 1. [`sources`](#sources), where each source file is listed with details like the number of header rows
 1. [`transformations`](#transformations), where source data can be transformed in various ways
 1. [`destinations`](#destinations), where transformed data can be mapped to JSON templates and Ed-Fi endpoints and sent to an Ed-Fi API
@@ -192,6 +193,23 @@ transformations:
 ```
 
 
+### **`packages`**
+The `packages` section of the [YAML configuration](#yaml-configuration) is an optional section you can use to specify packages &ndash; other `earthmover` projects from a local directory or GitHub &ndash; to import and build upon exisiting code. See [Project Composition](#project-composition) for more details and considerations.
+
+A sample `packages` section is shown here; the options are explained below.
+```yaml
+packages:
+  year_end_assessment:
+    git: "https://github.com/edanalytics/earthmover_edfi_bundles.git"
+    subdirectory: "assessments/assessment_name"
+  student_id_macros:
+    local: "path/to/student_id_macros"
+```
+Each package must have a name (which will be used to name the folder where it is installed in `/packages`) such as `year_end_assessment` or `student_id_macros` in this example. Two sources of `packages` are currently supported:
+* GitHub packages: Specify the URL of the repository containing the package. If the package YAML configuration is not in the top level of the repository, include the path to the folder with the the optional `subdirectory`.
+* Local packages: Specify the relative or absolute path to the folder containing the package YAML configuration.
+
+
 ### **`sources`**
 The `sources` section of the [YAML configuration](#yaml-configuration) specifies source data the tool will work with.
 
@@ -252,7 +270,7 @@ Each source must have a name (which is how it is referenced by transformations a
 * Database sources are supported via [SQLAlchemy](https://www.sqlalchemy.org/). They must specify a database `connection` string and SQL `query` to run.
 * FTP file sources are supported via [ftplib](https://docs.python.org/3/library/ftplib.html). They must specify an FTP `connection` string.
 
-For any source, optionally specify conditions you `expect` data to meet which, if not true for any row, will cause the run to fail with an error. (This can be useful for detecing and rejecting NULL or missing values before processing the data.) The format must be a Jinja expression that returns a boolean value. This is enables casting values (which are all treated as strings) to numeric formats like int and float for numeric comparisons.
+For any source, optionally specify conditions you `expect` data to meet which, if not true for any row, will cause the run to fail with an error. (This can be useful for detecting and rejecting NULL or missing values before processing the data.) The format must be a Jinja expression that returns a boolean value. This is enables casting values (which are all treated as strings) to numeric formats like int and float for numeric comparisons.
 
 The examples above show `user:pass` in the `connection` string, but if you are version-controlling your YAML you must avoid publishing such credentials. Typically this is done via [environment variables](#environment-variable-references) or [command line parameters](#command-line-parameters), which are both supported by this tool. Such environment variable references may be used throughout your YAML (not just in the `sources` section), and are parsed at load time.
 
@@ -480,8 +498,17 @@ Change the format of a date column.
           - date_column_3
         from_format: "%b %d %Y %H:%M%p"
         to_format: "%Y-%m-%d"
+        ignore_errors: False  # Default False
+        exact_match: False    # Default False
 ```
 The `from_format` and `to_format` must follow [Python's strftime() and strptime() formats](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).
+
+When `ignore_errors` is set to True, empty strings will be replaced with Pandas NaT (not-a-time) datatypes.
+This ensures column-consistency and prevents a mix of empty strings and timestamps.
+
+When `exact_match` is set to True, the operation will only run successfully if the `from_format` input exactly matches the format of the date column.
+When False, the operation allows the format to partially-match the target string.
+
 </details>
 
 
@@ -557,8 +584,8 @@ Reduce the number of rows by grouping, and add columns with values calculated ov
 ```
 Valid aggregation functions are
 * `count()` or `size()` - the number of rows in each group
-* `min(column)` - the minumum (numeric) value in `column` for each group
-* `str_min(column)` - the minumum (string) value in `column` for each group
+* `min(column)` - the minimum (numeric) value in `column` for each group
+* `str_min(column)` - the minimum (string) value in `column` for each group
 * `max(column)` - the maximum (numeric) value in `column` for each group
 * `str_max(column)` - the maximum (string) value in `column` for each group
 * `sum(column)` - the sum of (numeric) values in `column` for each group
@@ -795,6 +822,79 @@ For example, for `example_projects/09_edfi/`, a sample results file would be:
 }
 ```
 
+## **Project composition**
+An `earthmover` project can import and build upon other `earthmover` projects by importing them as packages, similar to the concept of dbt packages. When a project uses a package, any elements of the package can be overwritten by the project. This allows you to use majority of the code from a package and specify only the necessary changes in the project.
+
+To install the packages specified in your [YAML Configuration](#yaml-configuration), run `earthmover deps`. Packages will be installed in a nested format in a `packages/` directory. Once packages are installed, `earthmover` can be run as usual. If you make any changes to the packages, run `earthmover deps` again to install the latest version of the packages. 
+
+<details>
+<summary>Example of a composed project</summary>
+
+```yaml
+# projA/earthmover.yml                     # projA/pkgB/earthmover.yml
+config:                                    config:
+  show_graph: True                           parameter_defaults:
+  output_dir: ./output                         DO_FILTERING: "False"
+
+packages:                                  sources:
+  pkgB:                                      source1:
+    local: pkgB                                file: ./seeds/source1.csv
+                                               header_rows: 1
+sources:                                     source2:
+  source1:                                     file: ./seeds/source2.csv
+    file: ./seeds/source1.csv                  header_rows: 1
+    header_rows: 1                                           
+                                           transformations:
+destinations:                                trans1:
+  dest1:                                       ...
+    source: $transformations.trans1
+    template: ./templates/dest1.jsont      destinations:
+                                             dest1:
+                                               source: $transformations.trans1
+                                               template: ./templates/dest1.jsont
+                                             dest2:
+                                               source: $sources.source2
+                                               template: ./templates/dest2.jsont
+```
+Composed results:
+```yaml
+config:
+  show_graph: True
+  output_dir: ./output 
+  parameter_defaults:
+    DO_FILTERING: "False"
+
+packages:
+  pkgB:
+    local: pkgB
+
+sources:
+  source1:
+    file: ./seeds/source1.csv
+    header_rows: 1  
+  source2: 
+    file: ./packages/pkgB/seeds/source2.csv
+    header_rows: 1    
+    
+transformations:
+  trans1:
+    ...
+
+destinations:
+  dest1:
+    source: $transformations.trans1
+    template: ./templates/dest1.jsont
+  dest2:
+    source: $sources.source2
+    template: ./packages/pkgB/templates/dest2.jsont
+```
+</details>
+
+### Project Composition Considerations
+There is no limit to the number of packages that can be imported and no limit to how deeply they can be nested (i.e. packages can import other packages). However, there are a few things to keep in mind with using multiple packages.
+* If multiple packages at the same level (e.g. `projA/packages/pkgB` and `projA/packages/pkgC`, not `projA/packages/pkgB/packages/pkgC`) include same-named nodes, the package specified later in the `packages` list will overwrite. If the node is also specified in the top-level project, its version of the node will overwrite as usual.
+* A similar limitation exists for macros &ndash; a single definition of each macro will be applied everywhere in the project and packages using the same overwrite logic used for the nodes. When you are creating projects that are likely to be used as packages, consider including a namespace in the names of macros with more common operations, such as `assessment123_filter()` instead of the more generic `filter()`. 
+
 
 # Tests
 This tool ships with a test suite covering all transformation operations. It can be run with `earthmover -t`, which simply runs the tool on the `config.yaml` and toy data in the `earthmover/tests/` folder. (The DAG is pictured below.) Rendered `earthmover/tests/output/` are then compared against the `earthmover/tests/expected/` output; the test passes only if all files match exactly.
@@ -845,7 +945,7 @@ The [state feature](#state) adds some overhead, as hashes of input data and JSON
 # Best Practices
 In this section we outline some suggestions for best practices to follow when using `earthmover`, based on our experience with the tool. Many of these are based on best practices for using [dbt](https://www.getdbt.com/), to which `earthmover` is similar, although `earthmover` operates on dataframes rather than database tables.
 
-# Project Structure Practices
+## Project Structure Practices
 A typical `earthmover` project might have a structure like this:
 ```
 project/
@@ -873,7 +973,7 @@ Generally you should separate the mappings, transformations, and structure of yo
 
 When dealing with sensitive source data, you may have to comply with security protocols, such as referencing sensitive data from a network storage location rather than copying it to your own computer. In this situation, option 2 above is a good choice.
 
-To facilitate [operationalization]($operationalization-practices), we recommended using [environment vairables](#environment-variable-references) or [command-line parameters](#command-line-parameters) to pass input and output directories and filenames to `earthmover`, rather than hard-coding them into `earthmover.yaml`. For example, rather than
+To facilitate [operationalization]($operationalization-practices), we recommended using [environment variables](#environment-variable-references) or [command-line parameters](#command-line-parameters) to pass input and output directories and filenames to `earthmover`, rather than hard-coding them into `earthmover.yaml`. For example, rather than
 ```yaml
 config:
   output_dir: path/to/outputs/
@@ -952,7 +1052,7 @@ When developing your transformations, it can be helpful to
 You can remove these settings once your `earthmover` project is ready for operationalization.
 
 ## Operationalization practices
-Typically `earthmover` is used when the same (or simlar) data transformations must be done repeatedly. (A one-time data transformation task may be more easily done with [SQLite](https://www.sqlite.org/index.html) or a similar tool.) When deploying/operationalizing `earthmover`, whether with a simple scheduler like [cron](https://en.wikipedia.org/wiki/Cron) or an orchestration tool like [Airflow](https://airflow.apache.org/) or [Dagster](https://dagster.io/), consider
+Typically `earthmover` is used when the same (or similar) data transformations must be done repeatedly. (A one-time data transformation task may be more easily done with [SQLite](https://www.sqlite.org/index.html) or a similar tool.) When deploying/operationalizing `earthmover`, whether with a simple scheduler like [cron](https://en.wikipedia.org/wiki/Cron) or an orchestration tool like [Airflow](https://airflow.apache.org/) or [Dagster](https://dagster.io/), consider
 * specifying conditions you `expect` your [sources](#sources) to meet, so `earthmover` will fail on source data errors
 * specifying `config` &raquo; `log_level: INFO` and monitoring logs for phrases like
   > `distinct_rows` operation removed NN duplicate rows

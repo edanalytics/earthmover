@@ -4,7 +4,7 @@ import pandas as pd
 import re
 import string
 
-from earthmover.nodes.operation import Operation
+from earthmover.operations.operation import Operation
 from earthmover import util
 
 from typing import Dict, List, Tuple
@@ -24,14 +24,6 @@ class AddColumnsOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_dict: Dict[str, str] = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
@@ -80,14 +72,6 @@ class ModifyColumnsOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_dict: Dict[str, str] = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
@@ -141,14 +125,6 @@ class DuplicateColumnsOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_dict: Dict[str, str] = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
@@ -186,14 +162,6 @@ class RenameColumnsOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_dict: Dict[str, str] = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
@@ -229,14 +197,6 @@ class DropColumnsOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_to_drop: List[str] = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.columns_to_drop = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
@@ -268,15 +228,6 @@ class KeepColumnsOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.header: List[str] = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-
         self.header = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
@@ -308,20 +259,8 @@ class CombineColumnsOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_list: List[str] = None
-        self.new_column: str = None
-        self.separator: str = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-
         self.columns_list = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
         self.new_column   = self.error_handler.assert_get_key(self.config, 'new_column', dtype=str)
-
         self.separator = self.config.get('separator', "")
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
@@ -358,16 +297,6 @@ class MapValuesOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_list: List[str] = None
-        self.map_file: str = None
-        self.mapping: Dict[str, str] = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
 
         # Only 'column' or 'columns' can be populated
         _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
@@ -446,24 +375,15 @@ class DateFormatOperation(Operation):
     """
     allowed_configs: Tuple[str] = (
         'operation', 'repartition', 
-        'column', 'columns', 'from_format', 'to_format',
+        'column', 'columns', 'from_format', 'to_format', 'ignore_errors', 'exact_match',
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_list: List[str] = None
-        self.from_format: str = None
-        self.to_format: str = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-
         self.from_format = self.error_handler.assert_get_key(self.config, 'from_format', dtype=str)
         self.to_format   = self.error_handler.assert_get_key(self.config, 'to_format', dtype=str)
+        self.ignore_errors   = self.error_handler.assert_get_key(self.config, 'ignore_errors', dtype=bool, required=False)
+        self.exact_match   = self.error_handler.assert_get_key(self.config, 'exact_match', dtype=bool, required=False)
 
         # Only 'column' or 'columns' can be populated
         _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
@@ -493,7 +413,7 @@ class DateFormatOperation(Operation):
         for _column in self.columns_list:
             try:
                 data[_column] = (
-                    dask.dataframe.to_datetime(data[_column], format=self.from_format)
+                    dask.dataframe.to_datetime(data[_column], format=self.from_format, exact=bool(self.exact_match), errors='coerce' if self.ignore_errors else 'raise')
                         .dt.strftime(self.to_format)
                 )
 

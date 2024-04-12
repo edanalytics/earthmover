@@ -1,12 +1,39 @@
+### v0.3.0
+<details>
+
+<summary>Released TODO</summary>
+
+* feature: add project composition using `packages` keyword in template file (see README)
+* feature: `GroupByWithRankOperation` cumulatively sums record counts by group-by columns
+* feature: setting `log_level: DEBUG` in template configs or setting `debug: True` for a node displays the head of the node mid-run 
+* feature: add `optional_fields` key to all Sources to add optional empty columns when missing from schema
+* feature: add optional `ignore_errors` and `exact_match` boolean flags to `DateFormatOperation`
+* internal: force-cast a dataframe to string-type after loading a Source
+* internal: force-cast a dataframe to string-type before writing as a Destination
+* internal: remove attempted directory-hashing when a source is a directory (i.e., Parquet)
+* internal: refactor project to standardize import paths for Node and Operation
+* internal: add `Node.full_name` attribute and `Node.set_upstream_source()` method
+* internal: unify graph-building into compilation
+* internal: refactor compilation and execution code for cleanliness
+* internal: unify `Node.compile()` into initialization to ease Node development
+
+</details>
+
+
 ### v0.2.1
 <details>
-<summary>Released TODO</summary>
-* feature: `SortRowsOperation` sorts the dataset by `columns`
+<summary>Released 2024-04-08</summary>
+
+* feature: [adding fromjson() function to Jinja](https://github.com/edanalytics/earthmover/pull/75)
+* feature: [fix docs typos](https://github.com/edanalytics/earthmover/pull/68)
+* feature: [`SortRowsOperation` sorts the dataset by `columns`](https://github.com/edanalytics/earthmover/pull/56)
+
 </details>
 
 ### v0.2.0
 <details>
 <summary>Released 2023-09-11</summary>
+
 * breaking change: remove `source` as Operation config and move to Transformation; this simplifies templates and reduces memory usage
 * breaking change: `version: 2` required in Earthmover YAML files 
 * feature: `SnakeCaseColumnsOperation` converts all columns to snake_case
@@ -49,7 +76,7 @@
 <summary>Released 2023-05-12</summary>
 
 * bugfix: `config.state`_file was being ignored when specified
-* bugfix: further issues with multi-line `config.macros` - the resolution here (hopefully the last one!) is to pre-load macros (so they can be injected into run-time Jinja contexts) and then just allow the Jinja to render and macro definitions down to nothing in the config YAML... you do have to be careful with Jinja linebreak supression, i.e.
+* bugfix: further issues with multi-line `config.macros` - the resolution here (hopefully the last one!) is to pre-load macros (so they can be injected into run-time Jinja contexts) and then just allow the Jinja to render and macro definitions down to nothing in the config YAML... you do have to be careful with Jinja linebreak suppression, i.e.
     ```yaml
     config:
     macros: > # this is a macro!
