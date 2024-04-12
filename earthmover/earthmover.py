@@ -188,7 +188,7 @@ class Earthmover:
         if self.state_configs['show_graph']:
             self.graph.draw()
 
-    def compile_node_configs(self, node_configs: 'YamlMapping', node_class: 'Node'):
+    def compile_node_configs(self, node_configs: 'YamlMapping', node_class: 'Node') -> List['Node']:
         """
         Helper method to keep code DRY, yet flexible to new node types.
         """
@@ -237,7 +237,7 @@ class Earthmover:
                     self.metadata["row_counts"].update({node_name: len(node.data)})
 
 
-    def hash_graph_to_runs_file(self):
+    def hash_graph_to_runs_file(self) -> RunsFile:
         """
 
         :return:
