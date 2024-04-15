@@ -607,34 +607,6 @@ Note the difference between `min()`/`max()` and `str_min()`/`str_max()`: given a
 
 </details>
 
-<!--
-
-* <a id='op_group_by_with_count'></a> reduce number of rows via group by, and add a column for group counts:
-```yaml
-    - operation: group_by_with_count
-      source: $transformations.sessions
-      group_by_columns:
-        - school_number
-        - school_year
-        - structure_name
-        - term_code
-      count_column: instructional_days
-```
-One use-case for this is to calculate instructional days per session by joining sessions with a table of instructional dates, filtering for rows where the instructional date is between the session start and end date, then using this operator to group back down to one row per session but adding a count column.
-
-* <a id='op_group_by_with_agg'></a> reduce number of rows via group by, and add a column with concatenated values of another column:
-```yaml
-    - operation: group_by_with_agg
-      source: $transformations.assessment_items
-      group_by_columns:
-        - student_id
-      agg_column: item_score
-      separator: ";"
-```
-This transformation can be useful for building up nested structures, like arrays of objects in a JSON structure. `separator` is `,` if unspecified.
-
--->
-
 
 
 ### **`destinations`**

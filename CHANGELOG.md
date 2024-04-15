@@ -17,6 +17,7 @@
 * internal: unify graph-building into compilation
 * internal: refactor compilation and execution code for cleanliness
 * internal: unify `Node.compile()` into initialization to ease Node development
+* internal: Remove unused `group_by_with_count` and `group_by_with_agg` operations
 
 </details>
 

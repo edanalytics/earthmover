@@ -46,8 +46,6 @@ class Operation(Node):
             'filter_rows': row_operations.FilterRowsOperation,
             'sort_rows': row_operations.SortRowsOperation,
 
-            'group_by_with_count': groupby_operations.GroupByWithCountOperation,
-            'group_by_with_ag': groupby_operations.GroupByWithAggOperation,
             'group_by_with_rank': groupby_operations.GroupByWithRankOperation,
             'group_by': groupby_operations.GroupByOperation,
         }
