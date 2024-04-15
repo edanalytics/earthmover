@@ -9,7 +9,6 @@
 * feature: setting `log_level: DEBUG` in template configs or setting `debug: True` for a node displays the head of the node mid-run 
 * feature: add `optional_fields` key to all Sources to add optional empty columns when missing from schema
 * feature: add optional `ignore_errors` and `exact_match` boolean flags to `DateFormatOperation`
-* internal: force-cast a dataframe to string-type after loading a Source
 * internal: force-cast a dataframe to string-type before writing as a Destination
 * internal: remove attempted directory-hashing when a source is a directory (i.e., Parquet)
 * internal: refactor project to standardize import paths for Node and Operation
