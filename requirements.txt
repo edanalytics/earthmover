@@ -1,6 +1,6 @@
 wheel
 aiohttp>=3.8.1
-dask[dataframe]~=2023.11.0
+dask[dataframe]~=2023.5.0
 GitPython>=3.1.40
 Jinja2>=2.11.3
 networkx>=2.6.3
