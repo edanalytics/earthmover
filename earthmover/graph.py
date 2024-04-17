@@ -8,7 +8,7 @@ from typing import Dict, Iterable, Optional
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from earthmover.error_handler import ErrorHandler
-    from earthmover.node import Node
+    from earthmover.nodes.node import Node
 
 
 class Graph(nx.DiGraph):
@@ -115,11 +115,12 @@ class Graph(nx.DiGraph):
         try:
             import matplotlib.patches as mpatches
             import matplotlib.pyplot as plt
+            import pygraphviz
             _ = plt.figure(figsize=(image_width, image_height))
         except ImportError:
             self.error_handler.ctx.remove('node', 'line', 'file')
             self.error_handler.throw(
-                "drawing the graph requires the matplotlib library... please install it with `pip install matplotlib` or similar"
+                "drawing the graph requires additional libraries... please install using `pip install earthmover[graph]`"
             )
             raise  # Never called; avoids linting errors
 
@@ -134,7 +135,8 @@ class Graph(nx.DiGraph):
 
             node_labels[node_id] = node.name
 
-            _node_size_label = f"{node.num_rows} rows; {node.num_cols} cols"
+            # Default row and column counts to 0 during compile.
+            _node_size_label = f"{int(node.num_rows or 0)} rows; {node.num_cols or 0} cols"
             if node.size:
                 _node_size_label += f"; {util.human_size(node.size)}"
 
@@ -152,10 +154,10 @@ class Graph(nx.DiGraph):
         # Position nodes using PyGraphViz (needs to be apt/pip installed separately):
         try:
             node_positions = nx.drawing.nx_agraph.graphviz_layout(self, prog='dot', args='-Grankdir=LR')
-        except ImportError:
+        except ValueError:
             self.error_handler.ctx.remove('node', 'line', 'file')
             self.error_handler.throw(
-                "drawing the graph requires the PyGraphViz library... please install it with `sudo apt-get install graphviz graphviz-dev && pip install pygraphviz` or similar"
+                "drawing the graph requires the GraphViz package... please install it with `sudo apt-get install graphviz graphviz-dev` or similar"
             )
             raise  # Never called; avoids linting errors
 

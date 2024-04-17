@@ -2,8 +2,8 @@ import dask.dataframe as dd
 import numpy as np
 import pandas as pd
 
-from earthmover.node import Node
-from earthmover.nodes.operation import Operation
+from earthmover.nodes.node import Node
+from earthmover.operations.operation import Operation
 
 from typing import Dict, List, Tuple
 from typing import TYPE_CHECKING
@@ -30,25 +30,6 @@ class JoinOperation(Operation):
 
         # Check joined node
         self.sources: List[str] = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
-
-        self.join_type: str = None
-
-        self.left_keys: List[str] = None
-        self.left_keep_cols: List[str] = None
-        self.left_drop_cols: List[str] = None
-        self.left_cols: List[str] = None  # The final column list built of cols and keys
-
-        self.right_keys: List[str] = None
-        self.right_keep_cols: List[str] = None
-        self.right_drop_cols: List[str] = None
-        self.right_cols: List[str] = None  # The final column list built of cols and keys
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
 
         # Check left keys
         _key  = self.error_handler.assert_get_key(self.config, 'left_key', dtype=str, required=False)
@@ -97,16 +78,16 @@ class JoinOperation(Operation):
         super().execute(data, data_mapping=data_mapping, **kwargs)
 
         # Build left dataset
-        self.left_cols = data.columns
+        left_cols = data.columns
 
         if self.left_keep_cols:
-            if not set(self.left_keep_cols).issubset(self.left_cols):
+            if not set(self.left_keep_cols).issubset(left_cols):
                 self.error_handler.throw(
                     "columns in `left_keep_columns` are not defined in the dataset"
                 )
                 raise
 
-            self.left_cols = list(set(self.left_keep_cols).union(self.left_keys))
+            left_cols = list(set(self.left_keep_cols).union(self.left_keys))
 
         elif self.left_drop_cols:
             if any(col in self.left_keys for col in self.left_drop_cols):
@@ -115,23 +96,23 @@ class JoinOperation(Operation):
                 )
                 raise
 
-            self.left_cols = list(set(self.left_cols).difference(self.left_drop_cols))
+            left_cols = list(set(left_cols).difference(self.left_drop_cols))
 
-        left_data = data[self.left_cols]
+        left_data = data[left_cols]
 
         # Iterate each right dataset
         for source in self.sources:
             right_data = data_mapping[source].data
-            self.right_cols = right_data.columns
+            right_cols = right_data.columns
 
             if self.right_keep_cols:
-                if not set(self.right_keep_cols).issubset(self.right_cols):
+                if not set(self.right_keep_cols).issubset(right_cols):
                     self.error_handler.throw(
                         "columns in `right_keep_columns` are not defined in the dataset"
                     )
                     raise
 
-                self.right_cols = list(set(self.right_keep_cols).union(self.right_keys))
+                right_cols = list(set(self.right_keep_cols).union(self.right_keys))
 
             elif self.right_drop_cols:
                 if any(col in self.right_keys for col in self.right_drop_cols):
@@ -140,9 +121,9 @@ class JoinOperation(Operation):
                     )
                     raise
 
-                self.right_cols = list(set(self.right_cols).difference(self.right_drop_cols))
+                right_cols = list(set(right_cols).difference(self.right_drop_cols))
 
-            right_data = right_data[self.right_cols]
+            right_data = right_data[right_cols]
 
             # Complete the merge, using different logic depending on the partitions of the datasets.
             try:

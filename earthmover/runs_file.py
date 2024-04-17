@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from earthmover.earthmover import Earthmover
-    from earthmover.node import Node
+    from earthmover.nodes.node import Node
     from logging import Logger
 
 
@@ -158,7 +158,7 @@ class RunsFile:
             if f"$sources.{source.name}" not in node_data.keys():
                 continue
 
-            if not source.is_remote and source.file:
+            if not source.is_remote and source.file and not os.path.isdir(source.file):
                 sources_hash += self._get_file_hash(source.file)
 
         if sources_hash:

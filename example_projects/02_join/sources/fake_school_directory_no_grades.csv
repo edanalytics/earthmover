@@ -1,5 +1,5 @@
 cdscode,physical_address_state,physical_address_city,physical_address_zip,physical_address_street,mailing_address_state,mailing_address_city,mailing_address_zip,mailing_address_street
-00009ed2-4cda-4089-b806-6d2a4eff18bd,Illinois,Chicago,60646,5 Susan Way,California,Santa Rosa,95405,91201 Mccormick Way
+00009ed2-4cda-4089-b806-6d2a4eff18bd,Illinois,Chicago,60646,,California,Santa Rosa,95405,91201 Mccormick Way
 0002ae9f-d276-430a-a359-ba3cef797a76,Maryland,Baltimore,21281,3396 Main Avenue,Florida,Fort Lauderdale,33310,598 Stang Crossing
 0003292b-fa06-4029-a4eb-0d90d7db2b9f,New York,White Plains,10606,33 Fairfield Center,Illinois,Chicago,60604,9608 Huxley Alley
 0003ca3b-472d-4b65-a574-121cdf2dca85,Texas,Temple,76505,33874 Bobwhite Plaza,Georgia,Norcross,30092,74 Buhler Circle

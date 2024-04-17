@@ -1,6 +1,6 @@
 import abc
 
-from earthmover.node import Node
+from earthmover.nodes.node import Node
 
 from typing import Dict, Tuple
 from typing import TYPE_CHECKING
@@ -14,7 +14,7 @@ class Operation(Node):
     """
 
     """
-    type: str = "operation"
+    type: str = "transformation"
     allowed_configs: Tuple[str] = ('operation', 'repartition',)
 
     def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
@@ -46,8 +46,7 @@ class Operation(Node):
             'filter_rows': row_operations.FilterRowsOperation,
             'sort_rows': row_operations.SortRowsOperation,
 
-            'group_by_with_count': groupby_operations.GroupByWithCountOperation,
-            'group_by_with_ag': groupby_operations.GroupByWithAggOperation,
+            'group_by_with_rank': groupby_operations.GroupByWithRankOperation,
             'group_by': groupby_operations.GroupByOperation,
         }
 
@@ -80,7 +79,7 @@ class Operation(Node):
         :return:
         """
         self.error_handler.ctx.update(
-            file=self.earthmover.config_file, line=self.config.__line__, node=self, operation=None
+            file=self.config.__file__, line=self.config.__line__, node=self, operation=None
         )
 
         pass

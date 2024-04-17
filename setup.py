@@ -22,6 +22,14 @@ setuptools.setup (
     packages = setuptools.find_namespace_packages(include=['earthmover', 'earthmover.*']),
     include_package_data=True,
     install_requires = all_reqs,
+    extras_require = {
+        'excel': ['openpyxl'],
+        'graph': ['matplotlib', 'pygraphviz'],
+        'sql': ['sqlalchemy'],
+        'parquet': ['pyarrow'],
+        'postgres': ['sqlalchemy', 'psycopg2'],
+        'xml': ['pyarrow', 'lxml'],
+    },
     python_requires = '>=3',
     entry_points = '''
         [console_scripts]

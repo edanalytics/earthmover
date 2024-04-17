@@ -1,6 +1,6 @@
 import dask
 
-from earthmover.nodes.operation import Operation
+from earthmover.operations.operation import Operation
 
 from typing import List, Tuple
 from typing import TYPE_CHECKING
@@ -19,14 +19,6 @@ class DistinctRowsOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_list: List[str] = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
 
         # Only 'column' or 'columns' can be populated
         _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
@@ -71,16 +63,6 @@ class FilterRowsOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.query: str = None
-        self.behavior: str = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-
         self.query    = self.error_handler.assert_get_key(self.config, 'query', dtype=str)
         self.behavior = self.error_handler.assert_get_key(self.config, 'behavior', dtype=str)
 
@@ -125,16 +107,6 @@ class SortRowsOperation(Operation):
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            self.columns_list: List[str] = None
-            self.descending: bool = None
-
-        def compile(self):
-            """
-
-            :return:
-            """
-            super().compile()
-
             self.columns_list = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
             self.descending = self.error_handler.assert_get_key(self.config, 'descending', required=False, default=False)
 

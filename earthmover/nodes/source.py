@@ -5,7 +5,7 @@ import os
 import pandas as pd
 import re
 
-from earthmover.node import Node
+from earthmover.nodes.node import Node
 from earthmover import util
 
 from typing import Callable, List, Optional, Tuple
@@ -23,7 +23,7 @@ class Source(Node):
     type: str = 'source'
     mode: str = None  # Documents which class was chosen.
     is_remote: bool = None
-    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional',)
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',)
 
     NUM_ROWS_PER_CHUNK: int = 1000000
 
@@ -52,20 +52,15 @@ class Source(Node):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.chunksize: int = None
+        self.chunksize: int = self.error_handler.assert_get_key(self.config, 'chunksize', dtype=int, required=False, default=self.NUM_ROWS_PER_CHUNK)
 
         # A source can be blank if `optional=True` is specified in its configs.
         # (In this case, `columns` must be specified, and are used to construct an empty
         # dataframe which is passed through to downstream transformations and destinations.)
         self.optional: bool = self.config.get('optional', False)
 
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
-        self.chunksize = self.error_handler.assert_get_key(self.config, 'chunksize', dtype=int, required=False, default=self.NUM_ROWS_PER_CHUNK)
+        # Optional fields can be defined to be added as null columns if not present in the DataFrame.
+        self.optional_fields: List[str] = self.config.get('optional_fields', [])
 
     def post_execute(self, **kwargs):
         """
@@ -81,6 +76,13 @@ class Source(Node):
 
         self.data = self.opt_repartition(self.data)  # Repartition if specified.
 
+        # Add missing columns if defined under `optional_fields`.
+        if self.optional_fields:
+            for field in self.optional_fields:
+                if field not in self.data.columns:
+                    self.logger.debug(f"Optional column will be added to dataset: '{field}'")
+                    self.data[field] = ""  # Default to empty string.
+
         super().post_execute(**kwargs)
 
 
@@ -91,24 +93,13 @@ class FileSource(Source):
     mode: str = 'file'
     is_remote: bool = False
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional',
+        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
         'file', 'type', 'columns', 'header_rows',
         'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.file: str = None
-        self.file_type: str = None
-        self.read_lambda: Callable = None
-        self.columns_list: List[str] = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.file = self.error_handler.assert_get_key(self.config, 'file', dtype=str, required=False)
 
         #
@@ -169,9 +160,12 @@ class FileSource(Source):
         """
         super().execute()
 
+        # Verify necessary packages are installed.
+        self._verify_packages(self.file_type)
+
         try:
             if not self.file and self.optional:
-                self.data = pd.DataFrame(columns = self.columns_list)
+                self.data = pd.DataFrame(columns=self.columns_list, dtype="string")
             else:
                 self.data = self.read_lambda(self.file, self.config)
 
@@ -193,10 +187,6 @@ class FileSource(Source):
             )
 
         # error handling:
-        except ImportError:
-            self.error_handler.throw(
-                f"processing .{self.file_type} file {self.file} requires the pyarrow library... please `pip install pyarrow`"
-            )
         except FileNotFoundError:
             self.error_handler.throw(
                 f"source file {self.file} not found"
@@ -277,6 +267,37 @@ class FileSource(Source):
         }
         return read_lambda_mapping.get(file_type)
 
+    def _verify_packages(self, file_type: str):
+        """
+        Verify necessary packages are installed before attempting load.
+        """
+        if file_type == 'parquet':
+            try:
+                import pyarrow
+            except ImportError:
+                self.error_handler.throw(
+                    "loading a Parquet source requires additional libraries... please install using `pip install earthmover[parquet]`"
+                )
+                raise
+        elif file_type == 'excel':
+            try:
+                import pyarrow
+                import openpyxl
+            except ImportError:
+                self.error_handler.throw(
+                    "loading an Excel source requires additional libraries... please install using `pip install earthmover[excel]`"
+                )
+                raise
+        elif file_type == 'xml':
+            try:
+                import pyarrow
+                import lxml
+            except ImportError:
+                self.error_handler.throw(
+                    "loading an XML source requires additional libraries... please install using `pip install earthmover[xml]`"
+                )
+                raise
+
 
 class FtpSource(Source):
     """
@@ -285,22 +306,12 @@ class FtpSource(Source):
     mode: str = 'ftp'
     is_remote: bool = True
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional',
+        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
         'connection', 'query',
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.connection: str = None
-        self.ftp: ftplib.FTP = None
-        self.file: str = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.connection = self.error_handler.assert_get_key(self.config, 'connection', dtype=str)
 
         # There's probably a network builtin to simplify this.
@@ -357,21 +368,12 @@ class SqlSource(Source):
     mode: str = 'sql'
     is_remote: bool = True
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional',
+        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
         'connection', 'query',
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.connection: str = None
-        self.query: str = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.connection = self.error_handler.assert_get_key(self.config, 'connection', dtype=str)
         self.query = self.error_handler.assert_get_key(self.config, 'query', dtype=str)
 
@@ -393,9 +395,11 @@ class SqlSource(Source):
         """
         super().execute()
 
+        # Verify necessary packages are installed.
+        self._verify_packages(self.connection)
+
         try:
             self.data = self.load_sql_dataframe()
-
 
             self.logger.debug(
                 f"source `{self.name}` loaded (via SQL)"
@@ -424,3 +428,25 @@ class SqlSource(Source):
 
             with sqlalchemy.create_engine(self.connection).connect() as engine_cloud:
                 return pd.DataFrame(engine_cloud.execute(sqlalchemy.text(self.query)))
+
+    def _verify_packages(self, connection: str):
+        """
+        Verify necessary packages are installed before attempting load.
+        """
+        if connection.startswith('postgres'):
+            try:
+                import sqlalchemy
+                import psycopg2
+            except ImportError:
+                self.error_handler.throw(
+                    "connecting to a Postgres database requires additional libraries... please install using `pip install earthmover[postgres]`"
+                )
+                raise
+        else:
+            try:
+                import sqlalchemy
+            except ImportError:
+                self.error_handler.throw(
+                    "connecting to a database requires additional libraries... please install using `pip install earthmover[sql]`"
+                )
+                raise

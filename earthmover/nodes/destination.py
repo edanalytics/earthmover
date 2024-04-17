@@ -4,7 +4,7 @@ import os
 import pandas as pd
 import re
 
-from earthmover.node import Node
+from earthmover.nodes.node import Node
 from earthmover import util
 
 from typing import Tuple
@@ -42,19 +42,9 @@ class FileDestination(Destination):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.file: str = None
-        self.template: str = None
-        self.jinja_template: jinja2.Template = None
-        self.header: str = None
-        self.footer: str = None
-
-    def compile(self):
-        """
-
-        :return:
-        """
-        super().compile()
         self.template = self.error_handler.assert_get_key(self.config, 'template', dtype=str)
+        self.header = self.config.get("header")
+        self.footer = self.config.get("footer")
 
         #config->extension is optional: if not present, we assume the destination name has an extension
         extension = ""
@@ -81,12 +71,6 @@ class FileDestination(Destination):
         if self.config.get('linearize', True):
             template_string = self.EXP.sub(" ", template_string)  # Replace multiple spaces with a single space.
 
-        if 'header' in self.config:
-            self.header = self.config["header"]
-
-        if 'footer' in self.config:
-            self.footer = self.config["footer"]
-
         #
         try:
             self.jinja_template = util.build_jinja_template(template_string, macros=self.earthmover.macros)
@@ -99,7 +83,7 @@ class FileDestination(Destination):
 
     def execute(self, **kwargs):
         """
-        There is a bug in Dask where where `dd.to_csv(mode='a', single_file=True)` fails.
+        There is a bug in Dask where `dd.to_csv(mode='a', single_file=True)` fails.
         This is resolved in 2023.8.1: https://docs.dask.org/en/stable/changelog.html#id7 
 
         :return:
@@ -110,7 +94,6 @@ class FileDestination(Destination):
         # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
         self.data = (
             self.upstream_sources[self.source].data
-                .fillna('')
                 .map_partitions(lambda x: x.apply(self.render_row, axis=1), meta=pd.Series('str'))
         )
 
@@ -135,6 +118,7 @@ class FileDestination(Destination):
         self.size = os.path.getsize(self.file)
 
     def render_row(self, row: pd.Series):
+        row = row.astype("string").fillna('')
         _data_tuple = row.to_dict()
         _data_tuple["__row_data__"] = row
 

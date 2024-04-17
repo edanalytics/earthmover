@@ -107,6 +107,7 @@ The general structure of the YAML involves the following sections:
 1. `version`, with required value `2` (Earthmover 0.2.x and later)
 1. [`config`](#config), which specifies options like the logging level and parameter defaults
 1. [`definitions`](#definitions) is an *optional* way to specify reusable values and blocks
+1. [`packages`](#packages), an *optional* way to import and build on existing projects
 1. [`sources`](#sources), where each source file is listed with details like the number of header rows
 1. [`transformations`](#transformations), where source data can be transformed in various ways
 1. [`destinations`](#destinations), where transformed data can be mapped to JSON templates and Ed-Fi endpoints and sent to an Ed-Fi API
@@ -190,6 +191,23 @@ transformations:
         columns:
           school_year: *date_to_year
 ```
+
+
+### **`packages`**
+The `packages` section of the [YAML configuration](#yaml-configuration) is an optional section you can use to specify packages &ndash; other `earthmover` projects from a local directory or GitHub &ndash; to import and build upon exisiting code. See [Project Composition](#project-composition) for more details and considerations.
+
+A sample `packages` section is shown here; the options are explained below.
+```yaml
+packages:
+  year_end_assessment:
+    git: "https://github.com/edanalytics/earthmover_edfi_bundles.git"
+    subdirectory: "assessments/assessment_name"
+  student_id_macros:
+    local: "path/to/student_id_macros"
+```
+Each package must have a name (which will be used to name the folder where it is installed in `/packages`) such as `year_end_assessment` or `student_id_macros` in this example. Two sources of `packages` are currently supported:
+* GitHub packages: Specify the URL of the repository containing the package. If the package YAML configuration is not in the top level of the repository, include the path to the folder with the the optional `subdirectory`.
+* Local packages: Specify the relative or absolute path to the folder containing the package YAML configuration.
 
 
 ### **`sources`**
@@ -480,8 +498,17 @@ Change the format of a date column.
           - date_column_3
         from_format: "%b %d %Y %H:%M%p"
         to_format: "%Y-%m-%d"
+        ignore_errors: False  # Default False
+        exact_match: False    # Default False
 ```
 The `from_format` and `to_format` must follow [Python's strftime() and strptime() formats](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).
+
+When `ignore_errors` is set to True, empty strings will be replaced with Pandas NaT (not-a-time) datatypes.
+This ensures column-consistency and prevents a mix of empty strings and timestamps.
+
+When `exact_match` is set to True, the operation will only run successfully if the `from_format` input exactly matches the format of the date column.
+When False, the operation allows the format to partially-match the target string.
+
 </details>
 
 
@@ -579,34 +606,6 @@ Note the difference between `min()`/`max()` and `str_min()`/`str_max()`: given a
 | `str_max()` |     99 |
 
 </details>
-
-<!--
-
-* <a id='op_group_by_with_count'></a> reduce number of rows via group by, and add a column for group counts:
-```yaml
-    - operation: group_by_with_count
-      source: $transformations.sessions
-      group_by_columns:
-        - school_number
-        - school_year
-        - structure_name
-        - term_code
-      count_column: instructional_days
-```
-One use-case for this is to calculate instructional days per session by joining sessions with a table of instructional dates, filtering for rows where the instructional date is between the session start and end date, then using this operator to group back down to one row per session but adding a count column.
-
-* <a id='op_group_by_with_agg'></a> reduce number of rows via group by, and add a column with concatenated values of another column:
-```yaml
-    - operation: group_by_with_agg
-      source: $transformations.assessment_items
-      group_by_columns:
-        - student_id
-      agg_column: item_score
-      separator: ";"
-```
-This transformation can be useful for building up nested structures, like arrays of objects in a JSON structure. `separator` is `,` if unspecified.
-
--->
 
 
 
@@ -795,6 +794,79 @@ For example, for `example_projects/09_edfi/`, a sample results file would be:
 }
 ```
 
+## **Project composition**
+An `earthmover` project can import and build upon other `earthmover` projects by importing them as packages, similar to the concept of dbt packages. When a project uses a package, any elements of the package can be overwritten by the project. This allows you to use majority of the code from a package and specify only the necessary changes in the project.
+
+To install the packages specified in your [YAML Configuration](#yaml-configuration), run `earthmover deps`. Packages will be installed in a nested format in a `packages/` directory. Once packages are installed, `earthmover` can be run as usual. If you make any changes to the packages, run `earthmover deps` again to install the latest version of the packages. 
+
+<details>
+<summary>Example of a composed project</summary>
+
+```yaml
+# projA/earthmover.yml                     # projA/pkgB/earthmover.yml
+config:                                    config:
+  show_graph: True                           parameter_defaults:
+  output_dir: ./output                         DO_FILTERING: "False"
+
+packages:                                  sources:
+  pkgB:                                      source1:
+    local: pkgB                                file: ./seeds/source1.csv
+                                               header_rows: 1
+sources:                                     source2:
+  source1:                                     file: ./seeds/source2.csv
+    file: ./seeds/source1.csv                  header_rows: 1
+    header_rows: 1                                           
+                                           transformations:
+destinations:                                trans1:
+  dest1:                                       ...
+    source: $transformations.trans1
+    template: ./templates/dest1.jsont      destinations:
+                                             dest1:
+                                               source: $transformations.trans1
+                                               template: ./templates/dest1.jsont
+                                             dest2:
+                                               source: $sources.source2
+                                               template: ./templates/dest2.jsont
+```
+Composed results:
+```yaml
+config:
+  show_graph: True
+  output_dir: ./output 
+  parameter_defaults:
+    DO_FILTERING: "False"
+
+packages:
+  pkgB:
+    local: pkgB
+
+sources:
+  source1:
+    file: ./seeds/source1.csv
+    header_rows: 1  
+  source2: 
+    file: ./packages/pkgB/seeds/source2.csv
+    header_rows: 1    
+    
+transformations:
+  trans1:
+    ...
+
+destinations:
+  dest1:
+    source: $transformations.trans1
+    template: ./templates/dest1.jsont
+  dest2:
+    source: $sources.source2
+    template: ./packages/pkgB/templates/dest2.jsont
+```
+</details>
+
+### Project Composition Considerations
+There is no limit to the number of packages that can be imported and no limit to how deeply they can be nested (i.e. packages can import other packages). However, there are a few things to keep in mind with using multiple packages.
+* If multiple packages at the same level (e.g. `projA/packages/pkgB` and `projA/packages/pkgC`, not `projA/packages/pkgB/packages/pkgC`) include same-named nodes, the package specified later in the `packages` list will overwrite. If the node is also specified in the top-level project, its version of the node will overwrite as usual.
+* A similar limitation exists for macros &ndash; a single definition of each macro will be applied everywhere in the project and packages using the same overwrite logic used for the nodes. When you are creating projects that are likely to be used as packages, consider including a namespace in the names of macros with more common operations, such as `assessment123_filter()` instead of the more generic `filter()`. 
+
 
 # Tests
 This tool ships with a test suite covering all transformation operations. It can be run with `earthmover -t`, which simply runs the tool on the `config.yaml` and toy data in the `earthmover/tests/` folder. (The DAG is pictured below.) Rendered `earthmover/tests/output/` are then compared against the `earthmover/tests/expected/` output; the test passes only if all files match exactly.
@@ -845,7 +917,7 @@ The [state feature](#state) adds some overhead, as hashes of input data and JSON
 # Best Practices
 In this section we outline some suggestions for best practices to follow when using `earthmover`, based on our experience with the tool. Many of these are based on best practices for using [dbt](https://www.getdbt.com/), to which `earthmover` is similar, although `earthmover` operates on dataframes rather than database tables.
 
-# Project Structure Practices
+## Project Structure Practices
 A typical `earthmover` project might have a structure like this:
 ```
 project/
