@@ -1,7 +1,7 @@
 ### v0.3.0
 <details>
 
-<summary>Released TODO</summary>
+<summary>Released 2024-04-17</summary>
 
 * feature: add project composition using `packages` keyword in template file (see README)
 * feature: add installation extras for optional libraries, and improve error logging to notify which is missing

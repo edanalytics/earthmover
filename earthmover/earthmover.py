@@ -69,7 +69,6 @@ class Earthmover:
         self.macros: str = ""
 
         project_configs = self.load_project_configs(self.config_file)  # Merge the optional user configs into the defaults.
-        # TODO: Unify add params to state_configs.
 
         ### Update environment with state-config settings.
         # Overload state_configs with defaults, YAML configs, then CLI configs
