@@ -1,3 +1,14 @@
+### v0.3.1
+<details>
+
+<summary>Released 2024-04-26</summary>
+
+* internal: allow any ordering of Transformations during graph-building in compile
+* internal: only create a `/packages` dir when `earthmover deps` succeeds
+
+</details>
+
+
 ### v0.3.0
 <details>
 

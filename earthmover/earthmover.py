@@ -174,12 +174,14 @@ class Earthmover:
         """
         compiled_nodes = []
 
+        # Complete first pass to add nodes to graph.
         for name, config in node_configs.items():
             node = node_class(name, config, earthmover=self)
             compiled_nodes.append(node)
-
-            # Add the node and any source edges to the graph.
             self.graph.add_node(node.full_name, data=node)
+        
+        # Complete second pass to add edges between nodes.
+        for node in compiled_nodes:
             for source in node.upstream_sources:
                 try:
                     self.graph.add_edge(source, node.full_name)
@@ -425,6 +427,7 @@ class Earthmover:
         # Check that at least one package is defined
         if all(False for _ in self.package_graph.successors('root')):
             self.logger.warning("No packages have been defined!")
+            exit(1)
 
         # Install each package (and any nested sub-packages) into the packages directory
         self.build_package_graph(root_node='root', package_subgraph=self.package_graph, packages_dir=self.packages_dir, install=True)
