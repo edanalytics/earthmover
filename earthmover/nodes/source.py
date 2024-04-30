@@ -160,7 +160,7 @@ class FileSource(Source):
                 self.data = pd.DataFrame(columns=self.columns_list, dtype="string")
             else:
                 self.data = self.read_lambda(self.file, self.config)
-                if not self.remote:
+                if not self.is_remote:
                     self.size = os.path.getsize(self.file)
 
             # Verify the column list provided matches the number of columns in the dataframe.
