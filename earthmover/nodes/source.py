@@ -144,15 +144,6 @@ class FileSource(Source):
         if "://" in self.file:
             self.is_remote = True
 
-        elif self.file and not self.optional:
-            try:
-                self.size = os.path.getsize(self.file)
-            except FileNotFoundError:
-                self.error_handler.throw(
-                    f"Source file {self.file} not found"
-                )
-                raise
-
     def execute(self):
         """
 
