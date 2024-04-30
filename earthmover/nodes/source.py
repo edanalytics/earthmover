@@ -8,7 +8,7 @@ import re
 from earthmover.nodes.node import Node
 from earthmover import util
 
-from typing import Callable, List, Optional, Tuple
+from typing import List, Optional, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
@@ -119,10 +119,12 @@ class FileSource(Source):
                 )
                 raise
 
-        #
-        if not self.file and self.optional and ('columns' not in self.config or not isinstance(self.config['columns'], list)):
+        # Columns are required if a source is optional.
+        self.columns_list = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
+
+        if self.optional and not self.columns_list:
             self.error_handler.throw(
-                f"source `{self.name}` is optional and missing, but does not specify `columns` (which are required in this case)"
+                f"source `{self.name}` is optional, but does not specify `columns` (which are required in this case)"
             )
             raise
 
@@ -137,10 +139,7 @@ class FileSource(Source):
             )
             raise
 
-        #
-        self.columns_list = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
-
-        #
+        # Remote files cannot be size-checked in execute.
         if "://" in self.file:
             self.is_remote = True
 
@@ -156,7 +155,7 @@ class FileSource(Source):
 
         try:
             # Build an empty dataframe if the path is not populated or if an empty directory is passed (for Parquet files).
-            if self.optional and not self.file or (os.path.isdir(self.file) and not os.listdir(self.file)):
+            if self.optional and not os.path.exists(self.file) or (os.path.isdir(self.file) and not os.listdir(self.file)):
                 self.data = pd.DataFrame(columns=self.columns_list, dtype="string")
             else:
                 self.data = self.read_lambda(self.file, self.config)
