@@ -164,7 +164,8 @@ class FileSource(Source):
         self._verify_packages(self.file_type)
 
         try:
-            if not self.file and self.optional:
+            # Build an empty dataframe if the path is not populated or if an empty directory is passed (for Parquet files).
+            if self.optional and not self.file or (os.path.isdir(self.file) and not os.path.listdir(self.file)):
                 self.data = pd.DataFrame(columns=self.columns_list, dtype="string")
             else:
                 self.data = self.read_lambda(self.file, self.config)
