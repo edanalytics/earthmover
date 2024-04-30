@@ -307,7 +307,16 @@ class FtpSource(Source):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.connection = self.error_handler.assert_get_key(self.config, 'connection', dtype=str)
+        self.ftp = None  # FTP connection is made during execute.
 
+    def execute(self):
+        """
+        ftp://user:pass@host:port/path/to/file.ext
+        :return:
+        """
+        super().execute()
+
+        ### Parse the connection string and attempt connection to FTP.
         # There's probably a network builtin to simplify this.
         user, passwd, host, port, self.file = re.match(
             r"ftp://(.*?):?(.*?)@?([^:/]*):?(.*?)/(.*)",
@@ -328,13 +337,6 @@ class FtpSource(Source):
             self.error_handler.throw(
                 f"source file {self.connection} could not be accessed: {err}"
             )
-
-    def execute(self):
-        """
-        ftp://user:pass@host:port/path/to/file.ext
-        :return:
-        """
-        super().execute()
 
         try:
             # TODO: Can Dask read from FTP directly without this workaround?
