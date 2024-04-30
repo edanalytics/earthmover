@@ -8,7 +8,7 @@ import re
 from earthmover.nodes.node import Node
 from earthmover import util
 
-from typing import Callable, List, Optional, Tuple
+from typing import List, Optional, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
@@ -119,10 +119,12 @@ class FileSource(Source):
                 )
                 raise
 
-        #
-        if not self.file and self.optional and ('columns' not in self.config or not isinstance(self.config['columns'], list)):
+        # Columns are required if a source is optional.
+        self.columns_list = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
+
+        if self.optional and not self.columns_list:
             self.error_handler.throw(
-                f"source `{self.name}` is optional and missing, but does not specify `columns` (which are required in this case)"
+                f"source `{self.name}` is optional, but does not specify `columns` (which are required in this case)"
             )
             raise
 
@@ -137,21 +139,9 @@ class FileSource(Source):
             )
             raise
 
-        #
-        self.columns_list = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
-
-        #
+        # Remote files cannot be size-checked in execute.
         if "://" in self.file:
             self.is_remote = True
-
-        elif self.file and not self.optional:
-            try:
-                self.size = os.path.getsize(self.file)
-            except FileNotFoundError:
-                self.error_handler.throw(
-                    f"Source file {self.file} not found"
-                )
-                raise
 
     def execute(self):
         """
@@ -164,10 +154,13 @@ class FileSource(Source):
         self._verify_packages(self.file_type)
 
         try:
-            if not self.file and self.optional:
+            # Build an empty dataframe if the path is not populated or if an empty directory is passed (for Parquet files).
+            if self.optional and not os.path.exists(self.file) or (os.path.isdir(self.file) and not os.listdir(self.file)):
                 self.data = pd.DataFrame(columns=self.columns_list, dtype="string")
             else:
                 self.data = self.read_lambda(self.file, self.config)
+                if not self.is_remote:
+                    self.size = os.path.getsize(self.file)
 
             # Verify the column list provided matches the number of columns in the dataframe.
             if self.columns_list:
@@ -313,7 +306,16 @@ class FtpSource(Source):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.connection = self.error_handler.assert_get_key(self.config, 'connection', dtype=str)
+        self.ftp = None  # FTP connection is made during execute.
 
+    def execute(self):
+        """
+        ftp://user:pass@host:port/path/to/file.ext
+        :return:
+        """
+        super().execute()
+
+        ### Parse the connection string and attempt connection to FTP.
         # There's probably a network builtin to simplify this.
         user, passwd, host, port, self.file = re.match(
             r"ftp://(.*?):?(.*?)@?([^:/]*):?(.*?)/(.*)",
@@ -334,13 +336,6 @@ class FtpSource(Source):
             self.error_handler.throw(
                 f"source file {self.connection} could not be accessed: {err}"
             )
-
-    def execute(self):
-        """
-        ftp://user:pass@host:port/path/to/file.ext
-        :return:
-        """
-        super().execute()
 
         try:
             # TODO: Can Dask read from FTP directly without this workaround?
