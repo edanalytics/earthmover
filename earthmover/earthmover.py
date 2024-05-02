@@ -5,6 +5,7 @@ import logging
 import tempfile
 import networkx as nx
 import os
+import shutil
 import time
 import datetime
 import pandas as pd
@@ -22,6 +23,7 @@ from earthmover import util
 
 from typing import List, Optional
 
+COMPILED_YAML_FILE = "./earthmover_compiled.yaml"
 
 class Earthmover:
     """
@@ -52,6 +54,7 @@ class Earthmover:
         skip_hashing: bool = False,
         cli_state_configs: Optional[dict] = None,
         results_file: str = "",
+        skip_mkdir: bool = False,
     ):
         self.do_generate = True
         self.force = force
@@ -86,7 +89,7 @@ class Earthmover:
 
         # Prepare the output directory for destinations.
         self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
-        if not os.path.isdir(self.state_configs['output_dir']):
+        if not os.path.isdir(self.state_configs['output_dir']) and not skip_mkdir:
             self.logger.info(
                 f"creating output directory {self.state_configs['output_dir']}"
             )
@@ -141,7 +144,7 @@ class Earthmover:
 
         ### Optionally merge packages to update user-configs and write the composed YAML to disk.
         self.user_configs = self.merge_packages() or self.user_configs
-        self.user_configs.to_disk("./earthmover_compiled.yaml")
+        self.user_configs.to_disk(COMPILED_YAML_FILE)
 
         ### Compile the nodes and add to the graph type-by-type.
         self.sources = self.compile_node_configs(
@@ -539,3 +542,22 @@ class Earthmover:
                 nested_package_dir = os.path.join(package_node['package'].package_path, 'packages')
                 nested_package_subgraph = nx.ego_graph(self.package_graph, package_name)
                 self.build_package_graph(root_node=package_name, package_subgraph=nested_package_subgraph, packages_dir=nested_package_dir, install=install)
+
+    def clean(self):
+        """
+        Removes local artifacts created by `earthmover run`
+        :return:
+        """
+
+        was_noop = True
+        if os.path.isdir(self.state_configs['output_dir']):
+            shutil.rmtree(self.state_configs['output_dir'], ignore_errors = True)
+            was_noop = False
+
+        if os.path.isfile(COMPILED_YAML_FILE):
+            os.remove(COMPILED_YAML_FILE)
+            was_noop = False
+
+        if was_noop:
+            self.logger.warning("Nothing to remove!")
+            exit(1)
