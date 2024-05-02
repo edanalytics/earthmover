@@ -1,3 +1,10 @@
+### Unreleased
+<details>
+
+* feature: [Add `earthmover clean` command that removes local project artifacts](https://github.com/edanalytics/earthmover/pull/87)
+* bugfix: [Ensure command list in help menu and log output is always consistent](https://github.com/edanalytics/earthmover/pull/87)
+</details>
+
 ### v0.3.1
 <details>
 
