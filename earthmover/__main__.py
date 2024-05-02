@@ -5,6 +5,8 @@ import sys
 
 from earthmover.earthmover import Earthmover
 
+# use a dictionary here so that command strings can be accessed with a lookup.
+#   This helps enforce usage of this structure
 ALL_COMMANDS = {
     "run": "run",
     "compile": "compile",
