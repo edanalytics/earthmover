@@ -51,3 +51,9 @@ destinations:
     template: ./templates/studentSchoolAttendanceEvent.jsont
     extension: jsonl
     linearize: True
+  attendance_csv:
+    source: $sources.attendance
+    extension: csv
+    separator: "\t"
+    debug: True
+    header: True

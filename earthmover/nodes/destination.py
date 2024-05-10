@@ -1,4 +1,5 @@
 import csv
+import dask.dataframe as dd
 import jinja2
 import os
 import pandas as pd
@@ -18,8 +19,11 @@ class Destination(Node):
     mode: str = None  # Documents which class was chosen.
     allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition', 'source',)
 
-    def __new__(cls, *args, **kwargs):
-        return object.__new__(FileDestination)
+    def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
+        if config.get('extension') == 'csv':
+            return object.__new__(CsvDestination)
+        else:
+            return object.__new__(FileDestination)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -132,3 +136,50 @@ class FileDestination(Destination):
             raise
 
         return json_string
+
+
+class CsvDestination(Destination):
+    """
+
+    """
+    mode: str = 'csv'  # Documents which class was chosen.
+    allowed_configs: Tuple[str] = (
+        'debug', 'expect', 'show_progress', 'repartition', 'source',
+        'extension', 'header', 'separator', 'limit',
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.header = self.error_handler.assert_get_key(self.config, 'header', dtype=bool, required=False, default=True)
+        self.separator = self.error_handler.assert_get_key(self.config, 'separator', dtype=str, required=False, default=",")
+        self.limit = self.error_handler.assert_get_key(self.config, 'limit', dtype=int, required=False, default=None)
+        
+        self.file = os.path.join(
+            self.earthmover.state_configs['output_dir'],
+            f"{self.name}.csv"
+        )
+
+    def execute(self, **kwargs):
+        """
+        
+        :return:
+        """
+        super().execute(**kwargs)
+        
+        self.data = self.upstream_sources[self.source].data
+
+        # Apply limit to dataframe if specified.
+        if self.limit:
+            self.data = dd.from_pandas(self.data.head(n=self.limit), npartitions=1)
+
+        # Verify the output directory exists.
+        os.makedirs(os.path.dirname(self.file), exist_ok=True)
+
+        self.data.to_csv(
+            filename=self.file, single_file=True, index=False,
+            sep=self.separator, header=self.header
+        )
+
+        # TODO: More logging.
+        # How to handle different separator types? (\t = .tsv)
+        # Specify subset of columns (or done with KeepColumnsOperation?)
