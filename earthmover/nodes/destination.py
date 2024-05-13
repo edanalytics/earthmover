@@ -39,10 +39,11 @@ class FileDestination(Destination):
 
     EXP = re.compile(r"\s+")
     TEMPLATED_COL = "____OUTPUT____"
+    DEFAULT_TEMPLATE = """{ {% for col,val in __row_data__.items() %}"{{col}}": "{{val}}"{%if not loop.last%}, {%endif%}{% endfor %} }"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.template = self.error_handler.assert_get_key(self.config, 'template', dtype=str)
+        self.template = self.error_handler.assert_get_key(self.config, 'template', dtype=str, required=False)
         self.header = self.config.get("header")
         self.footer = self.config.get("footer")
 
@@ -57,15 +58,17 @@ class FileDestination(Destination):
         )
 
         #
-        try:
-            with open(self.template, 'r', encoding='utf-8') as fp:
-                template_string = fp.read()
+        if self.template:
+            try:
+                with open(self.template, 'r', encoding='utf-8') as fp:
+                    template_string = fp.read()
 
-        except Exception as err:
-            self.error_handler.throw(
-                f"`template` file {self.template} cannot be opened ({err})"
-            )
-            raise
+            except Exception as err:
+                self.error_handler.throw(
+                    f"`template` file {self.template} cannot be opened ({err})"
+                )
+                raise
+        else: template_string = self.DEFAULT_TEMPLATE
 
         #
         if self.config.get('linearize', True):
