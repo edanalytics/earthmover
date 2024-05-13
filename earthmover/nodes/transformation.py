@@ -32,7 +32,7 @@ class Transformation(Node):
 
         # Force error-handler reset before graph is built.
         self.error_handler.ctx.update(
-            file=self.config.__file__, line=self.config.__line__, node=self, operation=None
+            file=self.config.get("__file__",""), line=self.config.get("__line__",0), node=self, operation=None
         )
 
     def execute(self):

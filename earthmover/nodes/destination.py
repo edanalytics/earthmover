@@ -9,6 +9,8 @@ from earthmover import util
 
 from typing import Tuple
 
+from earthmover.yaml_parser import YamlMapping
+
 
 class Destination(Node):
     """
@@ -18,8 +20,16 @@ class Destination(Node):
     mode: str = None  # Documents which class was chosen.
     allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition', 'source',)
 
-    def __new__(cls, *args, **kwargs):
-        return object.__new__(FileDestination)
+    def __new__(cls, name: str, config, *args, **kwargs):
+        if (type(config)==dict or type(config)==YamlMapping) and 'kind' in config.keys():
+            if config.get("kind") == 'file':
+                return object.__new__(FileDestination)
+            elif config.get("kind") == 'noop':
+                return object.__new__(NoOpDestination)
+        elif (type(config)==dict or type(config)==YamlMapping) and 'kind' not in config.keys():
+            # default for backward compatibility
+            return object.__new__(FileDestination)
+        # else: throw an error?
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -132,3 +142,32 @@ class FileDestination(Destination):
             raise
 
         return json_string
+
+
+class NoOpDestination(Destination):
+    """
+    This "no-op" destination facilitates
+    - the new `show` command, which displays info about a partially-transformed dataframe
+    - using earthmover programmatically as a compute engine
+    without requiring any data to be output to file(s).
+    
+    This is necessary because graph paths not connected to a destination are pruned.
+    """
+    mode: str = 'no-op'
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+    
+    def execute(self, **kwargs):
+        """
+        There is a bug in Dask where `dd.to_csv(mode='a', single_file=True)` fails.
+        This is resolved in 2023.8.1: https://docs.dask.org/en/stable/changelog.html#id7 
+
+        :return:
+        """
+        super().execute(**kwargs)
+
+        self.data = (
+            self.upstream_sources[self.source].data
+                .map_partitions(lambda x: x.apply(self.render_row, axis=1), meta=pd.Series('str'))
+        )

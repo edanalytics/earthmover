@@ -30,6 +30,7 @@ class Operation(Node):
         operation_mapping = {
             'join': dataframe_operations.JoinOperation,
             'union': dataframe_operations.UnionOperation,
+            'debug': dataframe_operations.DebugOperation,
 
             'add_columns': column_operations.AddColumnsOperation,
             'modify_columns': column_operations.ModifyColumnsOperation,
@@ -79,7 +80,7 @@ class Operation(Node):
         :return:
         """
         self.error_handler.ctx.update(
-            file=self.config.__file__, line=self.config.__line__, node=self, operation=None
+            file=self.config.get("__file__",""), line=self.config.get("__line__",0), node=self, operation=None
         )
 
         pass

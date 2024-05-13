@@ -4,7 +4,8 @@ import os
 import sys
 
 from earthmover.earthmover import Earthmover
-
+from earthmover.nodes.transformation import Transformation
+from earthmover.nodes.destination import *
 
 class ExitOnExceptionHandler(logging.StreamHandler):
     """
@@ -50,7 +51,7 @@ def main(argv=None):
     parser.add_argument('command',
         nargs="?",
         type=str,
-        help='the command to run: `run`, `compile`, `visualize`'
+        help='the command to run: `deps`, `compile`, `run`, `show`, `visualize`'
         )
     parser.add_argument("-c", "--config-file",
         nargs="?",
@@ -194,6 +195,39 @@ def main(argv=None):
 
         except Exception as e:
             logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
+            raise
+
+    # Subcommand: show (compile + execute only up to one transformation, and display a debug operation)
+    elif args.command == 'show':
+        try:
+            em.compile()
+            config = {
+                "source": f"$transformations.{args.selector}",
+                "operations": [
+                    {
+                        "operation": "debug",
+                        "function": "head",
+                        "rows": 10
+                    }
+                ]
+            }
+            transformation_node = Transformation(name=f"{args.selector}_show", config=config, earthmover=em)
+            em.graph.add_node(f"$transformations.{args.selector}_show", data=transformation_node)
+            em.graph.add_edge(f"$transformations.{args.selector}", f"$transformations.{args.selector}_show")
+            transformation_node.set_upstream_source(f"$transformations.{args.selector}", em.graph.ref(f"$transformations.{args.selector}"))
+            config = {
+                "kind": "noop",
+                "source": f"$transformations.{args.selector}_show"
+            }
+            destination_node = NoOpDestination(name=f"{args.selector}_destination", config=config, earthmover=em)
+            em.graph.add_node(f"$destinations.{args.selector}_destination", data=destination_node)
+            em.graph.add_edge(f"$transformations.{args.selector}_show", f"$destinations.{args.selector}_destination")
+            destination_node.set_upstream_source(f"$transformations.{args.selector}_show", em.graph.ref(f"$transformations.{args.selector}_show"))
+            active_graph = em.filter_graph_on_selector(em.graph, selector=f"{args.selector}_destination")
+            em.execute(active_graph)
+
+        except Exception as err:
+            logger.exception(err, exc_info=em.state_configs['show_stacktrace'])
             raise
 
     # Subcommand: run (compile + execute)
