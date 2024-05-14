@@ -607,6 +607,22 @@ Note the difference between `min()`/`max()` and `str_min()`/`str_max()`: given a
 
 </details>
 
+#### Debug operation
+
+<details>
+<summary><code>debug</code></summary>
+
+Sort rows by one or more columns.
+```yaml
+      - operation: debug
+        function: head | tail | describe | columns
+        rows: 5 # (optional, default=10; ignored if function=describe|columns)
+        transpose: True # (default=False; ignored when function=columns)
+        skip_columns: [a, b, c] # to avoid logging PII
+        keep_columns: [x, y, z] # to look only at specific columns
+```
+`function=head|tail` displays the `rows` first or last rows of the dataframe, respectively. (Note that on large dataframes, these may not truly be the first/last rows, due to Dask's memory optimizations.) `function=describe` shows statistics about the values in the dataframe. `function=columns` shows the column names in the dataframe. `transpose` can be helpful with very wide dataframes. `keep_columns` defaults to all columns, `skip_columns` defaults to no columns.
+</details>
 
 
 ### **`destinations`**
@@ -649,12 +665,9 @@ Set either the number of bytes, or a text representation (e.g., "100MB") to shuf
 (Note: this configuration is advanced, and its use may drastically affect performance.)
 
 # Usage
-Once you have the required [setup](#setup) and your source data, run the transformations with
-```bash
-earthmover run -c path/to/config.yaml
-```
-If you omit the optional `-c` flag, `earthmover` will look for an `earthmover.yaml` in the current directory.
+Once you have the required [setup](#setup) and your source data, you can use the following commands in earthmover:
 
+## Top-level commands
 See a help message with
 ```bash
 earthmover -h
@@ -666,6 +679,38 @@ See the tool version with
 earthmover -v
 earthmover --version
 ```
+
+## `deps`
+If you reference `packages` in your `earthmover.yaml` (see [Project Composition](#project-composition)), before you can `run` earthmover you should
+```bash
+earthmover deps
+```
+which downloads remote packages or copy local packages into a `packages/` folder in your project directory.
+
+## `compile`
+Optionally compile your project with
+```bash
+earthmover compile
+```
+This
+* builds the transformation graph
+* does some basic validation, like making sure that references `sources` exist, and that the graph is acyclic
+* if `config.show_graph` is True, produces the graph visualization images
+* outputs `earthmover_compiled.yaml` in your current directory, which is a stitched-together YAML document that earthmover would execute on `earthmover run` - with packages composed, variables replaced, Jinja rendered, etc.
+
+## `show`
+While building your transformation instructions, you may find it helpful to look at the results of a particular transformation step. This can be done with
+```bash
+earthmover show -s my_transformation --function head --rows 3 --transpose
+```
+which will log output from the selected transformation node (`my_transformation`) in the graph. The flags `function`, `rows`, and `transpose` correspond to the options for a [debug operation](#debug-operation). Note that, unlike the behavior of [selectors](#selectors) with `earthmover run` which allow multiple (comma-separated) nodes to be specified, with `earthmover show` you should select exactly one transformation node. The output will reflect the dataframe after that transformation node has been executed.
+
+## `run`
+Run the transformations you've defined with
+```bash
+earthmover run -c path/to/config.yaml
+```
+If you omit the optional `-c` flag, `earthmover` will look for an `earthmover.yaml` in the current directory.
 
 
 # Features

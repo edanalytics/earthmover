@@ -221,7 +221,8 @@ class DebugOperation(Operation):
             if self.transpose: print(debug_data.tail(self.rows).transpose().reset_index(names="column").to_string(index=False))
             else: print(debug_data.tail(self.rows).to_string(index=False))
         elif self.func == 'describe':
-            print(debug_data.compute().describe())
+            if self.transpose: print(debug_data.compute().describe().transpose().reset_index(names="column").to_string(index=False))
+            else: print(debug_data.compute().describe())
         elif self.func == 'columns':
             print(list(data.columns))
 

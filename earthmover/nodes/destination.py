@@ -22,9 +22,9 @@ class Destination(Node):
 
     def __new__(cls, name: str, config, *args, **kwargs):
         if (type(config)==dict or type(config)==YamlMapping) and 'kind' in config.keys():
-            if config.get("kind") == 'file':
+            if config.get("kind","") == 'file':
                 return object.__new__(FileDestination)
-            elif config.get("kind") == 'noop':
+            elif config.get("kind","") == 'noop':
                 return object.__new__(NoOpDestination)
         elif (type(config)==dict or type(config)==YamlMapping) and 'kind' not in config.keys():
             # default for backward compatibility
@@ -154,6 +154,11 @@ class NoOpDestination(Destination):
     This is necessary because graph paths not connected to a destination are pruned.
     """
     mode: str = 'no-op'
+    allowed_configs: Tuple[str] = (
+        'debug', 'expect', 'show_progress', 'repartition', 'source',
+        'kind',
+    )
+
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

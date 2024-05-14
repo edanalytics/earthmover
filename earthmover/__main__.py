@@ -4,8 +4,6 @@ import os
 import sys
 
 from earthmover.earthmover import Earthmover
-from earthmover.nodes.transformation import Transformation
-from earthmover.nodes.destination import *
 
 class ExitOnExceptionHandler(logging.StreamHandler):
     """
@@ -95,12 +93,27 @@ def main(argv=None):
         type=str,
         help='produces a JSON output file with structured information about run results'
     )
+    parser.add_argument("--function",
+        type=str,
+        help='what to display with `earthmover show` (head, tail, describe, columns)'
+    )
+    parser.add_argument("--rows",
+        type=int,
+        help='how many rows of output to display with `earthmover show`'
+    )
+    parser.add_argument("--transpose",
+        action='store_true',
+        help='transposes the output of `earthmover show`'
+    )
 
     # Set empty defaults in case they've not been populated by the user.
     parser.set_defaults(**{
         "selector": "*",
         "params": "",
         "results_file": "",
+        "function": "head",
+        "rows": 10,
+        "transpose": False,
     })
 
     ### Parse the user-inputs and run Earthmover, depending on the command and subcommand passed.
@@ -200,31 +213,7 @@ def main(argv=None):
     # Subcommand: show (compile + execute only up to one transformation, and display a debug operation)
     elif args.command == 'show':
         try:
-            em.compile()
-            config = {
-                "source": f"$transformations.{args.selector}",
-                "operations": [
-                    {
-                        "operation": "debug",
-                        "function": "head",
-                        "rows": 10
-                    }
-                ]
-            }
-            transformation_node = Transformation(name=f"{args.selector}_show", config=config, earthmover=em)
-            em.graph.add_node(f"$transformations.{args.selector}_show", data=transformation_node)
-            em.graph.add_edge(f"$transformations.{args.selector}", f"$transformations.{args.selector}_show")
-            transformation_node.set_upstream_source(f"$transformations.{args.selector}", em.graph.ref(f"$transformations.{args.selector}"))
-            config = {
-                "kind": "noop",
-                "source": f"$transformations.{args.selector}_show"
-            }
-            destination_node = NoOpDestination(name=f"{args.selector}_destination", config=config, earthmover=em)
-            em.graph.add_node(f"$destinations.{args.selector}_destination", data=destination_node)
-            em.graph.add_edge(f"$transformations.{args.selector}_show", f"$destinations.{args.selector}_destination")
-            destination_node.set_upstream_source(f"$transformations.{args.selector}_show", em.graph.ref(f"$transformations.{args.selector}_show"))
-            active_graph = em.filter_graph_on_selector(em.graph, selector=f"{args.selector}_destination")
-            em.execute(active_graph)
+            em.show(selector=args.selector, func=args.function, rows=args.rows, transpose=args.transpose)
 
         except Exception as err:
             logger.exception(err, exc_info=em.state_configs['show_stacktrace'])
