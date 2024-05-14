@@ -190,7 +190,7 @@ class DebugOperation(Operation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.func = self.error_handler.assert_get_key(self.config, 'function', dtype=str)
-        self.rows = self.error_handler.assert_get_key(self.config, 'rows', dtype=int, default=5, required=False)
+        self.rows = self.error_handler.assert_get_key(self.config, 'rows', dtype=int, default=10, required=False)
         self.skip_columns = self.error_handler.assert_get_key(self.config, 'skip_columns', dtype=list, required=False, default=[])
         self.keep_columns = self.error_handler.assert_get_key(self.config, 'keep_columns', dtype=list, required=False, default=None)
         self.transpose = self.error_handler.assert_get_key(self.config, 'transpose', dtype=bool, required=False, default=None)
