@@ -124,3 +124,48 @@ class SortRowsOperation(Operation):
                 raise
 
             return data.sort_values(by=self.columns_list, ascending=(not self.descending))
+
+
+class FlattenOperation(Operation):
+    """
+
+    """
+    allowed_configs: Tuple[str] = (
+        'operation', 'repartition', 
+        'flatten_column', 'left_wrapper', 'right_wrapper', 'separator', 'value_column', 'trim_whitespace'
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Only 'column' or 'columns' can be populated
+        self._flatten_column  = self.error_handler.assert_get_key(self.config, 'flatten_column', dtype=str, required=True)
+        self._left_wrapper = self.error_handler.assert_get_key(self.config, 'left_wrapper', dtype=str, required=False, default="[\"")
+        self._right_wrapper = self.error_handler.assert_get_key(self.config, 'right_wrapper', dtype=str, required=False, default="\"]")
+        self._separator = self.error_handler.assert_get_key(self.config, 'separator', dtype=str, required=False, default=',')
+        self._value_column = self.error_handler.assert_get_key(self.config, 'value_column', dtype=str, required=True)
+        self._trim_whitespace = self.error_handler.assert_get_key(self.config, 'trim_whitespace', dtype=str, required=False, default=" \t\r\n\"")
+
+
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
+        """
+
+        :return:
+        """
+        super().execute(data, **kwargs)
+
+        target_dtypes = data.head(1).rename(columns={self._flatten_column: self._value_column})
+        data = data.map_partitions(self.flatten_partition, meta=target_dtypes)
+        return data
+
+    def flatten_partition(self, df):
+        # trim off `left_wrapper` and `right_wrapper` characters from the values in `flatten_column`:
+        preprocessed_df = df[self._flatten_column].str.lstrip(self._left_wrapper).str.rstrip(self._right_wrapper)
+        # split by `separator` and explode rows:
+        flattened_values_df = preprocessed_df.str.split(self._separator, expand=True).stack()
+        # trim off `trim_whitespace` characters from each of the split values:
+        postprocessed_df = flattened_values_df.str.strip(self._trim_whitespace).reset_index(level=1).drop('level_1', axis=1).rename(columns={0: self._value_column})
+        # join the exploded df to the original and drop `flatten_column` which is no longer needed:
+        flattened_partition_df = df.join(postprocessed_df).drop(self._flatten_column, axis=1).reset_index(drop=True)
+
+        return flattened_partition_df
