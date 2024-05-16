@@ -578,7 +578,7 @@ Split values in a column and create a copy of the row for each value.
         value_column: my_value # name of the new column to create with flattened values
         trim_whitespace: " \t\r\n\"" # characters to trim from `value_column` _after_ flattening
 ```
-The defaults above are designed to make flattening JSON arrays (in a string) with simply
+The defaults above are designed to allow flattening JSON arrays (in a string) with simply
 ```yaml
       - operation: flatten
         flatten_column: my_column
