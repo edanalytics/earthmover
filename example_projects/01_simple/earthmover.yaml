@@ -51,3 +51,20 @@ destinations:
     template: ./templates/studentSchoolAttendanceEvent.jsont
     extension: jsonl
     linearize: True
+
+  attendance:
+    source: $sources.attendance
+    extension: parquet
+    debug: True
+    limit: 5
+    column_datatypes:
+      day: datetime64[ns] 
+      student_id: int
+      absent: bool
+    keep_columns: 
+      - day
+      - student_id
+      - absent
+    partition_on: 
+      - day
+      - absent

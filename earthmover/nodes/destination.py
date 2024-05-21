@@ -1,4 +1,5 @@
 import csv
+import dask.dataframe as dd
 import jinja2
 import os
 import pandas as pd
@@ -18,8 +19,11 @@ class Destination(Node):
     mode: str = None  # Documents which class was chosen.
     allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition', 'source',)
 
-    def __new__(cls, *args, **kwargs):
-        return object.__new__(FileDestination)
+    def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
+        if config.get('extension') == 'parquet':
+            return object.__new__(ParquetDestination)
+        else:
+            return object.__new__(FileDestination)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -132,3 +136,85 @@ class FileDestination(Destination):
             raise
 
         return json_string
+
+class ParquetDestination(Destination):
+    """
+    """
+    mode: str = 'parquet'  # Documents which class was chosen.
+    allowed_configs: Tuple[str] = (
+        'debug', 'expect', 'show_progress', 'repartition', 'source',
+        'extension', 'limit', 'keep_columns', 'column_datatypes', 'partition_on'
+    )
+
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.limit = self.error_handler.assert_get_key(self.config, 'limit', dtype=int, required=False, default=None)
+        self.extension = self.error_handler.assert_get_key(self.config, 'extension', dtype=str, required=False, default="csv")
+        self.keep_columns = self.error_handler.assert_get_key(self.config, 'keep_columns', required=False, default=None)
+        self.column_datatypes = self.error_handler.assert_get_key(self.config, 'column_datatypes', required=False, default='str')
+        self.partition_on = self.error_handler.assert_get_key(self.config, 'partition_on', required=False, default=None)
+
+        self.file = os.path.join(
+            self.earthmover.state_configs['output_dir'],
+            f"{self.name}.{self.extension}"
+        )   
+
+    def execute(self, **kwargs):
+        """
+        
+        :return:
+        """
+        super().execute(**kwargs)
+
+        self.data = self.upstream_sources[self.source].data
+
+        # Apply limit to dataframe if specified. 
+        if self.limit:
+            if self.limit > len(self.data):
+                self.error_handler.throw(
+                    f"Limit value exceeds the number of rows in the data"
+                )
+                raise 
+
+            self.data = dd.from_pandas(self.data.head(n=self.limit), npartitions=1)
+
+        # Verify the output directory exists.
+        os.makedirs(os.path.dirname(self.file), exist_ok=True)
+        self.logger.info(f"Directory created: {os.path.dirname(self.file)}")
+
+        # Subset dataframe columns if specified
+        try:
+            if self.keep_columns:
+                self.data = self.data[self.keep_columns]
+
+        except KeyError as e:
+            self.error_handler.throw(
+                f"Error occurred while subsetting the data: {e.args[0]}"
+            )
+            raise
+
+        # Adjust column types if specified
+        if self.column_datatypes:
+            for column, dtype in self.column_datatypes.items():
+                self.data[column] =  self.data[column].astype(dtype)
+
+        try: 
+            # write paramaters default 
+            write_params = {'write_index': False,
+                            'overwrite': True}
+            
+            # Add partition if specified
+            if self.partition_on: 
+                write_params['partition_on'] = self.partition_on
+            
+            self.data.to_parquet(self.file, **write_params)
+            self.logger.info(f"Output `{self.file}` written")
+
+        except Exception as err:
+            self.error_handler.throw(
+                f"Error writing data to {self.extension} file: ({err})"
+            )
+            raise
+
+    
