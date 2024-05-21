@@ -155,7 +155,8 @@ class CsvDestination(Destination):
         self.separator = self.error_handler.assert_get_key(self.config, 'separator', dtype=str, required=False, default=",")
         self.limit = self.error_handler.assert_get_key(self.config, 'limit', dtype=int, required=False, default=None)
         self.extension = self.error_handler.assert_get_key(self.config, 'extension', dtype=str, required=False, default="csv")
-        self.keep_columns = self.config.get('keep_columns', None)
+        self.keep_columns = self.error_handler.assert_get_key(self.config, 'keep_columns', required=False, default=None)
+        self.config.get('keep_columns', None)
         
         self.file = os.path.join(
             self.earthmover.state_configs['output_dir'],
