@@ -51,3 +51,13 @@ destinations:
     template: ./templates/studentSchoolAttendanceEvent.jsont
     extension: jsonl
     linearize: True
+  attendance:
+    source: $sources.attendance
+    extension: tsv
+    debug: True
+    header: True
+    limit: 5
+    keep_columns: 
+      - day
+      - student_id
+      
