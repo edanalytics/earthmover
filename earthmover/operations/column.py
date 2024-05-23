@@ -52,7 +52,7 @@ class AddColumnsOperation(Operation):
 
                 data[col] = data.apply(
                     util.render_jinja_template, axis=1,
-                    meta=pd.Series(dtype='str', name=col),
+                    meta=pd.Series(dtype='string', name=col),
                     template=template,
                     template_str=val,
                     error_handler=self.error_handler
@@ -103,7 +103,7 @@ class ModifyColumnsOperation(Operation):
 
                 data[col] = data.apply(
                     util.render_jinja_template, axis=1,
-                    meta=pd.Series(dtype='str', name=col),
+                    meta=pd.Series(dtype='string', name=col),
                     template=template,
                     template_str=val,
                     error_handler=self.error_handler
@@ -279,7 +279,7 @@ class CombineColumnsOperation(Operation):
         data[self.new_column] = data.apply(
             lambda x: self.separator.join(x[col] for col in self.columns_list),
             axis=1,
-            meta=pd.Series(dtype='str', name=self.new_column)
+            meta=pd.Series(dtype='string', name=self.new_column)
         )
 
         return data

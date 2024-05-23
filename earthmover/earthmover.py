@@ -23,6 +23,17 @@ from earthmover import util
 from typing import List, Optional
 
 
+# Force strings to PyArrow to save memory.
+pd.options.future.infer_string = True
+pd.options.future.no_silent_downcasting = True
+pd.options.mode.copy_on_write = True
+pd.options.mode.string_storage = "pyarrow"
+
+dask.config.set({
+    'dataframe.convert-string': True,
+})
+
+
 class Earthmover:
     """
 

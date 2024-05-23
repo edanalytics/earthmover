@@ -94,7 +94,7 @@ class FileDestination(Destination):
         # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
         self.data = (
             self.upstream_sources[self.source].data
-                .map_partitions(lambda x: x.apply(self.render_row, axis=1), meta=pd.Series('str'))
+                .map_partitions(lambda x: x.apply(self.render_row, axis=1), meta=pd.Series('string'))
         )
 
         # Repartition before writing, if specified.
