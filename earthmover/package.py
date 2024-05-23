@@ -180,7 +180,7 @@ class GitHubPackage(Package):
         branch = self.error_handler.assert_get_key(self.config, 'branch', dtype=str, required=False, default=None)
 
         tmp_package_path = os.path.join(packages_dir, 'tmp_git')
-        os.mkdir(tmp_package_path)
+        os.makedirs(tmp_package_path)
 
         try:
             if branch:
@@ -190,7 +190,6 @@ class GitHubPackage(Package):
 
         # Timeouts are implemented to prevent automated runs from hanging if the git clone command is prompting for credentials
         except subprocess.TimeoutExpired:
-            os.rmdir(tmp_package_path)
             self.error_handler.throw(
                 f"Git clone command timed out for the {self.name} package ({source_path}). Are git credentials correctly configured?"
             )
