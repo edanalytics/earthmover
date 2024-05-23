@@ -1,6 +1,5 @@
 import os
 import shutil
-import stat
 import subprocess
 from typing import Optional, TYPE_CHECKING
 if TYPE_CHECKING:
