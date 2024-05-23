@@ -190,6 +190,7 @@ class GitHubPackage(Package):
 
         # Timeouts are implemented to prevent automated runs from hanging if the git clone command is prompting for credentials
         except subprocess.TimeoutExpired:
+            os.rmdir(self.package_path)
             self.error_handler.throw(
                 f"Git clone command timed out for the {self.name} package ({source_path}). Are git credentials correctly configured?"
             )
