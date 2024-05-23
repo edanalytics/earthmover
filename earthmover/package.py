@@ -180,7 +180,7 @@ class GitHubPackage(Package):
         branch = self.error_handler.assert_get_key(self.config, 'branch', dtype=str, required=False, default=None)
 
         tmp_package_path = os.path.join(packages_dir, 'tmp_git')
-        os.makedirs(tmp_package_path)
+        os.makedirs(tmp_package_path, exist_ok=True)
 
         try:
             if branch:
