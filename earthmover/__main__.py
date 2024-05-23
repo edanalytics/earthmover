@@ -5,7 +5,6 @@ import sys
 
 from earthmover.earthmover import Earthmover
 
-
 class ExitOnExceptionHandler(logging.StreamHandler):
     """
 
@@ -50,7 +49,7 @@ def main(argv=None):
     parser.add_argument('command',
         nargs="?",
         type=str,
-        help='the command to run: `run`, `compile`, `visualize`'
+        help='the command to run: `deps`, `compile`, `run`, `show`, `visualize`'
         )
     parser.add_argument("-c", "--config-file",
         nargs="?",
@@ -94,12 +93,27 @@ def main(argv=None):
         type=str,
         help='produces a JSON output file with structured information about run results'
     )
+    parser.add_argument("--function",
+        type=str,
+        help='what to display with `earthmover show` (head, tail, describe, columns)'
+    )
+    parser.add_argument("--rows",
+        type=int,
+        help='how many rows of output to display with `earthmover show`'
+    )
+    parser.add_argument("--transpose",
+        action='store_true',
+        help='transposes the output of `earthmover show`'
+    )
 
     # Set empty defaults in case they've not been populated by the user.
     parser.set_defaults(**{
         "selector": "*",
         "params": "",
         "results_file": "",
+        "function": "head",
+        "rows": 10,
+        "transpose": False,
     })
 
     ### Parse the user-inputs and run Earthmover, depending on the command and subcommand passed.
@@ -194,6 +208,15 @@ def main(argv=None):
 
         except Exception as e:
             logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
+            raise
+
+    # Subcommand: show (compile + execute only up to one transformation, and display a debug operation)
+    elif args.command == 'show':
+        try:
+            em.show(selector=args.selector, func=args.function, rows=args.rows, transpose=args.transpose)
+
+        except Exception as err:
+            logger.exception(err, exc_info=em.state_configs['show_stacktrace'])
             raise
 
     # Subcommand: run (compile + execute)

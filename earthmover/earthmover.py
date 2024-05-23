@@ -14,7 +14,7 @@ from earthmover.error_handler import ErrorHandler
 from earthmover.graph import Graph
 from earthmover.package import Package
 from earthmover.runs_file import RunsFile
-from earthmover.nodes.destination import Destination
+from earthmover.nodes.destination import Destination, NoOpDestination
 from earthmover.nodes.source import Source
 from earthmover.nodes.transformation import Transformation
 from earthmover.yaml_parser import JinjaEnvironmentYamlLoader
@@ -218,6 +218,35 @@ class Earthmover:
                 break
 
         return active_graph
+
+    def show(self, selector="", func="head", rows=10, transpose=False):
+        self.compile()
+        config = {
+            "source": f"$transformations.{selector}",
+            "operations": [
+                {
+                    "operation": "debug",
+                    "function": f"{func}",
+                    "rows": rows,
+                    "transpose": transpose
+                }
+            ]
+        }
+        transformation_node = Transformation(name=f"{selector}_show", config=config, earthmover=self)
+        self.graph.add_node(f"$transformations.{selector}_show", data=transformation_node)
+        self.graph.add_edge(f"$transformations.{selector}", f"$transformations.{selector}_show")
+        transformation_node.set_upstream_source(f"$transformations.{selector}", self.graph.ref(f"$transformations.{selector}"))
+        config = {
+            "kind": "noop",
+            "source": f"$transformations.{selector}_show"
+        }
+        destination_node = NoOpDestination(name=f"{selector}_destination", config=config, earthmover=self)
+        self.graph.add_node(f"$destinations.{selector}_destination", data=destination_node)
+        self.graph.add_edge(f"$transformations.{selector}_show", f"$destinations.{selector}_destination")
+        destination_node.set_upstream_source(f"$transformations.{selector}_show", self.graph.ref(f"$transformations.{selector}_show"))
+        active_graph = self.filter_graph_on_selector(self.graph, selector=f"{selector}_destination")
+        self.execute(active_graph)
+
 
     def execute(self, graph: Graph):
         """
