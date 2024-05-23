@@ -182,10 +182,16 @@ class GitHubPackage(Package):
         tmp_package_path = os.path.join(packages_dir, 'tmp_git')
         os.mkdir(tmp_package_path)
 
-        if branch:
-            subprocess.run(["git", "clone", "-b", branch, source_path, "."], cwd=tmp_package_path, timeout=10)
-        else:  #If branch is not specified, default working branch is used
-            subprocess.run(["git", "clone", source_path, "."], cwd=tmp_package_path, timeout=10)
+        try:
+            if branch:
+                subprocess.run(["git", "clone", "-b", branch, source_path, "."], cwd=tmp_package_path, timeout=10)
+            else:  #If branch is not specified, default working branch is used
+                subprocess.run(["git", "clone", source_path, "."], cwd=tmp_package_path, timeout=10)
+        except subprocess.TimeoutExpired:
+            self.error_handler.throw(
+                f"Git clone command timed out for the {self.name} package. Are git credentials correctly configured?"
+            )
+            raise
 
         if subdirectory: # Avoids the package being nested in folders
             subdirectory_path = os.path.join(tmp_package_path, subdirectory)
