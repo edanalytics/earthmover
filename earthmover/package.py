@@ -1,6 +1,6 @@
-import git
 import os
 import shutil
+import stat
 import subprocess
 from typing import Optional, TYPE_CHECKING
 if TYPE_CHECKING:
@@ -190,7 +190,7 @@ class GitHubPackage(Package):
 
         # Timeouts are implemented to prevent automated runs from hanging if the git clone command is prompting for credentials
         except subprocess.TimeoutExpired:
-            os.rmdir(self.package_path)
+            os.rmdir(self.tmp_package_path)
             self.error_handler.throw(
                 f"Git clone command timed out for the {self.name} package ({source_path}). Are git credentials correctly configured?"
             )
@@ -202,6 +202,6 @@ class GitHubPackage(Package):
         else:
             shutil.copytree(tmp_package_path, self.package_path)
 
-        git.rmtree(tmp_package_path)
+        shutil.rmtree(tmp_package_path)
 
         return super().get_installed_config_file()
