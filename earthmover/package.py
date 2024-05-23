@@ -1,6 +1,7 @@
 import git
 import os
 import shutil
+import subprocess
 from typing import Optional, TYPE_CHECKING
 if TYPE_CHECKING:
     from earthmover.earthmover import Earthmover
@@ -182,16 +183,16 @@ class GitHubPackage(Package):
         os.mkdir(tmp_package_path)
 
         if branch:
-            repo = git.Repo.clone_from(source_path, tmp_package_path, branch=branch)
+            subprocess.run(["git", "clone", "-b", branch, source_path, "."], cwd=tmp_package_path, timeout=10)
         else:  #If branch is not specified, default working branch is used
-            repo = git.Repo.clone_from(source_path, tmp_package_path)
+            subprocess.run(["git", "clone", source_path, "."], cwd=tmp_package_path, timeout=10)
 
         if subdirectory: # Avoids the package being nested in folders
-            subdirectory_path = os.path.join(repo.working_tree_dir, subdirectory)
+            subdirectory_path = os.path.join(tmp_package_path, subdirectory)
             shutil.copytree(subdirectory_path, self.package_path)
         else:
-            shutil.copytree(repo.working_tree_dir, self.package_path)
+            shutil.copytree(tmp_package_path, self.package_path)
 
-        git.rmtree(repo.working_tree_dir)
+        git.rmtree(tmp_package_path)
 
         return super().get_installed_config_file()
