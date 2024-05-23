@@ -184,12 +184,15 @@ class GitHubPackage(Package):
 
         try:
             if branch:
-                subprocess.run(["git", "clone", "-b", branch, source_path, "."], cwd=tmp_package_path, timeout=10)
+                subprocess.run(["git", "clone", "-b", branch, source_path, "."], cwd=tmp_package_path, timeout=60)
             else:  #If branch is not specified, default working branch is used
-                subprocess.run(["git", "clone", source_path, "."], cwd=tmp_package_path, timeout=10)
+                subprocess.run(["git", "clone", source_path, "."], cwd=tmp_package_path, timeout=60)
+
+        # Timeouts are implemented to prevent automated runs from hanging if the git clone command is prompting for credentials
         except subprocess.TimeoutExpired:
+            os.rmdir(tmp_package_path)
             self.error_handler.throw(
-                f"Git clone command timed out for the {self.name} package. Are git credentials correctly configured?"
+                f"Git clone command timed out for the {self.name} package ({source_path}). Are git credentials correctly configured?"
             )
             raise
 
