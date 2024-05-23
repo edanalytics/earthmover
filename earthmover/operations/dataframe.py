@@ -215,16 +215,21 @@ class DebugOperation(Operation):
         
         # call function and display debug info
         if self.func == 'head':
-            if self.transpose: print(debug_data.head(self.rows).transpose().reset_index(names="column").to_string(index=False))
-            else: print(debug_data.head(self.rows).to_string(index=False))
+            debug = debug_data.head(self.rows)
+            if self.transpose: debug = debug.transpose().reset_index(names="column")
+            debug = debug.to_string(index=False)
         elif self.func == 'tail':
-            if self.transpose: print(debug_data.tail(self.rows).transpose().reset_index(names="column").to_string(index=False))
-            else: print(debug_data.tail(self.rows).to_string(index=False))
+            debug = debug_data.tail(self.rows)
+            if self.transpose: debug = debug.transpose().reset_index(names="column")
+            debug = debug.to_string(index=False)
         elif self.func == 'describe':
-            if self.transpose: print(debug_data.compute().describe().transpose().reset_index(names="column").to_string(index=False))
-            else: print(debug_data.compute().describe())
+            debug = debug_data.compute().describe()
+            if self.transpose: debug = debug.transpose().reset_index(names="column")
+            debug = debug.to_string(index=False)
         elif self.func == 'columns':
-            print(list(data.columns))
+            debug = list(data.columns)
+        # else: throw an error?
+        print(debug)
 
         # do not actually transform the data
         return data

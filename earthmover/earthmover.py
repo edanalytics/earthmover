@@ -14,10 +14,9 @@ from earthmover.error_handler import ErrorHandler
 from earthmover.graph import Graph
 from earthmover.package import Package
 from earthmover.runs_file import RunsFile
-from earthmover.nodes.destination import Destination
+from earthmover.nodes.destination import Destination, NoOpDestination
 from earthmover.nodes.source import Source
 from earthmover.nodes.transformation import Transformation
-from earthmover.nodes.destination import *
 from earthmover.yaml_parser import JinjaEnvironmentYamlLoader
 from earthmover import util
 
