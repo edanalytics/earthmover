@@ -146,12 +146,13 @@ class UnionOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 'sources',
+        'operation', 'repartition', 'sources', 'fill_missing',
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.sources = self.error_handler.assert_get_key(self.config, 'sources', dtype=list)
+        self.fill_missing = self.error_handler.assert_get_key(self.config, 'fill_missing', dtype=bool, required=False, default=False)
 
     def execute(self, data: 'DataFrame', data_mapping: Dict[str, Node], **kwargs) -> 'DataFrame':
         """
@@ -164,8 +165,11 @@ class UnionOperation(Operation):
             source_data = data_mapping[source].data
 
             if set(source_data.columns) != set(data.columns):
-                self.error_handler.throw('dataframes to union do not share identical columns')
-                raise
+                if self.fill_missing:
+                    self.logger.debug('Dataframes to union do not share identical columns. Added columns will be filled with nulls.')
+                else:
+                    self.error_handler.throw('dataframes to union do not share identical columns')
+                    raise
 
             try:
                 data = dd.concat([data, source_data], ignore_index=True)
