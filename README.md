@@ -133,6 +133,7 @@ config:
   parameter_defaults:
     SOURCE_DIR: ./sources/
   show_progress: True
+  git_auth_timeout: 120
 
 ```
 * (optional) `output_dir` determines where generated JSONL is stored. The default is `./`.
@@ -148,7 +149,7 @@ config:
 * (optional) Specify Jinja `macros` which will be available within any Jinja template content throughout the project. (This can slow performance.)
 * (optional) Specify `parameter_defaults` which will be used if the user fails to specify a particular [parameter](#command-line-parameters) or [environment variable](#environment-variable-references).
 * (optional) Specify whether to `show_progress` while processing, via a Dask progress bar.
-
+* (optional) Specify length of time (in seconds) to wait for the user to enter Git credentials if needed during package installation; default is 60. See [project composition](#project-composition) for more details on package installation.
 
 ### **`definitions`**
 The `definitions` section of the [YAML configuration](#yaml-configuration) is an optional section you can use to define configurations which are reused throughout the rest of the configuration. `earthmover` does nothing special with this section, it's just interpreted by the YAML parser. However, this can be a very useful way to keep your YAML configuration [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) &ndash; rather than redefine the same values, Jinja phrases, etc. throughout your config, define them once in this section and refer to them later using [YAML anchors, aliases, and overrides](https://www.linode.com/docs/guides/yaml-anchors-aliases-overrides-extensions/).
