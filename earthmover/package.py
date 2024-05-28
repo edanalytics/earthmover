@@ -15,7 +15,7 @@ class Package:
     """
     mode: str = None
 
-    def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover', package_path: Optional[str] = None):
+    def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         """
         Logic for assigning packages to their respective classes.
 
