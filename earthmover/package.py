@@ -137,7 +137,7 @@ class LocalPackage(Package):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def install(self, packages_dir):
+    def install(self, packages_dir, *args):
         """
         Makes a copy of a local package directory into <project>/packages.
         :return:
@@ -166,7 +166,7 @@ class GitHubPackage(Package):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def install(self, packages_dir):
+    def install(self, packages_dir, git_auth_timeout):
         """
         Clones a GitHub repository into <project>/packages.
         If a subdirectory is specified, clone the repository into a temporary folder and copy the desired subdirectory into <project>/packages.
@@ -183,9 +183,9 @@ class GitHubPackage(Package):
 
         try:
             if branch:
-                subprocess.run(["git", "clone", "-b", branch, source_path, "."], cwd=tmp_package_path, timeout=60)
+                subprocess.run(["git", "clone", "-b", branch, source_path, "."], cwd=tmp_package_path, timeout=git_auth_timeout)
             else:  #If branch is not specified, default working branch is used
-                subprocess.run(["git", "clone", source_path, "."], cwd=tmp_package_path, timeout=60)
+                subprocess.run(["git", "clone", source_path, "."], cwd=tmp_package_path, timeout=git_auth_timeout)
 
         # Timeouts are implemented to prevent automated runs from hanging if the git clone command is prompting for credentials
         except subprocess.TimeoutExpired:

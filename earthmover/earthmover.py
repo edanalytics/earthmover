@@ -517,7 +517,7 @@ class Earthmover:
             # Install packages if necessary, or retrieve path to package yaml file
             package_node = self.package_graph.nodes[package_name]
             if install:
-                installed_package_yaml = package_node['package'].install(packages_dir)
+                installed_package_yaml = package_node['package'].install(packages_dir, self.state_configs.get('git_auth_timeout', 60))
             else:
                 package_node['package'].package_path = os.path.join(packages_dir, package_name)
                 installed_package_yaml = package_node['package'].get_installed_config_file()
