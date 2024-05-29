@@ -49,8 +49,8 @@ class FileDestination(Destination):
         self.extension = self.error_handler.assert_get_key(self.config, 'extension', dtype=str, required=False, default='')
 
         #config->extension is optional: if not present, we assume the destination name has an extension
-        _filename = f"{self.name}.{self.extension}" if self.extension else self.name
-        self.file = os.path.join(self.earthmover.state_configs['output_dir'], _filename)
+        filename = f"{self.name}.{self.extension}" if self.extension else self.name
+        self.file = os.path.join(self.earthmover.state_configs['output_dir'], filename)
 
     def execute(self, **kwargs):
         """
