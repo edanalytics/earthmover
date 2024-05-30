@@ -137,7 +137,7 @@ class LocalPackage(Package):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def install(self, packages_dir, *args):
+    def install(self, packages_dir, **kwargs):
         """
         Makes a copy of a local package directory into <project>/packages.
         :return:
@@ -183,9 +183,11 @@ class GitHubPackage(Package):
 
         try:
             if branch:
-                subprocess.run(["git", "clone", "-b", branch, source_path, "."], cwd=tmp_package_path, timeout=git_auth_timeout)
+                command = ["git", "clone", "-b", branch, source_path, "."]
             else:  #If branch is not specified, default working branch is used
-                subprocess.run(["git", "clone", source_path, "."], cwd=tmp_package_path, timeout=git_auth_timeout)
+                command = ["git", "clone", source_path, "."]
+
+            subprocess.run(command, cwd=tmp_package_path, timeout=git_auth_timeout)
 
         # Timeouts are implemented to prevent automated runs from hanging if the git clone command is prompting for credentials
         except subprocess.TimeoutExpired:
