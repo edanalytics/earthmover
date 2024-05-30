@@ -180,7 +180,6 @@ def main(argv=None):
             skip_hashing=args.skip_hashing,
             cli_state_configs=cli_state_configs,
             results_file=args.results_file,
-            skip_mkdir=args.command in ['clean', 'deps']
         )
 
     except Exception as err:

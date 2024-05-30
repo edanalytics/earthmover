@@ -54,7 +54,6 @@ class Earthmover:
         skip_hashing: bool = False,
         cli_state_configs: Optional[dict] = None,
         results_file: str = "",
-        skip_mkdir: bool = False,
     ):
         self.do_generate = True
         self.force = force
@@ -62,6 +61,7 @@ class Earthmover:
 
         self.results_file = results_file
         self.config_file = config_file
+        self.compiled_yaml_file = COMPILED_YAML_FILE
         self.error_handler = ErrorHandler(file=self.config_file)
 
         # Set a directory for installing packages
@@ -86,14 +86,6 @@ class Earthmover:
         self.logger.setLevel(
             logging.getLevelName( self.state_configs['log_level'].upper() )
         )
-
-        # Prepare the output directory for destinations.
-        self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
-        if not os.path.isdir(self.state_configs['output_dir']) and not skip_mkdir:
-            self.logger.info(
-                f"creating output directory {self.state_configs['output_dir']}"
-            )
-            os.makedirs(self.state_configs['output_dir'], exist_ok=True)
 
         # Set the temporary directory in cases of disk-spillage.
         dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
@@ -144,7 +136,7 @@ class Earthmover:
 
         ### Optionally merge packages to update user-configs and write the composed YAML to disk.
         self.user_configs = self.merge_packages() or self.user_configs
-        self.user_configs.to_disk(COMPILED_YAML_FILE)
+        self.user_configs.to_disk(self.compiled_yaml_file)
 
         ### Compile the nodes and add to the graph type-by-type.
         self.sources = self.compile_node_configs(
@@ -227,6 +219,14 @@ class Earthmover:
         Iterate subgraphs in `Earthmover.graph` and execute each Node in order.
         :return:
         """
+        # Prepare the output directory for destinations.
+        self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
+        if not os.path.isdir(self.state_configs['output_dir']):
+            self.logger.info(
+                f"creating output directory {self.state_configs['output_dir']}"
+            )
+            os.makedirs(self.state_configs['output_dir'], exist_ok=True)
+
         for idx, component in enumerate(nx.weakly_connected_components(graph)):
             self.logger.debug(f"processing component {idx}")
 
@@ -554,8 +554,8 @@ class Earthmover:
             shutil.rmtree(self.state_configs['output_dir'], ignore_errors = True)
             was_noop = False
 
-        if os.path.isfile(COMPILED_YAML_FILE):
-            os.remove(COMPILED_YAML_FILE)
+        if os.path.isfile(self.compiled_yaml_file):
+            os.remove(self.compiled_yaml_file)
             was_noop = False
 
         if was_noop:
