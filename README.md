@@ -85,8 +85,8 @@ transA:                           transA:
     - operation: add_columns          - operation: add_columns
       source: $sources.A
       columns:                          columns:
-        - A: "a"                          - A: "a"
-        - B: "b"                          - B: "b"
+        A: "a"                            A: "a"
+        B: "b"                            B: "b"
     - operation: union                - operation: union
       sources:                          sources:
       - $transformations.transA
@@ -371,10 +371,10 @@ Adds columns with specified values.
 ```yaml
       - operation: add_columns
         columns:
-          - new_column_1: value_1
-          - new_column_2: "{%raw%}{% if True %}Jinja works here{% endif %}{%endraw%}"
-          - new_column_3: "{%raw%}Reference values from {{AnotherColumn}} in this new column{%endraw%}"
-          - new_column_4: "{%raw%}{% if col1>col2 %}{{col1|float + col2|float}}{% else %}{{col1|float - col2|float}}{% endif %}{%endraw%}"
+          new_column_1: value_1
+          new_column_2: "{%raw%}{% if True %}Jinja works here{% endif %}{%endraw%}"
+          new_column_3: "{%raw%}Reference values from {{AnotherColumn}} in this new column{%endraw%}"
+          new_column_4: "{%raw%}{% if col1>col2 %}{{col1|float + col2|float}}{% else %}{{col1|float - col2|float}}{% endif %}{%endraw%}"
 ```
 Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers to another column's value. Any [Jinja filters](https://jinja.palletsprojects.com/en/3.1.x/templates/#builtin-filters) and [math operations](https://jinja.palletsprojects.com/en/3.0.x/templates/#math) should work. Reference the current row number with `{{__row_number__}}` or a dictionary containing the row data with `{{__row_data__['column_name']}}`. *You must wrap Jinja expressions* in `{%raw%}...{%endraw%}` to avoid them being parsed at YAML load time.
 </details>
@@ -700,7 +700,7 @@ transformations:
     operations:
       - operation: add_columns
         columns:
-          - source_file: {{i}}
+          source_file: {{i}}
 {% endfor %}
   stacked:
     source: $transformations.source1
