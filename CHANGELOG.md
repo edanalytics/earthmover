@@ -1,3 +1,6 @@
+### Unreleased
+* internal: fix some examples in README
+
 ### v0.3.1
 <details>
 
