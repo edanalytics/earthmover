@@ -1,5 +1,15 @@
-### Unreleased
-* internal: fix some examples in README
+### v0.3.2
+<details>
+
+<summary>Released TODO</summary>
+
+internal: Move `FileSource` size-checking and `FtpSource` FTP-connecting from compile to execute
+internal: Allow filepaths to be passed to an optional `FileSource`, and check for file before creating empty dataframe
+internal: Build an empty dataframe if an empty folder is passed to an optional `FileSource`
+internal: fix some examples in README
+
+</details>
+
 
 ### v0.3.1
 <details>
