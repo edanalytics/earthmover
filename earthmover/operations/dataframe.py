@@ -166,7 +166,7 @@ class UnionOperation(Operation):
 
             if set(source_data.columns) != set(data.columns):
                 if self.fill_missing:
-                    self.logger.debug('Dataframes to union do not share identical columns. Added columns will be filled with nulls.')
+                    self.logger.debug('Dataframes to union do not share identical columns. Missing columns will be filled with nulls.')
                 else:
                     self.error_handler.throw('dataframes to union do not share identical columns')
                     raise
