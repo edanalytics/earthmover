@@ -318,7 +318,10 @@ Concatenates the transformation source with one or more sources sources of the s
           - $sources.courses_list_1
           - $sources.courses_list_2
           - $sources.courses_list_3
+        fill_missing_columns: False
 ```
+By default, unioning sources with different columns raises an error.
+Set `fill_missing_columns` to `True` to union all columns into the output dataframe.
 </details>
 
 
