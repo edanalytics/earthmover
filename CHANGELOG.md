@@ -3,11 +3,11 @@
 
 <summary>Released TODO</summary>
 
-feature: Add optional 'fill_missing_columns' field to `UnionOperation` to fill disjunct columns with nulls, instead of raising an error (default `False`)
-internal: Move `FileSource` size-checking and `FtpSource` FTP-connecting from compile to execute
-internal: Allow filepaths to be passed to an optional `FileSource`, and check for file before creating empty dataframe
-internal: Build an empty dataframe if an empty folder is passed to an optional `FileSource`
-internal: fix some examples in README
+* feature: Add optional 'fill_missing_columns' field to `UnionOperation` to fill disjunct columns with nulls, instead of raising an error (default `False`)
+* internal: Move `FileSource` size-checking and `FtpSource` FTP-connecting from compile to execute
+* internal: Allow filepaths to be passed to an optional `FileSource`, and check for file before creating empty dataframe
+* internal: Build an empty dataframe if an empty folder is passed to an optional `FileSource`
+* internal: fix some examples in README
 
 </details>
 
