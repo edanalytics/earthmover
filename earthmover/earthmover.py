@@ -38,6 +38,7 @@ class Earthmover:
         "show_stacktrace": False,
         "tmp_dir": tempfile.gettempdir(),
         "show_progress": False,
+        "git_auth_timeout": 60
     }
 
     sources: List[Source] = []
@@ -517,7 +518,7 @@ class Earthmover:
             # Install packages if necessary, or retrieve path to package yaml file
             package_node = self.package_graph.nodes[package_name]
             if install:
-                installed_package_yaml = package_node['package'].install(packages_dir)
+                installed_package_yaml = package_node['package'].install(packages_dir, git_auth_timeout=self.state_configs['git_auth_timeout'])
             else:
                 package_node['package'].package_path = os.path.join(packages_dir, package_name)
                 installed_package_yaml = package_node['package'].get_installed_config_file()
