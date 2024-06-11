@@ -87,6 +87,9 @@ class Earthmover:
             logging.getLevelName( self.state_configs['log_level'].upper() )
         )
 
+        # Prepare the output directory for destinations.
+        self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
+
         # Set the temporary directory in cases of disk-spillage.
         dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
 
@@ -219,8 +222,6 @@ class Earthmover:
         Iterate subgraphs in `Earthmover.graph` and execute each Node in order.
         :return:
         """
-        # Prepare the output directory for destinations.
-        self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
         if not os.path.isdir(self.state_configs['output_dir']):
             self.logger.info(
                 f"creating output directory {self.state_configs['output_dir']}"

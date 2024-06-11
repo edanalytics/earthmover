@@ -5,15 +5,13 @@ import sys
 
 from earthmover.earthmover import Earthmover
 
-# use a dictionary here so that command strings can be accessed with a lookup.
-#   This helps enforce usage of this structure
-ALL_COMMANDS = {
-    "run": "run",
-    "compile": "compile",
-    "deps": "deps",
-    "clean": "clean"
-}
-command_list = ', '.join(f"`{c}`" for c in ALL_COMMANDS.values())
+# Any new command should be added to this list
+RUN = "run"
+COMPILE = "compile"
+DEPS = "deps"
+CLEAN = "clean"
+ALLOWED_COMMANDS = [RUN, COMPILE, DEPS, CLEAN]
+command_list = ", ".join(f"`{c}`" for c in ALLOWED_COMMANDS)
 
 class ExitOnExceptionHandler(logging.StreamHandler):
     """
@@ -118,7 +116,7 @@ def main(argv=None):
         print(f"unknown arguments {unknown_args_str} passed, use -h flag for help")
         exit(1)
     
-    if args.command is not None and args.command not in ALL_COMMANDS.values():
+    if args.command is not None and args.command not in ALLOWED_COMMANDS:
         print(f"unknown command '{args.command}' passed, use -h flag for help")
         exit(1)
 
@@ -187,7 +185,7 @@ def main(argv=None):
         raise  # Avoids linting error
 
     # Command: deps (parse Earthmover YAML and compile listed packages)
-    if args.command == ALL_COMMANDS["deps"]:
+    if args.command == DEPS:
         em.logger.info(f"installing packages...")
         if args.selector != '*':
             em.logger.info("selector is ignored for package install.")
@@ -200,7 +198,7 @@ def main(argv=None):
             raise
 
     # Command: compile (parse Earthmover YAML and build graph)
-    elif args.command == ALL_COMMANDS["compile"]:
+    elif args.command == COMPILE:
         em.logger.info(f"compiling project...")
         if args.selector != '*':
             em.logger.info("selector is ignored for compile-only run.")
@@ -213,7 +211,7 @@ def main(argv=None):
             logger.exception(e, exc_info=em.state_configs['show_stacktrace'])
             raise
 
-    elif args.command == ALL_COMMANDS["clean"]:
+    elif args.command == CLEAN:
         em.logger.info(f"removing local artifacts...")
         if args.selector != '*':
             em.logger.info("selector is ignored for project cleaning.")
@@ -227,7 +225,7 @@ def main(argv=None):
 
     # Command: run (compile + execute)
     # This is the default if none is specified.
-    elif args.command == ALL_COMMANDS["run"] or not args.command:
+    elif args.command == RUN or not args.command:
         if not args.command:
             em.logger.warning("[no command specified; proceeding with `run` but we recommend explicitly giving a command]")
 
