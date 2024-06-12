@@ -3,7 +3,6 @@ import jinja2
 import os
 import pandas as pd
 import re
-import dask
 
 from earthmover.nodes.node import Node
 from earthmover import util
