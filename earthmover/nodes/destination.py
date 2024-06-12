@@ -83,9 +83,7 @@ class FileDestination(Destination):
 
     def execute(self, **kwargs):
         """
-        There is a bug in Dask where `dd.to_csv(mode='a', single_file=True)` fails.
-        This is resolved in 2023.8.1: https://docs.dask.org/en/stable/changelog.html#id7 
-
+        
         :return:
         """
         super().execute(**kwargs)
@@ -118,7 +116,7 @@ class FileDestination(Destination):
 
     def write_row(self, row: pd.Series, fp):
         fp.write(row + "\n")
-        return "" # this wipes out data in the dataframe after it's written, which should save some memory
+        return None # this wipes out data in the dataframe after it's written, which should save some memory
 
     def render_row(self, row: pd.Series):
         row = row.astype("string").fillna('')
