@@ -895,7 +895,7 @@ Some details of the design of this tool are discussed below.
 
 Note that due to step (3) above, *runtime* Jinja expressions (such as column definitions for `add_columns` or `modify_columns` operations) should be wrapped with `{%raw%}...{%endraw%}` to avoid being parsed when the YAML is being loaded.
 
-The parsed YAML is written to a file called `earthmover_compiled.yaml` in your working directory during a `compile` or `run` command. This file can be used to debug issues related to compile-time Jinja or [project composition](#project-composition).
+The parsed YAML is written to a file called `earthmover_compiled.yaml` in your working directory during a `compile` command. This file can be used to debug issues related to compile-time Jinja or [project composition](#project-composition).
 
 
 ## DAG

@@ -129,7 +129,7 @@ class Earthmover:
         return configs
 
 
-    def compile(self):
+    def compile(self, to_disk: bool = False):
         """
         Parse optional packages, iterate the node configs, compile each Node, and build the graph.
         Save the Nodes to their `Earthmover.{node_type}` objects.
@@ -142,7 +142,8 @@ class Earthmover:
 
         ### Optionally merge packages to update user-configs and write the composed YAML to disk.
         self.user_configs = self.merge_packages() or self.user_configs
-        self.user_configs.to_disk("./earthmover_compiled.yaml")
+        if to_disk:
+            self.user_configs.to_disk("./earthmover_compiled.yaml")
 
         ### Compile the nodes and add to the graph type-by-type.
         self.sources = self.compile_node_configs(

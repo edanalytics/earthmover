@@ -189,7 +189,7 @@ def main(argv=None):
             em.logger.info("selector is ignored for compile-only run.")
 
         try:
-            em.compile()
+            em.compile(to_disk=True)
             em.logger.info("looks ok")
 
         except Exception as e:
