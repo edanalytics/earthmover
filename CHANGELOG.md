@@ -1,9 +1,20 @@
-### Unreleased
+### v0.3.2
 <details>
 
+<summary>Released TODO</summary>
+
+* feature: Add optional 'fill_missing_columns' field to `UnionOperation` to fill disjunct columns with nulls, instead of raising an error (default `False`)
+* feature: Add `git_auth_timeout` config when entering Git credentials during package composition
 * feature: [Add `earthmover clean` command that removes local project artifacts](https://github.com/edanalytics/earthmover/pull/87)
+* internal: Move `FileSource` size-checking and `FtpSource` FTP-connecting from compile to execute
+* internal: Allow filepaths to be passed to an optional `FileSource`, and check for file before creating empty dataframe
+* internal: Build an empty dataframe if an empty folder is passed to an optional `FileSource`
+* internal: fix some examples in README
+* internal: remove GitPython dependency
 * bugfix: [Ensure command list in help menu and log output is always consistent](https://github.com/edanalytics/earthmover/pull/87)
+
 </details>
+
 
 ### v0.3.1
 <details>
