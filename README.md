@@ -612,6 +612,23 @@ Note the difference between `min()`/`max()` and `str_min()`/`str_max()`: given a
 </details>
 
 
+#### Debug operation
+
+<details>
+<summary><code>debug</code></summary>
+
+Sort rows by one or more columns.
+```yaml
+      - operation: debug
+        function: head | tail | describe | columns # default=head
+        rows: 10 # (optional, default=5; ignored if function=describe|columns)
+        transpose: True # (default=False; ignored when function=columns)
+        skip_columns: [a, b, c] # to avoid logging PII
+        keep_columns: [x, y, z] # to look only at specific columns
+```
+`function=head|tail` displays the `rows` first or last rows of the dataframe, respectively. (Note that on large dataframes, these may not truly be the first/last rows, due to Dask's memory optimizations.) `function=describe` shows statistics about the values in the dataframe. `function=columns` shows the column names in the dataframe. `transpose` can be helpful with very wide dataframes. `keep_columns` defaults to all columns, `skip_columns` defaults to no columns.
+</details>
+
 
 ### **`destinations`**
 The `destinations` section of the [YAML configuration](#yaml-configuration) specifies how transformed data is materialized to files.

@@ -181,3 +181,58 @@ class UnionOperation(Operation):
                 raise
 
         return data
+
+
+
+class DebugOperation(Operation):
+    """
+    """
+    allowed_configs: Tuple[str] = (
+        'operation', 'function', 'rows', 'transpose', 'skip_columns', 'keep_columns'
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.func = self.error_handler.assert_get_key(self.config, 'function', dtype=str, required=False, default="head")
+        self.rows = self.error_handler.assert_get_key(self.config, 'rows', dtype=int, required=False, default=5)
+        self.skip_columns = self.error_handler.assert_get_key(self.config, 'skip_columns', dtype=list, required=False, default=[])
+        self.keep_columns = self.error_handler.assert_get_key(self.config, 'keep_columns', dtype=list, required=False, default=None)
+        self.transpose = self.error_handler.assert_get_key(self.config, 'transpose', dtype=bool, required=False, default=False)
+
+    def execute(self, data: 'DataFrame', data_mapping: Dict[str, Node], **kwargs) -> 'DataFrame':
+        """
+        :return:
+        """
+        super().execute(data, data_mapping=data_mapping, **kwargs)
+
+        # subset to desired columns
+        if not self.keep_columns: self.keep_columns = list(data.columns)
+        selected_columns = [ c for c in list(data.columns) if c in self.keep_columns and c not in self.skip_columns ]
+        debug_data = data[selected_columns]
+
+        # construct log message
+        transformation_name = f"${self.type}s.{self.name.replace('.operations:debug','')}"
+        rows_str = ' '+str(self.rows) if self.func in ['head','tail'] else ''
+        transpose_str = ', Transpose' if self.transpose else ''
+        self.earthmover.logger.info(f"debug ({self.func}{rows_str}{transpose_str}) for {transformation_name}:")
+
+        # call function and display debug info
+        if self.func == 'head':
+            debug = debug_data.head(self.rows)
+            if self.transpose: debug = debug.transpose().reset_index(names="column")
+            debug = debug.to_string(index=False)
+        elif self.func == 'tail':
+            debug = debug_data.tail(self.rows)
+            if self.transpose: debug = debug.transpose().reset_index(names="column")
+            debug = debug.to_string(index=False)
+        elif self.func == 'describe':
+            debug = debug_data.compute().describe()
+            if self.transpose: debug = debug.transpose().reset_index(names="column")
+            debug = debug.to_string(index=False)
+        elif self.func == 'columns':
+            debug = list(data.columns)
+        # else: throw an error?
+        print(debug)
+
+        # do not actually transform the data
+        return data
