@@ -57,6 +57,16 @@ class FileDestination(Destination):
             f"{self.name}{extension}"
         )
 
+        
+    def execute(self, **kwargs):
+        """
+        There is a bug in Dask where `dd.to_csv(mode='a', single_file=True)` fails.
+        This is resolved in 2023.8.1: https://docs.dask.org/en/stable/changelog.html#id7 
+
+        :return:
+        """
+        super().execute(**kwargs)
+
         #
         if self.template:
             try:
@@ -83,16 +93,7 @@ class FileDestination(Destination):
                 f"syntax error in Jinja template in `template` file {self.template} ({err})"
             )
             raise
-
-    def execute(self, **kwargs):
-        """
-        There is a bug in Dask where `dd.to_csv(mode='a', single_file=True)` fails.
-        This is resolved in 2023.8.1: https://docs.dask.org/en/stable/changelog.html#id7 
-
-        :return:
-        """
-        super().execute(**kwargs)
-
+        
         # this renders each row without having to itertuples() (which is much slower)
         # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
         self.data = (
