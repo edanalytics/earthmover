@@ -39,7 +39,7 @@ class FileDestination(Destination):
 
     EXP = re.compile(r"\s+")
     TEMPLATED_COL = "____OUTPUT____"
-    DEFAULT_TEMPLATE = """{ {% for col,val in __row_data__.items() %}"{{col}}": "{{val}}"{%if not loop.last%}, {%endif%}{% endfor %} }"""
+    DEFAULT_TEMPLATE = """{ {% for col,val in __row_data__.items() %}"{{col}}": {{val|tojson}}{%if not loop.last%}, {%endif%}{% endfor %} }"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
