@@ -80,6 +80,7 @@ def render_jinja_template(row: 'Series', template: jinja2.Template, template_str
     :return:
     """
     try:
+        row["__row_data__"] = row.to_dict()
         return template.render(row)
 
     except Exception as err:
