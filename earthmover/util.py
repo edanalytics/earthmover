@@ -80,8 +80,9 @@ def render_jinja_template(row: 'Series', template: jinja2.Template, template_str
     :return:
     """
     try:
-        row["__row_data__"] = row.to_dict()
-        return template.render(row)
+        row_data = row.to_dict()
+        row_data.update({"__row_data__": row.to_dict()})
+        return template.render(row_data)
 
     except Exception as err:
         error_handler.ctx.remove('line')
