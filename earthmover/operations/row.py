@@ -139,12 +139,12 @@ class FlattenOperation(Operation):
         super().__init__(*args, **kwargs)
 
         # Only 'column' or 'columns' can be populated
-        self._flatten_column  = self.error_handler.assert_get_key(self.config, 'flatten_column', dtype=str, required=True)
-        self._left_wrapper = self.error_handler.assert_get_key(self.config, 'left_wrapper', dtype=str, required=False, default="[\"")
-        self._right_wrapper = self.error_handler.assert_get_key(self.config, 'right_wrapper', dtype=str, required=False, default="\"]")
-        self._separator = self.error_handler.assert_get_key(self.config, 'separator', dtype=str, required=False, default=',')
-        self._value_column = self.error_handler.assert_get_key(self.config, 'value_column', dtype=str, required=True)
-        self._trim_whitespace = self.error_handler.assert_get_key(self.config, 'trim_whitespace', dtype=str, required=False, default=" \t\r\n\"")
+        self.flatten_column  = self.error_handler.assert_get_key(self.config, 'flatten_column', dtype=str, required=True)
+        self.left_wrapper = self.error_handler.assert_get_key(self.config, 'left_wrapper', dtype=str, required=False, default="[\"")
+        self.right_wrapper = self.error_handler.assert_get_key(self.config, 'right_wrapper', dtype=str, required=False, default="\"]")
+        self.separator = self.error_handler.assert_get_key(self.config, 'separator', dtype=str, required=False, default=',')
+        self.value_column = self.error_handler.assert_get_key(self.config, 'value_column', dtype=str, required=True)
+        self.trim_whitespace = self.error_handler.assert_get_key(self.config, 'trim_whitespace', dtype=str, required=False, default=" \t\r\n\"")
 
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
@@ -154,18 +154,21 @@ class FlattenOperation(Operation):
         """
         super().execute(data, **kwargs)
 
-        target_dtypes = data.head(1).rename(columns={self._flatten_column: self._value_column})
+        # target_dtypes = data.head(1).rename(columns={self.flatten_column: self.value_column})
+        target_dtypes = data.dtypes.to_dict()
+        target_dtypes.update({self.value_column: target_dtypes[self.flatten_column]})
+        del target_dtypes[self.flatten_column]
         data = data.map_partitions(self.flatten_partition, meta=target_dtypes)
         return data
 
     def flatten_partition(self, df):
         # trim off `left_wrapper` and `right_wrapper` characters from the values in `flatten_column`:
-        preprocessed_df = df[self._flatten_column].str.lstrip(self._left_wrapper).str.rstrip(self._right_wrapper)
+        preprocessed_df = df[self.flatten_column].str.lstrip(self.left_wrapper).str.rstrip(self.right_wrapper)
         # split by `separator` and explode rows:
-        flattened_values_df = preprocessed_df.str.split(self._separator, expand=True).stack()
+        flattened_values_df = preprocessed_df.str.split(self.separator, expand=True).stack()
         # trim off `trim_whitespace` characters from each of the split values:
-        postprocessed_df = flattened_values_df.str.strip(self._trim_whitespace).reset_index(level=1).drop('level_1', axis=1).rename(columns={0: self._value_column})
+        postprocessed_df = flattened_values_df.str.strip(self.trim_whitespace).reset_index(level=1).drop('level_1', axis=1).rename(columns={0: self.value_column})
         # join the exploded df to the original and drop `flatten_column` which is no longer needed:
-        flattened_partition_df = df.join(postprocessed_df).drop(self._flatten_column, axis=1).reset_index(drop=True)
+        flattened_partition_df = df.join(postprocessed_df).drop(self.flatten_column, axis=1).reset_index(drop=True)
 
         return flattened_partition_df
