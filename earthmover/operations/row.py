@@ -1,8 +1,6 @@
-import dask
-
 from earthmover.operations.operation import Operation
 
-from typing import List, Tuple
+from typing import Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
@@ -146,7 +144,6 @@ class FlattenOperation(Operation):
         self.value_column = self.error_handler.assert_get_key(self.config, 'value_column', dtype=str, required=True)
         self.trim_whitespace = self.error_handler.assert_get_key(self.config, 'trim_whitespace', dtype=str, required=False, default=" \t\r\n\"")
 
-
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
 
@@ -154,21 +151,36 @@ class FlattenOperation(Operation):
         """
         super().execute(data, **kwargs)
 
-        # target_dtypes = data.head(1).rename(columns={self.flatten_column: self.value_column})
+        # Update the meta to reflect the flattened column.
         target_dtypes = data.dtypes.to_dict()
         target_dtypes.update({self.value_column: target_dtypes[self.flatten_column]})
         del target_dtypes[self.flatten_column]
-        data = data.map_partitions(self.flatten_partition, meta=target_dtypes)
-        return data
+
+        return data.map_partitions(self.flatten_partition, meta=target_dtypes)
 
     def flatten_partition(self, df):
-        # trim off `left_wrapper` and `right_wrapper` characters from the values in `flatten_column`:
-        preprocessed_df = df[self.flatten_column].str.lstrip(self.left_wrapper).str.rstrip(self.right_wrapper)
-        # split by `separator` and explode rows:
-        flattened_values_df = preprocessed_df.str.split(self.separator, expand=True).stack()
-        # trim off `trim_whitespace` characters from each of the split values:
-        postprocessed_df = flattened_values_df.str.strip(self.trim_whitespace).reset_index(level=1).drop('level_1', axis=1).rename(columns={0: self.value_column})
-        # join the exploded df to the original and drop `flatten_column` which is no longer needed:
-        flattened_partition_df = df.join(postprocessed_df).drop(self.flatten_column, axis=1).reset_index(drop=True)
 
-        return flattened_partition_df
+        flattened_values_df = (df[self.flatten_column]
+            # trim off `left_wrapper` and `right_wrapper` characters
+            .str.lstrip(self.left_wrapper)  
+            .str.rstrip(self.right_wrapper)
+
+            # split by `separator` and explode rows
+            .str.split(self.separator, expand=True)
+            .stack()
+
+            # trim off `trim_whitespace` characters from each of the split values
+            .str.strip(self.trim_whitespace)
+
+            # remove the hierarchical index and set the `value_column` name
+            .reset_index(level=1)
+            .drop('level_1', axis=1)
+            .rename(columns={0: self.value_column})
+        )
+
+        # join the exploded df to the original and drop `flatten_column` which is no longer needed
+        return (df
+            .join(flattened_values_df)
+            .drop(self.flatten_column, axis=1)
+            .reset_index(drop=True)
+        )
