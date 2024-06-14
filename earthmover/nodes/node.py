@@ -164,7 +164,7 @@ class Node:
                 num_failed = len(result.query(f"{expectation_result_col}=='False'").index)
                 if num_failed > 0:
                     self.error_handler.throw(
-                        f"Source `${self.type}s.{self.name}` failed expectation `{expectation}` ({num_failed} rows fail)"
+                        f"Source `{self.full_name}` failed expectation `{expectation}` ({num_failed} rows fail)"
                     )
                 else:
                     self.logger.info(
