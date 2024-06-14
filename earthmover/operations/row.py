@@ -140,7 +140,7 @@ class FlattenOperation(Operation):
         self.right_wrapper = self.error_handler.assert_get_key(self.config, 'right_wrapper', dtype=str, required=False, default="\"']")
         self.separator = self.error_handler.assert_get_key(self.config, 'separator', dtype=str, required=False, default=',')
         self.value_column = self.error_handler.assert_get_key(self.config, 'value_column', dtype=str, required=True)
-        self.trim_whitespace = self.error_handler.assert_get_key(self.config, 'trim_whitespace', dtype=str, required=False, default=" \t\r\n\"\'")
+        self.trim_whitespace = self.error_handler.assert_get_key(self.config, 'trim_whitespace', dtype=str, required=False, default=" \t\r\n\"'")
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
