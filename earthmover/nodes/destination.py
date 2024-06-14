@@ -41,21 +41,17 @@ class FileDestination(Destination):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.template = self.error_handler.assert_get_key(self.config, 'template', dtype=str, required=False)
-        self.header = self.config.get("header")
-        self.footer = self.config.get("footer")
+        self.template = self.error_handler.assert_get_key(self.config, 'template', dtype=str, required=False, default=None)
+        self.header = self.error_handler.assert_get_key(self.config, 'header', dtype=str, required=False, default=None)
+        self.footer = self.error_handler.assert_get_key(self.config, 'footer', dtype=str, required=False, default=None)
+        self.linearize = self.error_handler.assert_get_key(self.config, 'linearize', dtype=bool, required=False, default=True)
+        self.extension = self.error_handler.assert_get_key(self.config, 'extension', dtype=str, required=False, default='')
+        self.jinja_template = None  # Defined in execute()
 
         #config->extension is optional: if not present, we assume the destination name has an extension
-        extension = ""
-        if "extension" in self.config:
-            extension = f".{self.config['extension']}"
-            
-        self.file = os.path.join(
-            self.earthmover.state_configs['output_dir'],
-            f"{self.name}{extension}"
-        )
+        filename = f"{self.name}.{self.extension}" if self.extension else self.name
+        self.file = os.path.join(self.earthmover.state_configs['output_dir'], filename)
 
-        
     def execute(self, **kwargs):
         """
         
@@ -63,30 +59,28 @@ class FileDestination(Destination):
         """
         super().execute(**kwargs)
 
-        #
-        if self.template:
-            try:
+        # Prepare the Jinja template for rendering rows.
+        try:
+            if self.template:
                 with open(self.template, 'r', encoding='utf-8') as fp:
                     template_string = fp.read()
+            else:
+                template_string = self.DEFAULT_TEMPLATE
 
-            except Exception as err:
-                self.error_handler.throw(
-                    f"`template` file {self.template} cannot be opened ({err})"
-                )
-                raise
-        else:
-            template_string = self.DEFAULT_TEMPLATE
+            # Replace multiple spaces with a single space to flatten templates.
+            if self.linearize:
+                template_string = self.EXP.sub(" ", template_string)
 
-        #
-        if self.config.get('linearize', True):
-            template_string = self.EXP.sub(" ", template_string)  # Replace multiple spaces with a single space.
-
-        #
-        try:
             self.jinja_template = util.build_jinja_template(template_string, macros=self.earthmover.macros)
 
+        except OSError as err:
+            self.error_handler.throw(
+                f"`template` file {self.template} cannot be opened ({err})"
+            )
+            raise
+
         except Exception as err:
-            self.earthmover.error_handler.throw(
+            self.error_handler.throw(
                 f"syntax error in Jinja template in `template` file {self.template} ({err})"
             )
             raise
