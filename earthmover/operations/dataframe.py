@@ -183,13 +183,14 @@ class UnionOperation(Operation):
         return data
 
 
-
 class DebugOperation(Operation):
     """
     """
     allowed_configs: Tuple[str] = (
         'operation', 'function', 'rows', 'transpose', 'skip_columns', 'keep_columns'
     )
+
+    DEBUG_FUNCTIONS = ['head', 'tail', 'describe', 'columns']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -199,40 +200,43 @@ class DebugOperation(Operation):
         self.keep_columns = self.error_handler.assert_get_key(self.config, 'keep_columns', dtype=list, required=False, default=None)
         self.transpose = self.error_handler.assert_get_key(self.config, 'transpose', dtype=bool, required=False, default=False)
 
+        if self.func not in self.DEBUG_FUNCTIONS:
+            self.error_handler.throw(f"debug type `{self.func}` not defined")
+
     def execute(self, data: 'DataFrame', data_mapping: Dict[str, Node], **kwargs) -> 'DataFrame':
         """
         :return:
         """
         super().execute(data, data_mapping=data_mapping, **kwargs)
 
-        # subset to desired columns
-        if not self.keep_columns: self.keep_columns = list(data.columns)
-        selected_columns = [ c for c in list(data.columns) if c in self.keep_columns and c not in self.skip_columns ]
+        # construct log message, removing reference to the debug operation
+        transformation_name = self.full_name.replace('.operations:debug', '')
+        rows_str = ' ' + str(self.rows) if self.func in ['head', 'tail'] else ''
+        transpose_str = ', Transpose' if self.transpose else ''
+        self.logger.info(f"debug ({self.func}{rows_str}{transpose_str}) for {transformation_name}:")
+        
+        # `columns` debug does not require column selection or compute
+        if self.func == 'columns':
+            print(list(data.columns))
+            return data  # do not actually transform the data
+
+        # otherwise, subset to desired columns
+        if not self.keep_columns:
+            self.keep_columns = list(data.columns)
+        
+        selected_columns = [col for col in list(data.columns) if col in self.keep_columns and col not in self.skip_columns]
         debug_data = data[selected_columns]
 
-        # construct log message
-        transformation_name = f"${self.type}s.{self.name.replace('.operations:debug','')}"
-        rows_str = ' '+str(self.rows) if self.func in ['head','tail'] else ''
-        transpose_str = ', Transpose' if self.transpose else ''
-        self.earthmover.logger.info(f"debug ({self.func}{rows_str}{transpose_str}) for {transformation_name}:")
-
-        # call function and display debug info
+        # call function, and display debug info
         if self.func == 'head':
-            debug = debug_data.head(self.rows)
-            if self.transpose: debug = debug.transpose().reset_index(names="column")
-            debug = debug.to_string(index=False)
+            debug_data = debug_data.head(self.rows)
         elif self.func == 'tail':
-            debug = debug_data.tail(self.rows)
-            if self.transpose: debug = debug.transpose().reset_index(names="column")
-            debug = debug.to_string(index=False)
+            debug_data = debug_data.tail(self.rows)
         elif self.func == 'describe':
-            debug = debug_data.compute().describe()
-            if self.transpose: debug = debug.transpose().reset_index(names="column")
-            debug = debug.to_string(index=False)
-        elif self.func == 'columns':
-            debug = list(data.columns)
-        # else: throw an error?
-        print(debug)
+            debug_data = debug_data.compute().describe()
 
-        # do not actually transform the data
-        return data
+        if self.transpose:
+            debug_data = debug_data.transpose().reset_index(names="column")
+        
+        print(debug_data.to_string(index=False))
+        return data  # do not actually transform the data
