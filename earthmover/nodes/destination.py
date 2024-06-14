@@ -1,5 +1,3 @@
-import csv
-import jinja2
 import os
 import pandas as pd
 import re
@@ -39,14 +37,16 @@ class FileDestination(Destination):
 
     EXP = re.compile(r"\s+")
     TEMPLATED_COL = "____OUTPUT____"
+    DEFAULT_TEMPLATE = """{ {% for col, val in __row_data__.items() %}"{{ col }}": {{ val | tojson }}{% if not loop.last %}, {% endif %}{% endfor %} }"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.template = self.error_handler.assert_get_key(self.config, 'template', dtype=str)
+        self.template = self.error_handler.assert_get_key(self.config, 'template', dtype=str, required=False, default=None)
         self.header = self.error_handler.assert_get_key(self.config, 'header', dtype=str, required=False, default=None)
         self.footer = self.error_handler.assert_get_key(self.config, 'footer', dtype=str, required=False, default=None)
         self.linearize = self.error_handler.assert_get_key(self.config, 'linearize', dtype=bool, required=False, default=True)
         self.extension = self.error_handler.assert_get_key(self.config, 'extension', dtype=str, required=False, default='')
+        self.jinja_template = None  # Defined in execute()
 
         #config->extension is optional: if not present, we assume the destination name has an extension
         filename = f"{self.name}.{self.extension}" if self.extension else self.name
@@ -61,8 +61,11 @@ class FileDestination(Destination):
 
         # Prepare the Jinja template for rendering rows.
         try:
-            with open(self.template, 'r', encoding='utf-8') as fp:
-                template_string = fp.read()
+            if self.template:
+                with open(self.template, 'r', encoding='utf-8') as fp:
+                    template_string = fp.read()
+            else:
+                template_string = self.DEFAULT_TEMPLATE
 
             # Replace multiple spaces with a single space to flatten templates.
             if self.linearize:
