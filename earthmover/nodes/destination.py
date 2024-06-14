@@ -100,10 +100,14 @@ class FileDestination(Destination):
 
         # Write the optional header, each line, and the optional footer.
         with open(self.file, 'w+', encoding='utf-8') as fp:
+            print("Original FP datatype")
+            print(fp)
+            print(type(fp))
+
             if self.header:
                 fp.write(self.header)
 
-            self.data.apply(self.write_row, meta=pd.Series('str'), fp=fp).compute()
+            self.data.apply(self.write_row, fp=fp, meta=pd.Series('str')).compute()
 
             if self.footer:
                 fp.write(self.footer)
@@ -111,7 +115,10 @@ class FileDestination(Destination):
         self.logger.debug(f"output `{self.file}` written")
         self.size = os.path.getsize(self.file)
 
-    def write_row(self, row: pd.Series, fp):
+    def write_row(self, row: pd.Series, fp: 'TextIOWrapper'):
+        print("Write-Row FP datatype")
+        print(fp)
+        print(type(fp))
         fp.write(row + "\n")
         return None # this wipes out data in the dataframe after it's written, which should save some memory
 

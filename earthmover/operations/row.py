@@ -161,6 +161,9 @@ class FlattenOperation(Operation):
     def flatten_partition(self, df):
 
         flattened_values_df = (df[self.flatten_column]
+            # force to a string before splitting
+            .astype("string")
+
             # trim off `left_wrapper` and `right_wrapper` characters
             .str.lstrip(self.left_wrapper)  
             .str.rstrip(self.right_wrapper)
