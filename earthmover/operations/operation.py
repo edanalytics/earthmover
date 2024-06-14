@@ -30,6 +30,7 @@ class Operation(Node):
         operation_mapping = {
             'join': dataframe_operations.JoinOperation,
             'union': dataframe_operations.UnionOperation,
+            'debug': dataframe_operations.DebugOperation,
 
             'add_columns': column_operations.AddColumnsOperation,
             'modify_columns': column_operations.ModifyColumnsOperation,
