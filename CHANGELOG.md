@@ -1,3 +1,27 @@
+### v0.3.2
+<details>
+
+<summary>Released 2024-06-14</summary>
+
+* feature: Add optional 'fill_missing_columns' field to `UnionOperation` to fill disjunct columns with nulls, instead of raising an error (default `False`)
+* feature: Add `git_auth_timeout` config when entering Git credentials during package composition
+* feature: [Add `earthmover clean` command that removes local project artifacts](https://github.com/edanalytics/earthmover/pull/87)
+* feature: only output compiled template during `earthmover compile`
+* feature: Render full row into JSON lines when `template` is undefined in `FileDestination`
+* internal: Move `FileSource` size-checking and `FtpSource` FTP-connecting from compile to execute
+* internal: Move template-file check from compile to execute in `FileDestination`
+* internal: Allow filepaths to be passed to an optional `FileSource`, and check for file before creating empty dataframe
+* internal: Build an empty dataframe if an empty folder is passed to an optional `FileSource`
+* internal: fix some examples in README
+* internal: remove GitPython dependency
+* bugfix: fix bug in `FileDestination` where `linearize: False` resulted in BOM characters
+* bugfix: fix bug where nested JSON would be loaded as a stringified Python dictionary
+* bugfix: [Ensure command list in help menu and log output is always consistent](https://github.com/edanalytics/earthmover/pull/87)
+* bugfix: fix bug in `ModifyColumnsOperation` where `__row_data__` was not exposed in Jinja templating
+
+</details>
+
+
 ### v0.3.1
 <details>
 
