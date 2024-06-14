@@ -135,8 +135,6 @@ class FlattenOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        # Only 'column' or 'columns' can be populated
         self.flatten_column  = self.error_handler.assert_get_key(self.config, 'flatten_column', dtype=str, required=True)
         self.left_wrapper = self.error_handler.assert_get_key(self.config, 'left_wrapper', dtype=str, required=False, default="[\"")
         self.right_wrapper = self.error_handler.assert_get_key(self.config, 'right_wrapper', dtype=str, required=False, default="\"]")
