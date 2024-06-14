@@ -7,6 +7,7 @@
 * feature: Add `git_auth_timeout` config when entering Git credentials during package composition
 * feature: [Add `earthmover clean` command that removes local project artifacts](https://github.com/edanalytics/earthmover/pull/87)
 * feature: only output compiled template during `earthmover compile`
+* feature: Render full row into JSON lines when `template` is undefined in `FileDestination`
 * internal: Move `FileSource` size-checking and `FtpSource` FTP-connecting from compile to execute
 * internal: Move template-file check from compile to execute in `FileDestination`
 * internal: Allow filepaths to be passed to an optional `FileSource`, and check for file before creating empty dataframe
