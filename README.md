@@ -569,6 +569,59 @@ By default, rows are sorted ascendingly. Set `descending: True` to reverse this 
 </details>
 
 
+<details>
+<summary><code>flatten</code></summary>
+
+Split values in a column and create a copy of the row for each value.
+```yaml
+      - operation: flatten
+        flatten_column: my_column
+        left_wrapper: '["' # characters to trim from the left of values in `flatten_column`
+        right_wrapper: '"]' # characters to trim from the right of values in `flatten_column`
+        separator: ","  # the string by which to split values in `flatten_column`
+        value_column: my_value # name of the new column to create with flattened values
+        trim_whitespace: " \t\r\n\"" # characters to trim from `value_column` _after_ flattening
+```
+The defaults above are designed to allow flattening JSON arrays (in a string) with simply
+```yaml
+      - operation: flatten
+        flatten_column: my_column
+        value_column: my_value
+```
+Note that for empty string values or empty arrays, a row will still be preserved. These can be removed in a second step with a `filter_rows` operation. Example:
+```yaml
+# Given a dataframe like this:
+#   foo     bar    to_flatten
+#   ---     ---    ----------
+#   foo1    bar1   "[\"test1\",\"test2\",\"test3\"]"
+#   foo2    bar2   ""
+#   foo3    bar3   "[]"
+#   foo4    bar4   "[\"test4\",\"test5\",\"test6\"]"
+# 
+# a flatten operation like this:
+      - operation: flatten
+        flatten_column: to_flatten
+        value_column: my_value
+# will produce a dataframe like this:
+#   foo     bar    my_value
+#   ---     ---    --------
+#   foo1    bar1   test1
+#   foo1    bar1   test2
+#   foo1    bar1   test3
+#   foo2    bar2   ""
+#   foo3    bar3   ""
+#   foo4    bar4   test4
+#   foo4    bar4   test5
+#   foo4    bar4   test6
+#
+# and you can remove the blank rows if needed with a further operation:
+      - operation: filter_rows
+        query: my_value == ''
+        behavior: exclude
+```
+</details>
+
+
 #### Group operations
 
 <details>
