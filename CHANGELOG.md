@@ -4,6 +4,7 @@
 <summary>Released 2024-06-14</summary>
 
 * feature: Add `DebugOperation` for logging data head, tail, columns, or metadata midrun
+* feature: Add `FlattenOperation` for splitting and exploding string columns into values
 * feature: Add optional 'fill_missing_columns' field to `UnionOperation` to fill disjunct columns with nulls, instead of raising an error (default `False`)
 * feature: Add `git_auth_timeout` config when entering Git credentials during package composition
 * feature: [Add `earthmover clean` command that removes local project artifacts](https://github.com/edanalytics/earthmover/pull/87)
