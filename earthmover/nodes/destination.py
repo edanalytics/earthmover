@@ -1,5 +1,3 @@
-import csv
-import jinja2
 import os
 import pandas as pd
 import re
@@ -39,56 +37,53 @@ class FileDestination(Destination):
 
     EXP = re.compile(r"\s+")
     TEMPLATED_COL = "____OUTPUT____"
+    DEFAULT_TEMPLATE = """{ {% for col, val in __row_data__.items() %}"{{ col }}": {{ val | tojson }}{% if not loop.last %}, {% endif %}{% endfor %} }"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.template = self.error_handler.assert_get_key(self.config, 'template', dtype=str)
-        self.header = self.config.get("header")
-        self.footer = self.config.get("footer")
+        self.template = self.error_handler.assert_get_key(self.config, 'template', dtype=str, required=False, default=None)
+        self.header = self.error_handler.assert_get_key(self.config, 'header', dtype=str, required=False, default=None)
+        self.footer = self.error_handler.assert_get_key(self.config, 'footer', dtype=str, required=False, default=None)
+        self.linearize = self.error_handler.assert_get_key(self.config, 'linearize', dtype=bool, required=False, default=True)
+        self.extension = self.error_handler.assert_get_key(self.config, 'extension', dtype=str, required=False, default='')
+        self.jinja_template = None  # Defined in execute()
 
         #config->extension is optional: if not present, we assume the destination name has an extension
-        extension = ""
-        if "extension" in self.config:
-            extension = f".{self.config['extension']}"
-            
-        self.file = os.path.join(
-            self.earthmover.state_configs['output_dir'],
-            f"{self.name}{extension}"
-        )
+        filename = f"{self.name}.{self.extension}" if self.extension else self.name
+        self.file = os.path.join(self.earthmover.state_configs['output_dir'], filename)
 
-        #
+    def execute(self, **kwargs):
+        """
+        
+        :return:
+        """
+        super().execute(**kwargs)
+
+        # Prepare the Jinja template for rendering rows.
         try:
-            with open(self.template, 'r', encoding='utf-8') as fp:
-                template_string = fp.read()
+            if self.template:
+                with open(self.template, 'r', encoding='utf-8') as fp:
+                    template_string = fp.read()
+            else:
+                template_string = self.DEFAULT_TEMPLATE
 
-        except Exception as err:
+            # Replace multiple spaces with a single space to flatten templates.
+            if self.linearize:
+                template_string = self.EXP.sub(" ", template_string)
+
+            self.jinja_template = util.build_jinja_template(template_string, macros=self.earthmover.macros)
+
+        except OSError as err:
             self.error_handler.throw(
                 f"`template` file {self.template} cannot be opened ({err})"
             )
             raise
 
-        #
-        if self.config.get('linearize', True):
-            template_string = self.EXP.sub(" ", template_string)  # Replace multiple spaces with a single space.
-
-        #
-        try:
-            self.jinja_template = util.build_jinja_template(template_string, macros=self.earthmover.macros)
-
         except Exception as err:
-            self.earthmover.error_handler.throw(
+            self.error_handler.throw(
                 f"syntax error in Jinja template in `template` file {self.template} ({err})"
             )
             raise
-
-    def execute(self, **kwargs):
-        """
-        There is a bug in Dask where `dd.to_csv(mode='a', single_file=True)` fails.
-        This is resolved in 2023.8.1: https://docs.dask.org/en/stable/changelog.html#id7 
-
-        :return:
-        """
-        super().execute(**kwargs)
 
         # this renders each row without having to itertuples() (which is much slower)
         # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
@@ -103,15 +98,15 @@ class FileDestination(Destination):
         # Verify the output directory exists.
         os.makedirs(os.path.dirname(self.file), exist_ok=True)
 
-        # Write the optional header, the JSON lines as CSV (for performance), and the optional footer.
-        self.data.to_csv(
-            filename=self.file, single_file=True, mode='wt', index=False,
-            header=[self.header] if self.header else False,  # We must write the header directly due to aforementioned bug.
-            escapechar="\x01", sep="\x02", quoting=csv.QUOTE_NONE,  # Pretend to be CSV to improve performance
-        )
+        # Write the optional header, each line, and the optional footer.
+        with open(self.file, 'w+', encoding='utf-8') as fp:
 
-        if self.footer:
-            with open(self.file, 'a', encoding='utf-8') as fp:
+            if self.header:
+                fp.write(self.header)
+
+            self.data.apply(lambda row: fp.write(row + '\n'), meta=pd.Series('string')).compute()
+
+            if self.footer:
                 fp.write(self.footer)
 
         self.logger.debug(f"output `{self.file}` written")

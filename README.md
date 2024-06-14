@@ -85,8 +85,8 @@ transA:                           transA:
     - operation: add_columns          - operation: add_columns
       source: $sources.A
       columns:                          columns:
-        - A: "a"                          - A: "a"
-        - B: "b"                          - B: "b"
+        A: "a"                            A: "a"
+        B: "b"                            B: "b"
     - operation: union                - operation: union
       sources:                          sources:
       - $transformations.transA
@@ -133,6 +133,7 @@ config:
   parameter_defaults:
     SOURCE_DIR: ./sources/
   show_progress: True
+  git_auth_timeout: 120
 
 ```
 * (optional) `output_dir` determines where generated JSONL is stored. The default is `./`.
@@ -148,7 +149,7 @@ config:
 * (optional) Specify Jinja `macros` which will be available within any Jinja template content throughout the project. (This can slow performance.)
 * (optional) Specify `parameter_defaults` which will be used if the user fails to specify a particular [parameter](#command-line-parameters) or [environment variable](#environment-variable-references).
 * (optional) Specify whether to `show_progress` while processing, via a Dask progress bar.
-
+* (optional) Specify the `git_auth_timeout` (in seconds) to wait for the user to enter Git credentials if needed during package installation; default is 60. See [project composition](#project-composition) for more details on package installation.
 
 ### **`definitions`**
 The `definitions` section of the [YAML configuration](#yaml-configuration) is an optional section you can use to define configurations which are reused throughout the rest of the configuration. `earthmover` does nothing special with this section, it's just interpreted by the YAML parser. However, this can be a very useful way to keep your YAML configuration [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) &ndash; rather than redefine the same values, Jinja phrases, etc. throughout your config, define them once in this section and refer to them later using [YAML anchors, aliases, and overrides](https://www.linode.com/docs/guides/yaml-anchors-aliases-overrides-extensions/).
@@ -318,7 +319,10 @@ Concatenates the transformation source with one or more sources sources of the s
           - $sources.courses_list_1
           - $sources.courses_list_2
           - $sources.courses_list_3
+        fill_missing_columns: False
 ```
+By default, unioning sources with different columns raises an error.
+Set `fill_missing_columns` to `True` to union all columns into the output dataframe.
 </details>
 
 
@@ -371,10 +375,10 @@ Adds columns with specified values.
 ```yaml
       - operation: add_columns
         columns:
-          - new_column_1: value_1
-          - new_column_2: "{%raw%}{% if True %}Jinja works here{% endif %}{%endraw%}"
-          - new_column_3: "{%raw%}Reference values from {{AnotherColumn}} in this new column{%endraw%}"
-          - new_column_4: "{%raw%}{% if col1>col2 %}{{col1|float + col2|float}}{% else %}{{col1|float - col2|float}}{% endif %}{%endraw%}"
+          new_column_1: value_1
+          new_column_2: "{%raw%}{% if True %}Jinja works here{% endif %}{%endraw%}"
+          new_column_3: "{%raw%}Reference values from {{AnotherColumn}} in this new column{%endraw%}"
+          new_column_4: "{%raw%}{% if col1>col2 %}{{col1|float + col2|float}}{% else %}{{col1|float - col2|float}}{% endif %}{%endraw%}"
 ```
 Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers to another column's value. Any [Jinja filters](https://jinja.palletsprojects.com/en/3.1.x/templates/#builtin-filters) and [math operations](https://jinja.palletsprojects.com/en/3.0.x/templates/#math) should work. Reference the current row number with `{{__row_number__}}` or a dictionary containing the row data with `{{__row_data__['column_name']}}`. *You must wrap Jinja expressions* in `{%raw%}...{%endraw%}` to avoid them being parsed at YAML load time.
 </details>
@@ -565,6 +569,59 @@ By default, rows are sorted ascendingly. Set `descending: True` to reverse this 
 </details>
 
 
+<details>
+<summary><code>flatten</code></summary>
+
+Split values in a column and create a copy of the row for each value.
+```yaml
+      - operation: flatten
+        flatten_column: my_column
+        left_wrapper: '["' # characters to trim from the left of values in `flatten_column`
+        right_wrapper: '"]' # characters to trim from the right of values in `flatten_column`
+        separator: ","  # the string by which to split values in `flatten_column`
+        value_column: my_value # name of the new column to create with flattened values
+        trim_whitespace: " \t\r\n\"" # characters to trim from `value_column` _after_ flattening
+```
+The defaults above are designed to allow flattening JSON arrays (in a string) with simply
+```yaml
+      - operation: flatten
+        flatten_column: my_column
+        value_column: my_value
+```
+Note that for empty string values or empty arrays, a row will still be preserved. These can be removed in a second step with a `filter_rows` operation. Example:
+```yaml
+# Given a dataframe like this:
+#   foo     bar    to_flatten
+#   ---     ---    ----------
+#   foo1    bar1   "[\"test1\",\"test2\",\"test3\"]"
+#   foo2    bar2   ""
+#   foo3    bar3   "[]"
+#   foo4    bar4   "[\"test4\",\"test5\",\"test6\"]"
+# 
+# a flatten operation like this:
+      - operation: flatten
+        flatten_column: to_flatten
+        value_column: my_value
+# will produce a dataframe like this:
+#   foo     bar    my_value
+#   ---     ---    --------
+#   foo1    bar1   test1
+#   foo1    bar1   test2
+#   foo1    bar1   test3
+#   foo2    bar2   ""
+#   foo3    bar3   ""
+#   foo4    bar4   test4
+#   foo4    bar4   test5
+#   foo4    bar4   test6
+#
+# and you can remove the blank rows if needed with a further operation:
+      - operation: filter_rows
+        query: my_value == ''
+        behavior: exclude
+```
+</details>
+
+
 #### Group operations
 
 <details>
@@ -607,6 +664,23 @@ Note the difference between `min()`/`max()` and `str_min()`/`str_max()`: given a
 
 </details>
 
+
+#### Debug operation
+
+<details>
+<summary><code>debug</code></summary>
+
+Sort rows by one or more columns.
+```yaml
+      - operation: debug
+        function: head | tail | describe | columns # default=head
+        rows: 10 # (optional, default=5; ignored if function=describe|columns)
+        transpose: True # (default=False; ignored when function=columns)
+        skip_columns: [a, b, c] # to avoid logging PII
+        keep_columns: [x, y, z] # to look only at specific columns
+```
+`function=head|tail` displays the `rows` first or last rows of the dataframe, respectively. (Note that on large dataframes, these may not truly be the first/last rows, due to Dask's memory optimizations.) `function=describe` shows statistics about the values in the dataframe. `function=columns` shows the column names in the dataframe. `transpose` can be helpful with very wide dataframes. `keep_columns` defaults to all columns, `skip_columns` defaults to no columns.
+</details>
 
 
 ### **`destinations`**
@@ -700,7 +774,7 @@ transformations:
     operations:
       - operation: add_columns
         columns:
-          - source_file: {{i}}
+          source_file: {{i}}
 {% endfor %}
   stacked:
     source: $transformations.source1
@@ -891,7 +965,7 @@ Some details of the design of this tool are discussed below.
 
 Note that due to step (3) above, *runtime* Jinja expressions (such as column definitions for `add_columns` or `modify_columns` operations) should be wrapped with `{%raw%}...{%endraw%}` to avoid being parsed when the YAML is being loaded.
 
-The parsed YAML is written to a file called `earthmover_compiled.yaml` in your working directory during a `compile` or `run` command. This file can be used to debug issues related to compile-time Jinja or [project composition](#project-composition).
+The parsed YAML is written to a file called `earthmover_compiled.yaml` in your working directory during a `compile` command. This file can be used to debug issues related to compile-time Jinja or [project composition](#project-composition).
 
 
 ## DAG

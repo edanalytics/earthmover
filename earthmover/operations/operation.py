@@ -30,6 +30,7 @@ class Operation(Node):
         operation_mapping = {
             'join': dataframe_operations.JoinOperation,
             'union': dataframe_operations.UnionOperation,
+            'debug': dataframe_operations.DebugOperation,
 
             'add_columns': column_operations.AddColumnsOperation,
             'modify_columns': column_operations.ModifyColumnsOperation,
@@ -45,6 +46,7 @@ class Operation(Node):
             'distinct_rows': row_operations.DistinctRowsOperation,
             'filter_rows': row_operations.FilterRowsOperation,
             'sort_rows': row_operations.SortRowsOperation,
+            'flatten': row_operations.FlattenOperation,
 
             'group_by_with_rank': groupby_operations.GroupByWithRankOperation,
             'group_by': groupby_operations.GroupByOperation,

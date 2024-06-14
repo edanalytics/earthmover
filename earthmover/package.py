@@ -1,6 +1,6 @@
-import git
 import os
 import shutil
+import subprocess
 from typing import Optional, TYPE_CHECKING
 if TYPE_CHECKING:
     from earthmover.earthmover import Earthmover
@@ -137,7 +137,7 @@ class LocalPackage(Package):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def install(self, packages_dir):
+    def install(self, packages_dir, **kwargs):
         """
         Makes a copy of a local package directory into <project>/packages.
         :return:
@@ -166,7 +166,7 @@ class GitHubPackage(Package):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def install(self, packages_dir):
+    def install(self, packages_dir, git_auth_timeout):
         """
         Clones a GitHub repository into <project>/packages.
         If a subdirectory is specified, clone the repository into a temporary folder and copy the desired subdirectory into <project>/packages.
@@ -179,19 +179,30 @@ class GitHubPackage(Package):
         branch = self.error_handler.assert_get_key(self.config, 'branch', dtype=str, required=False, default=None)
 
         tmp_package_path = os.path.join(packages_dir, 'tmp_git')
-        os.mkdir(tmp_package_path)
+        os.makedirs(tmp_package_path, exist_ok=True)
 
-        if branch:
-            repo = git.Repo.clone_from(source_path, tmp_package_path, branch=branch)
-        else:  #If branch is not specified, default working branch is used
-            repo = git.Repo.clone_from(source_path, tmp_package_path)
+        try:
+            if branch:
+                command = ["git", "clone", "-b", branch, source_path, "."]
+            else:  #If branch is not specified, default working branch is used
+                command = ["git", "clone", source_path, "."]
+
+            subprocess.run(command, cwd=tmp_package_path, timeout=git_auth_timeout)
+
+        # Timeouts are implemented to prevent automated runs from hanging if the git clone command is prompting for credentials
+        except subprocess.TimeoutExpired:
+            shutil.rmtree(tmp_package_path)
+            self.error_handler.throw(
+                f"Git clone command timed out for the {self.name} package ({source_path}). Are git credentials correctly configured?"
+            )
+            raise
 
         if subdirectory: # Avoids the package being nested in folders
-            subdirectory_path = os.path.join(repo.working_tree_dir, subdirectory)
+            subdirectory_path = os.path.join(tmp_package_path, subdirectory)
             shutil.copytree(subdirectory_path, self.package_path)
         else:
-            shutil.copytree(repo.working_tree_dir, self.package_path)
+            shutil.copytree(tmp_package_path, self.package_path)
 
-        git.rmtree(repo.working_tree_dir)
+        shutil.rmtree(tmp_package_path)
 
         return super().get_installed_config_file()

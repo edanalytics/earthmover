@@ -5,6 +5,7 @@ import logging
 import tempfile
 import networkx as nx
 import os
+import shutil
 import time
 import datetime
 import pandas as pd
@@ -22,6 +23,7 @@ from earthmover import util
 
 from typing import List, Optional
 
+COMPILED_YAML_FILE = "./earthmover_compiled.yaml"
 
 class Earthmover:
     """
@@ -38,6 +40,7 @@ class Earthmover:
         "show_stacktrace": False,
         "tmp_dir": tempfile.gettempdir(),
         "show_progress": False,
+        "git_auth_timeout": 60
     }
 
     sources: List[Source] = []
@@ -59,6 +62,7 @@ class Earthmover:
 
         self.results_file = results_file
         self.config_file = config_file
+        self.compiled_yaml_file = COMPILED_YAML_FILE
         self.error_handler = ErrorHandler(file=self.config_file)
 
         # Set a directory for installing packages
@@ -86,11 +90,6 @@ class Earthmover:
 
         # Prepare the output directory for destinations.
         self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
-        if not os.path.isdir(self.state_configs['output_dir']):
-            self.logger.info(
-                f"creating output directory {self.state_configs['output_dir']}"
-            )
-            os.makedirs(self.state_configs['output_dir'], exist_ok=True)
 
         # Set the temporary directory in cases of disk-spillage.
         dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
@@ -128,7 +127,7 @@ class Earthmover:
         return configs
 
 
-    def compile(self):
+    def compile(self, to_disk: bool = False):
         """
         Parse optional packages, iterate the node configs, compile each Node, and build the graph.
         Save the Nodes to their `Earthmover.{node_type}` objects.
@@ -141,7 +140,8 @@ class Earthmover:
 
         ### Optionally merge packages to update user-configs and write the composed YAML to disk.
         self.user_configs = self.merge_packages() or self.user_configs
-        self.user_configs.to_disk("./earthmover_compiled.yaml")
+        if to_disk:
+            self.user_configs.to_disk(self.compiled_yaml_file)
 
         ### Compile the nodes and add to the graph type-by-type.
         self.sources = self.compile_node_configs(
@@ -224,6 +224,12 @@ class Earthmover:
         Iterate subgraphs in `Earthmover.graph` and execute each Node in order.
         :return:
         """
+        if not os.path.isdir(self.state_configs['output_dir']):
+            self.logger.info(
+                f"creating output directory {self.state_configs['output_dir']}"
+            )
+            os.makedirs(self.state_configs['output_dir'], exist_ok=True)
+
         for idx, component in enumerate(nx.weakly_connected_components(graph)):
             self.logger.debug(f"processing component {idx}")
 
@@ -517,7 +523,7 @@ class Earthmover:
             # Install packages if necessary, or retrieve path to package yaml file
             package_node = self.package_graph.nodes[package_name]
             if install:
-                installed_package_yaml = package_node['package'].install(packages_dir)
+                installed_package_yaml = package_node['package'].install(packages_dir, git_auth_timeout=self.state_configs['git_auth_timeout'])
             else:
                 package_node['package'].package_path = os.path.join(packages_dir, package_name)
                 installed_package_yaml = package_node['package'].get_installed_config_file()
@@ -539,3 +545,22 @@ class Earthmover:
                 nested_package_dir = os.path.join(package_node['package'].package_path, 'packages')
                 nested_package_subgraph = nx.ego_graph(self.package_graph, package_name)
                 self.build_package_graph(root_node=package_name, package_subgraph=nested_package_subgraph, packages_dir=nested_package_dir, install=install)
+
+    def clean(self):
+        """
+        Removes local artifacts created by `earthmover run`
+        :return:
+        """
+
+        was_noop = True
+        if os.path.isdir(self.state_configs['output_dir']):
+            shutil.rmtree(self.state_configs['output_dir'], ignore_errors = True)
+            was_noop = False
+
+        if os.path.isfile(self.compiled_yaml_file):
+            os.remove(self.compiled_yaml_file)
+            was_noop = False
+
+        if was_noop:
+            self.logger.warning("Nothing to remove!")
+            exit(1)
