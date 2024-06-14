@@ -1,5 +1,3 @@
-import csv
-import jinja2
 import os
 import pandas as pd
 import re
@@ -39,7 +37,7 @@ class FileDestination(Destination):
 
     EXP = re.compile(r"\s+")
     TEMPLATED_COL = "____OUTPUT____"
-    DEFAULT_TEMPLATE = """{ {% for col,val in __row_data__.items() %}"{{col}}": {{val|tojson}}{%if not loop.last%}, {%endif%}{% endfor %} }"""
+    DEFAULT_TEMPLATE = """{ {% for col, val in __row_data__.items() %}"{{ col }}": {{ val | tojson }}{% if not loop.last %}, {% endif %}{% endfor %} }"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -76,7 +74,8 @@ class FileDestination(Destination):
                     f"`template` file {self.template} cannot be opened ({err})"
                 )
                 raise
-        else: template_string = self.DEFAULT_TEMPLATE
+        else:
+            template_string = self.DEFAULT_TEMPLATE
 
         #
         if self.config.get('linearize', True):
