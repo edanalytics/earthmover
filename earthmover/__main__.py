@@ -4,7 +4,7 @@ import os
 import sys
 
 from earthmover.earthmover import Earthmover
-from earthmover.init import copy_starter_repo
+from earthmover.init import run_init
 
 # Any new command should be added to this list
 RUN = "run"
@@ -132,7 +132,7 @@ def main(argv=None):
         exit(0)
 
     if args.command == INIT:
-        copy_starter_repo("hila")
+        run_init()
         exit(0)
 
     # -t / --test

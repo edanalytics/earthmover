@@ -14,3 +14,12 @@ def copy_starter_repo(project_name: str) -> None:
     shutil.copytree(
         starter_project_directory, project_name, ignore=shutil.ignore_patterns(*IGNORE_FILES)
     )
+
+def run_init() -> None:
+    project_name = input("Enter a name for your project: ")
+
+    # sanitize
+    clean_name = "".join(c for c in project_name if (c.isalnum() or c in "_-"))
+
+    # try to create
+    copy_starter_repo(clean_name)
