@@ -3,6 +3,7 @@
 <summary>Released 2024-06-18</summary>
 
 * hotfix: Resolve incompatible package dependencies
+* hotfix: Fix type casting of nested JSON for destination templates
 
 </details>
 
