@@ -1,0 +1,8 @@
+{
+    {% for key in __row_data__.keys() -%}
+    {% if key != "__row_data__" -%}
+    {% if not loop.first %},{% endif -%}
+    "{{key}}": "{{__row_data__[key]|trim}}"
+    {%- endif %}
+    {% endfor -%}
+}

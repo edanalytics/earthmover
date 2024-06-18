@@ -1,0 +1,6 @@
+{ "city": "Cincinnati" ,"state": "OH" ,"num_area_codes": "2" ,"num_zip_codes": "71"  }
+{ "city": "Dallas" ,"state": "TX" ,"num_area_codes": "8" ,"num_zip_codes": "105"  }
+{ "city": "Denver" ,"state": "CO" ,"num_area_codes": "3" ,"num_zip_codes": "69"  }
+{ "city": "Portland" ,"state": "OR" ,"num_area_codes": "3" ,"num_zip_codes": "55"  }
+{ "city": "Saint Louis" ,"state": "MO" ,"num_area_codes": "3" ,"num_zip_codes": "68"  }
+{ "city": "San Diego" ,"state": "CA" ,"num_area_codes": "12" ,"num_zip_codes": "79"  }
