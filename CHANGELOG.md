@@ -1,3 +1,11 @@
+### v0.3.3
+<details>
+<summary>Released 2024-06-18</summary>
+
+* hotfix: Resolve incompatible package dependencies
+
+</details>
+
 ### v0.3.2
 <details>
 
