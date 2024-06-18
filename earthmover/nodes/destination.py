@@ -116,6 +116,7 @@ class FileDestination(Destination):
         row = row.to_dict()
         types_to_cast = [bool, int, float]
         keys_to_cast = list(filter(lambda x: type(row[x]) in types_to_cast, row.keys()))
+        # this line (a) converts the keys_to_cast to string, and also converts all Nones to empty string:
         row = dict(map(lambda x: (x[0], str(x[1]) if x[0] in keys_to_cast else (x[1] if x[1] else "")), row.items()))
         _data_tuple = row
         _data_tuple["__row_data__"] = row
