@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import json
 import re
 
 from earthmover.nodes.node import Node
@@ -113,8 +114,11 @@ class FileDestination(Destination):
         self.size = os.path.getsize(self.file)
 
     def render_row(self, row: pd.Series):
-        row = row.astype("string").fillna('')
-        _data_tuple = row.to_dict()
+        types_to_cast = [bool, int, float]
+        cols_to_cast = list(filter(lambda x: type(row[x]) in types_to_cast, row.keys()))
+        row = row.to_dict()
+        row = dict(map(lambda x: (x[0], str(x[1]) if x[0] in cols_to_cast else (x[1] if x[1] else "")), row.items()))
+        _data_tuple = row
         _data_tuple["__row_data__"] = row
 
         try:
