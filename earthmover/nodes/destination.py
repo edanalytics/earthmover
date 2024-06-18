@@ -113,8 +113,8 @@ class FileDestination(Destination):
         self.size = os.path.getsize(self.file)
 
     def render_row(self, row: pd.Series):
-        types_to_cast = [bool, int, float]
         row = row.to_dict()
+        types_to_cast = [bool, int, float]
         keys_to_cast = list(filter(lambda x: type(row[x]) in types_to_cast, row.keys()))
         row = dict(map(lambda x: (x[0], str(x[1]) if x[0] in keys_to_cast else (x[1] if x[1] else "")), row.items()))
         _data_tuple = row
