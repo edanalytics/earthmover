@@ -132,8 +132,12 @@ def main(argv=None):
         exit(0)
 
     if args.command == INIT:
-        run_init()
-        exit(0)
+        project_path = run_init()
+        if project_path is not None:
+            print(f"Successfully initialized new project! You can test it out by running:\n\ncd {project_path}\nearthmover run\n")
+            exit(0)
+        else:
+            exit(1)
 
     # -t / --test
     if args.test:
