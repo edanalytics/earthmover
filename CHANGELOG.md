@@ -1,3 +1,12 @@
+### v0.3.3
+<details>
+<summary>Released 2024-06-18</summary>
+
+* hotfix: Resolve incompatible package dependencies
+* hotfix: Fix type casting of nested JSON for destination templates
+
+</details>
+
 ### v0.3.2
 <details>
 
