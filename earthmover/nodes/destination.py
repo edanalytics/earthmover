@@ -115,9 +115,9 @@ class FileDestination(Destination):
 
     def render_row(self, row: pd.Series):
         types_to_cast = [bool, int, float]
-        cols_to_cast = list(filter(lambda x: type(row[x]) in types_to_cast, row.keys()))
         row = row.to_dict()
-        row = dict(map(lambda x: (x[0], str(x[1]) if x[0] in cols_to_cast else (x[1] if x[1] else "")), row.items()))
+        keys_to_cast = list(filter(lambda x: type(row[x]) in types_to_cast, row.keys()))
+        row = dict(map(lambda x: (x[0], str(x[1]) if x[0] in keys_to_cast else (x[1] if x[1] else "")), row.items()))
         _data_tuple = row
         _data_tuple["__row_data__"] = row
 
