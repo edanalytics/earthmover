@@ -22,6 +22,10 @@ def run_init() -> None:
 
     # sanitize
     clean_name = "".join(c for c in project_name if (c.isalnum() or c in "_-"))
+    if len(clean_name) == 0:
+        print(f"ERROR: entered name has no valid characters (alphanumeric, underscore, dash)")
+        return None
+
     full_path = PurePath(os.getcwd(), clean_name)
 
     try:
