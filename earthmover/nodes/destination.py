@@ -104,7 +104,9 @@ class FileDestination(Destination):
             if self.header:
                 fp.write(self.header)
 
-            self.data.apply(lambda row: fp.write(row + '\n'), meta=pd.Series('string')).compute()
+            for partition in self.data.partitions:
+                fp.writelines(partition.compute())
+                partition = None  # Remove partition from memory immediately after write.
 
             if self.footer:
                 fp.write(self.footer)
