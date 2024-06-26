@@ -104,7 +104,9 @@ class FileDestination(Destination):
             if self.header:
                 fp.write(self.header)
 
-            self.data.apply(lambda row: fp.write(row + '\n'), meta=pd.Series('string')).compute()
+            for partition in self.data.partitions:
+                fp.writelines(partition.compute())
+                partition = None  # Remove partition from memory immediately after write.
 
             if self.footer:
                 fp.write(self.footer)
@@ -113,16 +115,17 @@ class FileDestination(Destination):
         self.size = os.path.getsize(self.file)
 
     def render_row(self, row: pd.Series):
-        row = row.to_dict()
-        types_to_cast = [bool, int, float]
-        keys_to_cast = list(filter(lambda x: type(row[x]) in types_to_cast, row.keys()))
-        # this line (a) converts the keys_to_cast to string, and also converts all Nones to empty string:
-        row = dict(map(lambda x: (x[0], str(x[1]) if x[0] in keys_to_cast else (x[1] if x[1] else "")), row.items()))
-        _data_tuple = row
-        _data_tuple["__row_data__"] = row
+        types_to_cast = (bool, int, float)
+
+        # this line converts the keys_to_cast to string, and also converts all Nones to empty string:
+        row_data = {
+            field: str(value) if isinstance(field, types_to_cast) else (value or "")
+            for field, value in row.to_dict().items()
+        }
+        row_data["__row_data__"] = row_data
 
         try:
-            json_string = self.jinja_template.render(_data_tuple)
+            json_string = self.jinja_template.render(row_data) + "\n"
 
         except Exception as err:
             self.error_handler.throw(

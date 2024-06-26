@@ -1,3 +1,12 @@
+### v0.3.4
+<details>
+<summary>Released 2024-06-26</summary>
+
+* hotfix: Fix bug when writing out JSON in `FileDestination`
+
+</details>
+
+
 ### v0.3.3
 <details>
 <summary>Released 2024-06-18</summary>
