@@ -3,7 +3,6 @@ version: 2
 config:
   output_dir: ./output/
   log_level: INFO
-  memory_limit: 1GB
   state_file: ./runs.csv
   show_graph: false
   show_stacktrace: true
