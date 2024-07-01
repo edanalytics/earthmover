@@ -1,0 +1,40 @@
+version: 2
+
+config:
+  output_dir: ./output/
+  log_level: INFO
+  state_file: ./runs.csv
+  show_graph: false
+  show_stacktrace: true
+  parameter_defaults:
+    BUNDLE_DIR: '.'
+    OUTPUT_DIR: './output/'
+
+sources:
+  attendance:
+    file: ./sources/attendance.tsv
+    header_rows: 1
+
+transformations:
+  attendance:
+    source: $sources.attendance
+    operations:
+      - operation: map_values
+        column: absent
+        mapping:
+          "TRUE": absent
+          "FALSE": present
+      - operation: rename_columns
+        columns:
+          absent: status
+          section: session
+      - operation: add_columns
+        columns:
+          school: '{% raw %}{{ md5( range(1, 51) | random | string )}}{% endraw %}'
+
+destinations:
+  studentSchoolAttendanceEvents:
+    source: $transformations.attendance
+    template: ./templates/studentSchoolAttendanceEvent.jsont
+    extension: jsonl
+    linearize: True

@@ -4,13 +4,15 @@ import os
 import sys
 
 from earthmover.earthmover import Earthmover
+from earthmover.init import run_init
 
 # Any new command should be added to this list
 RUN = "run"
 COMPILE = "compile"
 DEPS = "deps"
 CLEAN = "clean"
-ALLOWED_COMMANDS = [RUN, COMPILE, DEPS, CLEAN]
+INIT = "init"
+ALLOWED_COMMANDS = [RUN, COMPILE, DEPS, CLEAN, INIT]
 command_list = ", ".join(f"`{c}`" for c in ALLOWED_COMMANDS)
 
 class ExitOnExceptionHandler(logging.StreamHandler):
@@ -48,7 +50,7 @@ def main(argv=None):
         filtering, value mapping, and value conversions and computations via the
         Jinja templating language. Data sources larger than memory are supported
         via chunked processing."""
-    
+
     parser = argparse.ArgumentParser(
         prog="earthmover",
         description=description,
@@ -115,7 +117,7 @@ def main(argv=None):
         unknown_args_str = ', '.join(f"`{c}`" for c in unknown_args)
         print(f"unknown arguments {unknown_args_str} passed, use -h flag for help")
         exit(1)
-    
+
     if args.command is not None and args.command not in ALLOWED_COMMANDS:
         print(f"unknown command '{args.command}' passed, use -h flag for help")
         exit(1)
@@ -129,10 +131,18 @@ def main(argv=None):
             print(f"earthmover, version {VERSION}")
         exit(0)
 
+    if args.command == INIT:
+        project_path = run_init()
+        if project_path is not None:
+            print(f"Successfully initialized new project! You can test it out by running:\n\ncd {project_path}\nearthmover run\n")
+            exit(0)
+        else:
+            exit(1)
+
     # -t / --test
     if args.test:
         tests_dir = os.path.join( os.path.realpath(os.path.dirname(__file__)), "tests" )
-        
+
         em = Earthmover(
             config_file=os.path.join(tests_dir, "earthmover.yaml"),
             logger=logger,
@@ -166,7 +176,6 @@ def main(argv=None):
     if args.show_stacktrace:
         cli_state_configs['show_stacktrace'] = True
         cli_state_configs['log_level'] = 'DEBUG'
-
 
     # Main run
     try:
@@ -215,7 +224,7 @@ def main(argv=None):
         em.logger.info(f"removing local artifacts...")
         if args.selector != '*':
             em.logger.info("selector is ignored for project cleaning.")
-        
+
         try:
             em.clean()
             em.logger.info("done!")
