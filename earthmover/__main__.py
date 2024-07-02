@@ -142,7 +142,7 @@ def main(argv=None):
     # -t / --test
     if args.test:
         tests_dir = os.path.join( os.path.realpath(os.path.dirname(__file__)), "tests" )
-    
+        
         em = Earthmover(
             config_file=os.path.join(tests_dir, "earthmover.yaml"),
             logger=logger,
@@ -225,7 +225,7 @@ def main(argv=None):
         em.logger.info(f"removing local artifacts...")
         if args.selector != '*':
             em.logger.info("selector is ignored for project cleaning.")
-    
+        
         try:
             em.clean()
             em.logger.info("done!")
