@@ -4,22 +4,21 @@ import shutil
 
 def populate_project(project_name: str) -> None:
     root_path = Path(os.path.dirname(__file__))
+    include_path = root_path / "include" / "starter_project"
 
     # initialize starter project
     project_path = Path(project_name)
     project_path.mkdir()
-    shutil.copy2(root_path / "include" / "starter_project" / "README.md", project_path)
-    shutil.copy2(root_path / "include" / "starter_project" / "earthmover.yaml", project_path)
-
-    # copy example files used by test suite into starter project
-    test_path = root_path / "tests"
+    shutil.copy2(include_path / "README.md", project_path)
+    shutil.copy2(include_path / "earthmover.yaml", project_path)
 
     project_sources = project_path / "sources"
     project_templates = project_path / "templates"
-
     project_sources.mkdir()
     project_templates.mkdir()
 
+    # copy example files used by test suite into starter project
+    test_path = root_path / "tests"
     shutil.copy2(test_path / "sources" / "mammals.csv", project_sources)
     shutil.copy2(test_path / "sources" / "fishes.csv", project_sources)
     shutil.copy2(test_path / "templates" / "animal.jsont", project_templates)
