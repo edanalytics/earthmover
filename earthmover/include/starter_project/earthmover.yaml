@@ -2,13 +2,12 @@ version: 2
 
 config:
   log_level: INFO
-  output_dir: ${OUTPUT_DIR}
+  output_dir: ./outputs
   show_stacktrace: False
   show_graph: False
   parameter_defaults:
     # You can set these values at the command line or leave the defaults
     BASE_DIR: "."
-    OUTPUT_DIR: './outputs'
 
 
 sources:
