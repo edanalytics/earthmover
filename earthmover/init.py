@@ -6,8 +6,8 @@ def populate_project(project_name: str) -> None:
     root_path = Path(os.path.dirname(__file__))
 
     # initialize starter project
-    shutil.copytree(root_path / "include" / "starter_project" / "README.md", project_name)
-    shutil.copytree(root_path / "include" / "starter_project" / "earthmover.yaml", project_name)
+    shutil.copy2(root_path / "include" / "starter_project" / "README.md", project_name)
+    shutil.copy2(root_path / "include" / "starter_project" / "earthmover.yaml", project_name)
 
     # copy example files used by test suite into starter project
     test_path = root_path / "tests"
