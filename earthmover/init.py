@@ -1,21 +1,23 @@
-# inspired by dbt init
-# ref: https://github.com/dbt-labs/dbt-core/blob/main/core/dbt/task/init.py
 import os
-from pathlib import PurePath
+from pathlib import Path
 import shutil
 
-# These files are not needed for the starter project but exist for finding the resource path
-IGNORE_FILES = ["__init__.py", "__pycache__"]
+def populate_project(project_name: str) -> None:
+    root_path = Path(os.path.dirname(__file__))
 
-def copy_starter_repo(project_name: str) -> None:
-    # Lazy import to avoid ModuleNotFoundError
-    from earthmover.include.starter_project import (
-        PACKAGE_PATH as starter_project_directory,
-    )
+    # initialize starter project
+    shutil.copytree(root_path / "include" / "starter_project", project_name)
 
-    shutil.copytree(
-        starter_project_directory, project_name, ignore=shutil.ignore_patterns(*IGNORE_FILES)
-    )
+    # copy example files used by test suite into starter project
+    test_path = root_path / "tests"
+
+    project_path = Path(project_name)
+    project_sources = project_path / "sources"
+    project_templates = project_path / "templates"
+
+    shutil.copy2(test_path / "sources" / "mammals.csv", project_sources)
+    shutil.copy2(test_path / "sources" / "fishes.csv", project_sources)
+    shutil.copy2(test_path / "templates" / "animal.jsont", project_templates)
 
 def run_init() -> None:
     project_name = input("Enter a name for your project: ")
@@ -26,10 +28,10 @@ def run_init() -> None:
         print(f"ERROR: entered name has no valid characters (alphanumeric, underscore, dash)")
         return None
 
-    full_path = PurePath(os.getcwd(), clean_name)
+    full_path = Path(os.getcwd(), clean_name)
 
     try:
-        copy_starter_repo(full_path)
+        populate_project(full_path)
     except FileExistsError:
         print(f"ERROR: a file or directory already exists at {full_path}")
         return None
