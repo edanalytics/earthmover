@@ -39,6 +39,7 @@ class Earthmover:
         "log_level": "INFO",
         "show_stacktrace": False,
         "tmp_dir": tempfile.gettempdir(),
+        "packages_dir": os.path.join(os.getcwd(), 'packages'),
         "show_progress": False,
         "git_auth_timeout": 60
     }
@@ -64,9 +65,6 @@ class Earthmover:
         self.config_file = config_file
         self.compiled_yaml_file = COMPILED_YAML_FILE
         self.error_handler = ErrorHandler(file=self.config_file)
-
-        # Set a directory for installing packages
-        self.packages_dir = os.path.join(os.getcwd(), 'packages')
 
         ### Parse the user-provided config file and retrieve project-configs, macros, and parameter defaults.
         self.params = json.loads(params) if params else {}
@@ -436,7 +434,7 @@ class Earthmover:
             exit(1)
 
         # Install each package (and any nested sub-packages) into the packages directory
-        self.build_package_graph(root_node='root', package_subgraph=self.package_graph, packages_dir=self.packages_dir, install=True)
+        self.build_package_graph(root_node='root', package_subgraph=self.package_graph, packages_dir=self.state_configs['packages_dir'], install=True)
 
 
     def merge_packages(self) -> Optional['YamlMapping']:
@@ -449,7 +447,7 @@ class Earthmover:
         if all(False for _ in self.package_graph.successors('root')):
             return
         
-        self.build_package_graph(root_node='root', package_subgraph=self.package_graph, packages_dir=self.packages_dir, install=False)
+        self.build_package_graph(root_node='root', package_subgraph=self.package_graph, packages_dir=self.state_configs['packages_dir'], install=False)
 
         # Merge each package yaml into the predecessor yaml, storing the result in the predecessor
         # Post-order traversal ensures the correct hierarchy of merges
