@@ -53,7 +53,7 @@ class FileDestination(Destination):
     )
 
     NULL_REPR: object = ""  # Templates use empty strings as nulls.
-    STRING_DTYPES: Tuple[object] = (object)  # All datatypes are converted to strings in templates.
+    STRING_DTYPES: Tuple[object] = (bool, int, float)  # All scalars are converted to strings in templates.
 
     EXP = re.compile(r"\s+")
     TEMPLATED_COL = "____OUTPUT____"
