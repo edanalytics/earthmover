@@ -16,6 +16,9 @@ class Destination(Node):
     mode: str = None  # Documents which class was chosen.
     allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition', 'source',)
 
+    NULL_REPR: object = None  # Representation for Nones, NaNs, and NAs on output.
+    STRING_DTYPES: Tuple[object] = ()  # Datatypes to be forced to strings on output (default none).
+
     def __new__(cls, *args, **kwargs):
         return object.__new__(FileDestination)
 
@@ -23,6 +26,20 @@ class Destination(Node):
         super().__init__(*args, **kwargs)
         self.source: str = self.error_handler.assert_get_key(self.config, 'source', dtype=str)
         self.upstream_sources[self.source] = None
+
+    def cast_output_dtype(self, value: object) -> str:
+        """
+        Helper method for casting row values to correct datatypes.
+        Null-representation and dtype-to-string conversion differ by destination subclass.
+        """
+        if pd.isna(value):
+            return self.NULL_REPR
+        
+        elif isinstance(value, self.STRING_DTYPES):
+            return str(value)
+        
+        else:
+            return value
 
 
 class FileDestination(Destination):
@@ -34,6 +51,9 @@ class FileDestination(Destination):
         'debug', 'expect', 'show_progress', 'repartition', 'source',
         'template', 'extension', 'linearize', 'header', 'footer',
     )
+
+    NULL_REPR: object = ""  # Templates use empty strings as nulls.
+    STRING_DTYPES: Tuple[object] = (object)  # All datatypes are converted to strings in templates.
 
     EXP = re.compile(r"\s+")
     TEMPLATED_COL = "____OUTPUT____"
@@ -116,7 +136,7 @@ class FileDestination(Destination):
 
     def render_row(self, row: pd.Series):
         row_data = {
-            field: self.dtype_to_str(value)
+            field: self.cast_output_dtype(value)
             for field, value in row.to_dict().items()
         }
         row_data["__row_data__"] = row_data
@@ -131,17 +151,3 @@ class FileDestination(Destination):
             raise
 
         return json_string
-    
-    @staticmethod
-    def dtype_to_str(value: object) -> str:
-        """
-        Force a value to a string representation, or an empty string if NaN.
-        """
-        if pd.isna(value):
-            return ""
-        
-        elif isinstance(value, (bool, int, float)):
-            return str(value)
-        
-        else:
-            return value or ""
