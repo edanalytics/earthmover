@@ -39,7 +39,6 @@ class Earthmover:
         "log_level": "INFO",
         "show_stacktrace": False,
         "tmp_dir": tempfile.gettempdir(),
-        "packages_dir": os.path.join(os.getcwd(), 'packages'),
         "show_progress": False,
         "git_auth_timeout": 60
     }
@@ -91,6 +90,10 @@ class Earthmover:
 
         # Set the temporary directory in cases of disk-spillage.
         dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
+
+        # Add default location for packages directory
+        if 'packages_dir' not in self.state_configs:
+            self.state_configs['packages_dir'] = os.path.join(os.path.dirname(self.config_file), 'packages')
 
         ### Initialize a dictionary for tracking run metadata (for structured output)
         self.metadata = {
@@ -477,7 +480,7 @@ class Earthmover:
         package_graph = Graph(error_handler=self.error_handler)  # Tracks package hierarchy
 
         # Create a root package to be the root of the packages directed graph
-        root_package = Package('root', configs, earthmover=self, package_path=os.getcwd())
+        root_package = Package('root', configs, earthmover=self, package_path=os.path.dirname(self.config_file))
         root_package.config_file = self.config_file
         package_graph.add_node('root', package=root_package)
 
