@@ -28,7 +28,7 @@ class Destination(Node):
         self.upstream_sources[self.source] = None
 
     @classmethod
-    def cast_output_dtype(cls, value: object) -> str:
+    def cast_output_dtype(cls, value: object) -> object:
         """
         Helper method for casting row values to correct datatypes.
         Null-representation and dtype-to-string conversion differ by destination subclass.
@@ -36,11 +36,10 @@ class Destination(Node):
         if pd.isna(value):
             return cls.NULL_REPR
         
-        elif isinstance(value, cls.STRING_DTYPES):
+        if isinstance(value, cls.STRING_DTYPES):
             return str(value)
         
-        else:
-            return value
+        return value
 
 
 class FileDestination(Destination):
