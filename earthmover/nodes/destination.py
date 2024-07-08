@@ -115,11 +115,8 @@ class FileDestination(Destination):
         self.size = os.path.getsize(self.file)
 
     def render_row(self, row: pd.Series):
-        types_to_cast = (bool, int, float)
-
-        # this line converts the keys_to_cast to string, and also converts all Nones to empty string:
         row_data = {
-            field: str(value) if isinstance(field, types_to_cast) else (value or "")
+            field: self.dtype_to_str(value)
             for field, value in row.to_dict().items()
         }
         row_data["__row_data__"] = row_data
@@ -134,3 +131,17 @@ class FileDestination(Destination):
             raise
 
         return json_string
+    
+    @staticmethod
+    def dtype_to_str(value: object) -> str:
+        """
+        Force a value to a string representation, or an empty string if NaN.
+        """
+        if pd.isna(value):
+            return ""
+        
+        elif isinstance(value, (bool, int, float)):
+            return str(value)
+        
+        else:
+            return value or ""
