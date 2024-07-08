@@ -27,15 +27,16 @@ class Destination(Node):
         self.source: str = self.error_handler.assert_get_key(self.config, 'source', dtype=str)
         self.upstream_sources[self.source] = None
 
-    def cast_output_dtype(self, value: object) -> str:
+    @classmethod
+    def cast_output_dtype(cls, value: object) -> str:
         """
         Helper method for casting row values to correct datatypes.
         Null-representation and dtype-to-string conversion differ by destination subclass.
         """
         if pd.isna(value):
-            return self.NULL_REPR
+            return cls.NULL_REPR
         
-        elif isinstance(value, self.STRING_DTYPES):
+        elif isinstance(value, cls.STRING_DTYPES):
             return str(value)
         
         else:
