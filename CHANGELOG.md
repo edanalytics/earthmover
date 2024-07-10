@@ -1,3 +1,13 @@
+### v0.3.5
+<details>
+<summary>Released 2024-07-12</summary>
+
+* internal: improve customization in write behavior in new file destinations
+* bugfix: Fix bug when writing null values in `FileDestination`
+
+</details>
+
+
 ### v0.3.4
 <details>
 <summary>Released 2024-06-26</summary>
