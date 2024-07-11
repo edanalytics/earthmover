@@ -84,8 +84,8 @@ class ModifyColumnsOperation(Operation):
         for col, val in self.columns_dict.items():
             # Apply value to all columns
             if col == "*":
-                for col3 in data.columns:
-                    self.apply_jinja(data, col3, self.columns_dict["*"])
+                for col in data.columns:
+                    self.apply_jinja(data, col, self.columns_dict["*"])
             # Apply value to specified column
             else:
                 self.apply_jinja(data, col, val)
