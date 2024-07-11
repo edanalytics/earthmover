@@ -2,8 +2,8 @@ version: 2
 
 config:
   output_dir: ${BASE_DIR}/outputs/
-  log_level: DEBUG
-  show_stacktrace: True
+  log_level: INFO
+  show_stacktrace: False
   show_graph: False
   macros: >
     {% macro test() -%}
