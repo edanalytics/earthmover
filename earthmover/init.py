@@ -26,7 +26,7 @@ def populate_project(project_name: str) -> None:
 def run_init() -> None:
     project_name = input("Enter a name for your project: ")
 
-    # sanitize
+    # sanitize by removing spaces and most punctuation (just to eliminate possibility of invalid names)
     clean_name = "".join(c for c in project_name if (c.isalnum() or c in "_-"))
     if len(clean_name) == 0:
         print(f"ERROR: entered name has no valid characters (alphanumeric, underscore, dash)")
