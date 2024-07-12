@@ -4,13 +4,15 @@ import os
 import sys
 
 from earthmover.earthmover import Earthmover
+from earthmover.init import run_init
 
 # Any new command should be added to this list
 RUN = "run"
 COMPILE = "compile"
 DEPS = "deps"
 CLEAN = "clean"
-ALLOWED_COMMANDS = [RUN, COMPILE, DEPS, CLEAN]
+INIT = "init"
+ALLOWED_COMMANDS = [RUN, COMPILE, DEPS, CLEAN, INIT]
 command_list = ", ".join(f"`{c}`" for c in ALLOWED_COMMANDS)
 
 class ExitOnExceptionHandler(logging.StreamHandler):
@@ -128,6 +130,14 @@ def main(argv=None):
             VERSION = f.read().strip()
             print(f"earthmover, version {VERSION}")
         exit(0)
+
+    if args.command == INIT:
+        project_path = run_init()
+        if project_path is not None:
+            print(f"Successfully initialized new project! You can test it out by running:\n\ncd {project_path}\nearthmover run\n")
+            exit(0)
+        else:
+            exit(1)
 
     # -t / --test
     if args.test:
