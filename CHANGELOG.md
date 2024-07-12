@@ -2,6 +2,7 @@
 <details>
 <summary>Released 2024-07-12</summary>
 
+* internal: expand test run to include the new `debug` and `flatten` operations, as well as a nested JSON source file
 * internal: improve customization in write behavior in new file destinations
 * bugfix: Fix bug when writing null values in `FileDestination`
 
