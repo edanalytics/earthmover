@@ -56,7 +56,6 @@ transformations:
       - operation: modify_columns
         columns:
           id: {%raw%}1_{{value}}{%endraw%}
-          # "*": {%raw%}4___{{value}}{%endraw%}
 
   bird_species:
     source: $sources.bird_species
