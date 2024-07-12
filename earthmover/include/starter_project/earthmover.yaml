@@ -1,0 +1,71 @@
+version: 2
+
+config:
+  log_level: INFO
+  output_dir: ./outputs
+  show_stacktrace: False
+  show_graph: False
+  parameter_defaults:
+    # You can set these values at the command line or leave the defaults
+    BASE_DIR: "."
+
+
+sources:
+  mammal_species:
+    file: ${BASE_DIR}/sources/mammals.csv
+    # the first row in this file is taken to be column names
+    header_rows: 1
+
+  fish_species:
+    file: ${BASE_DIR}/sources/fishes.csv
+    header_rows: 1
+
+
+transformations:
+  mammal_species:
+    source: $sources.mammal_species
+    operations:
+      # before unioning, align the column names between the two files
+      - operation: snake_case_columns
+      # add a common name for the group of animals in this file
+      - operation: add_columns
+        columns:
+          family: mammal
+      # ensure the included ID is still unique after the union
+      - operation: modify_columns
+        columns:
+          # transforms id=100 -> id=1_100
+          id: {%raw%}1_{{value}}{%endraw%}
+
+  fish_species:
+    source: $sources.fish_species
+    operations:
+      # remove duplicate rows present in the file
+      - operation: distinct_rows
+        columns: [ id, name, genus, species ]
+      # add a common name for the group of animals in this file
+      - operation: add_columns
+        columns:
+          family: fish
+      # ensure the included ID is still unique after the union
+      - operation: modify_columns
+        columns:
+          # transforms id=11 -> id=3_100
+          id: {%raw%}3_{{value}}{%endraw%}
+
+  animal_species:
+    source: $transformations.mammal_species
+    operations:
+      # perform a SQL-like union between the two source files
+      - operation: union
+        sources:
+          - $transformations.fish_species
+
+
+destinations:
+  animals:
+    # write the unioned animal data to a JSONL file
+    source: $transformations.animal_species
+    template: ${BASE_DIR}/templates/animal.jsont
+    extension: jsonl
+    linearize: True
