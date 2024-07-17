@@ -463,6 +463,7 @@ Modify the values in the specified columns.
           state_abbr: "{%raw%}XXX{{value|reverse}}XXX{%endraw%}"
           school_year: "{%raw%}20{{value[-2:]}}{%endraw%}"
           zipcode: "{%raw%}{{ value|int ** 2 }}{%endraw%}"
+          "*": "{%raw%}{{value|trim}}{%endraw%}" # Edit all values in dataframe
 ```
 Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers to another column's value. Any [Jinja filters](https://jinja.palletsprojects.com/en/3.1.x/templates/#builtin-filters) and [math operations](https://jinja.palletsprojects.com/en/3.0.x/templates/#math) should work. Reference the current row number with `{{__row_number__}}` or a dictionary containing the row data with `{{__row_data__['column_name']}}`. *You must wrap Jinja expressions* in `{%raw%}...{%endraw%}` to avoid them being parsed at YAML load time.
 </details>
