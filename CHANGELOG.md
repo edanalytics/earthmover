@@ -1,3 +1,8 @@
+### Unreleased
+
+* feature: add `json_array_agg` function to `group_by` operator
+* documentation: add information on `earthmover init` and `earthmover clean` to the README
+
 ### v0.3.5
 <details>
 <summary>Released 2024-07-12</summary>

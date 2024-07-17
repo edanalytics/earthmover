@@ -338,6 +338,18 @@ transformations:
         function: head
         rows: 2
         transpose: True
+  families:
+    source: $transformations.animal_species
+    operations:
+      - operation: group_by
+        group_by_columns:
+          - family
+        create_columns:
+          all_lifespans: json_array_agg(avg_lifespan_yrs)
+      - operation: keep_columns
+        columns:
+          - family
+          - all_lifespans
 
 
 destinations:
@@ -377,5 +389,11 @@ destinations:
   cities_code_stats:
     source: $transformations.cities_code_stats
     template: ${BASE_DIR}/templates/verbatim.jsont
+    extension: jsonl
+    linearize: True
+
+  families:
+    source: $transformations.families
+    template: ${BASE_DIR}/templates/families.jsont
     extension: jsonl
     linearize: True
