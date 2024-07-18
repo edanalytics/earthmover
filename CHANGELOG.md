@@ -1,3 +1,10 @@
+### v0.3.6
+<details>
+<summary>Released ???</summary>
+
+</details>
+
+
 ### v0.3.5
 <details>
 <summary>Released 2024-07-12</summary>
