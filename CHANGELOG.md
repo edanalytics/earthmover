@@ -2,6 +2,8 @@
 <details>
 <summary>Released ???</summary>
 
+* internal: set working directory to the location of the `earthmover.yaml` file
+
 </details>
 
 
