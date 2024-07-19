@@ -8,6 +8,7 @@ import re
 
 from earthmover.nodes.node import Node
 from earthmover import util
+from earthmover.file_mixins import File
 
 from typing import List, Optional, Tuple
 from typing import TYPE_CHECKING
@@ -94,31 +95,20 @@ class FileSource(Source):
     mode: str = 'file'
     is_remote: bool = False
     allowed_configs: Tuple[str] = (
-        'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
-        'file', 'type', 'columns', 'header_rows',
-        'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
+        'debug', 'expect', 'show_progress', 'repartition',
+        'chunksize', 'optional', 'optional_fields',
+        'file', 'type', 'columns', 
+        # 'header_rows', 'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
     )
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.file = self.error_handler.assert_get_key(self.config, 'file', dtype=str, required=False)
+        
+        super().__init__(*args, **kwargs)  # Defines self.config
+        self.file = self.config.get('file')
 
-        #
-        if not self.file:
-            self.file = ''
-            self.file_type = ''
-        #
-        else:
-            self.file_type = self.error_handler.assert_get_key(
-                self.config, 'type', dtype=str, required=False,
-                default=self._get_filetype(self.file)
-            )
-
-            if not self.file_type:
-                self.error_handler.throw(
-                    f"file `{self.file}` is of unrecognized file format - specify the `type` manually or see documentation for supported file types"
-                )
-                raise
+        if self.file:
+            self.file_class = File(self.file, self.config, self.error_handler)
+            self.allowed_configs = self.allowed_configs + self.file_class.allowed_read_configs
 
         # Columns are required if a source is optional.
         self.columns_list = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
@@ -129,16 +119,7 @@ class FileSource(Source):
             )
             raise
 
-        # Initialize the read_lambda.
-        _sep = util.get_sep(self.file_type)
-        try:
-            self.read_lambda = self._get_read_lambda(self.file_type, sep=_sep)
-
-        except Exception as _:
-            self.error_handler.throw(
-                f"no lambda defined for file type `{self.file_type}`"
-            )
-            raise
+        self.read_kwargs = self.file_class.validate_read_configs(self.config)
 
         # Remote files cannot be size-checked in execute.
         if "://" in self.file:
@@ -152,7 +133,7 @@ class FileSource(Source):
         super().execute()
 
         # Verify necessary packages are installed.
-        self._verify_packages(self.file_type)
+        self._verify_packages(self.file_class.file_type)
 
         try:
             # Build an empty dataframe if the path is not populated or if an empty directory is passed (for Parquet files).
@@ -160,7 +141,7 @@ class FileSource(Source):
                 self.data = pd.DataFrame(columns=self.columns_list, dtype="string")
             else:
                 dask_config.set({'dataframe.convert-string': False})
-                self.data = self.read_lambda(self.file, self.config)
+                self.data = self.file_class.read(**self.read_kwargs)
                 if not self.is_remote:
                     self.size = os.path.getsize(self.file)
 
@@ -190,43 +171,6 @@ class FileSource(Source):
             self.error_handler.throw(
                 f"error with source file {self.file} ({err})"
             )
-
-    @staticmethod
-    def _get_filetype(file: str):
-        """
-        Determine file type from file extension
-
-        :param file:
-        :return:
-        """
-        ext_mapping = {
-            'csv'     : 'csv',
-            'dta'     : 'stata',
-            'feather' : 'feather',
-            'html'    : 'html',
-            'json'    : 'json',
-            'jsonl'   : 'jsonl',
-            'ndjson'  : 'jsonl',
-            'odf'     : 'excel',
-            'ods'     : 'excel',
-            'odt'     : 'excel',
-            'orc'     : 'orc',
-            'parquet' : 'parquet',
-            'pickle'  : 'pickle',
-            'pkl'     : 'pickle',
-            'sas7bdat': 'sas',
-            'sav'     : 'spss',
-            'tsv'     : 'tsv',
-            'txt'     : 'fixedwidth',
-            'xls'     : 'excel',
-            'xlsb'    : 'excel',
-            'xlsm'    : 'excel',
-            'xlsx'    : 'excel',
-            'xml'     : 'xml',
-        }
-
-        ext = file.lower().rsplit('.', 1)[-1]
-        return ext_mapping.get(ext)
 
     @staticmethod
     def _get_read_lambda(file_type: str, sep: Optional[str] = None):
