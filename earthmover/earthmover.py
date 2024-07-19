@@ -61,7 +61,7 @@ class Earthmover:
         self.skip_hashing = skip_hashing
 
         self.results_file = results_file
-        self.config_file = config_file
+        self.config_file = os.path.abspath(config_file)
         self.compiled_yaml_file = COMPILED_YAML_FILE
         self.error_handler = ErrorHandler(file=self.config_file)
 
