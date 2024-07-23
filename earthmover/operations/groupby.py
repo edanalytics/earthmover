@@ -151,7 +151,7 @@ class GroupByOperation(Operation):
         agg_lambda_mapping = {
             'agg'      : lambda x: separator.join(x[column]),
             'aggregate': lambda x: separator.join(x[column]),
-            'json_array_agg': lambda x: f"[{','.join(_quote_list_items(x[column]))}]" if separator == "str" else f"[{','.join(x[column])}]",
+            'json_array_agg': lambda x: x[column].to_json(orient="records") if separator == "str" else f"[{','.join(x[column])}]",
             'avg'      : lambda x: pd.to_numeric(x[column]).sum() / max(1, len(x)),
             'count'    : lambda x: len(x),
             'max'      : lambda x: pd.to_numeric(x[column]).max(),
@@ -172,6 +172,3 @@ class GroupByOperation(Operation):
             'variance' : lambda x: pd.to_numeric(x[column]).var(),
         }
         return agg_lambda_mapping.get(agg_type)
-
-def _quote_list_items(str_list):
-    return [f'"{i}"' for i in str_list]

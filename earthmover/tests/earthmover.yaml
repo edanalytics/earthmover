@@ -346,10 +346,12 @@ transformations:
           - family
         create_columns:
           all_lifespans: json_array_agg(avg_lifespan_yrs)
+          all_lifespans_quoted: json_array_agg(avg_lifespan_yrs,str)
       - operation: keep_columns
         columns:
           - family
           - all_lifespans
+          - all_lifespans_quoted
 
 
 destinations:
