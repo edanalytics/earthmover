@@ -5,6 +5,7 @@ import logging
 import tempfile
 import networkx as nx
 import os
+from pathlib import Path
 import shutil
 import time
 import datetime
@@ -548,14 +549,20 @@ class Earthmover:
 
     def clean(self):
         """
-        Removes local artifacts created by `earthmover run`
+        Removes local artifacts created by `earthmover run` and `earthmover compile`
         :return:
         """
 
         was_noop = True
-        if os.path.isdir(self.state_configs['output_dir']):
-            shutil.rmtree(self.state_configs['output_dir'], ignore_errors = True)
-            was_noop = False
+        output_dir = Path(self.state_configs['output_dir'])
+        if output_dir.is_dir():
+            if Path(output_dir / "earthmover.yaml").is_file() or Path(output_dir / "earthmover.yml").is_file():
+                # only remove directory if it doesn't contain the config file
+                # (output_dir contains earthmover.yaml by default)
+                self.logger.warning(f"Not removing directory '{output_dir}' because it contains the project's config file")
+            else:
+                shutil.rmtree(output_dir, ignore_errors = True)
+                was_noop = False
 
         if os.path.isfile(self.compiled_yaml_file):
             os.remove(self.compiled_yaml_file)

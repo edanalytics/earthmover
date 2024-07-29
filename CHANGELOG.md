@@ -1,3 +1,7 @@
+### Unreleased
+
+* bugfix: fix bug with `earthmover clean` that could have removed earthmover.yaml files
+
 ### v0.3.5
 <details>
 <summary>Released 2024-07-12</summary>
