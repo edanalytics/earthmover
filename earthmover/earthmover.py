@@ -554,9 +554,9 @@ class Earthmover:
         """
 
         was_noop = True
-        output_dir = Path(self.state_configs['output_dir'])
-        if output_dir.is_dir():
-            if Path(output_dir / "earthmover.yaml").is_file() or Path(output_dir / "earthmover.yml").is_file():
+        output_dir = self.state_configs['output_dir']
+        if os.path.isdir(output_dir):
+            if os.path.isfile(os.path.join(output_dir, "earthmover.yaml")) or os.path.isfile(os.path.join(output_dir, "earthmover.yml")):
                 # only remove directory if it doesn't contain the config file
                 # (output_dir contains earthmover.yaml by default)
                 self.logger.warning(f"Not removing directory '{output_dir}' because it contains the project's config file")
