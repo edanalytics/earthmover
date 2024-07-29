@@ -5,7 +5,6 @@ import logging
 import tempfile
 import networkx as nx
 import os
-from pathlib import Path
 import shutil
 import time
 import datetime
