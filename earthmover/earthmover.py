@@ -4,6 +4,7 @@ import json
 import logging
 import tempfile
 import networkx as nx
+import pathlib
 import os
 import shutil
 import time
@@ -392,9 +393,10 @@ class Earthmover:
 
     def test(self, tests_dir: str):
         # delete files in tests/output/
-        output_dir = os.path.join(tests_dir, "outputs")
-        for fp in os.listdir(output_dir):
-            os.remove(os.path.join(output_dir, fp))
+        output_dir = pathlib.Path(tests_dir, "outputs")
+        output_dir.mkdir(exist_ok=True)
+        for fp in (output_dir).iterdir():
+            pathlib.Path(fp).unlink()
 
         # run earthmover!
         self.generate(selector="*")

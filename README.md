@@ -33,9 +33,11 @@ Guides and Resources -->
 pip install earthmover
 ```
 
+To see Earthmover in action, run `earthmover init` to spin up a ready-to-run starter project.
 
 # Setup
-Running the tool requires
+
+In general, the tool requires
 1. [source data](#source-data), such as CSV or TSV files or a relational database table
 1. Jinja [templates](#templates) defining the desired output format (JSON, XML, etc.)
 1. a [YAML configuration](#yaml-configuration) file specifying the source data, doing any necessary transformations (joins, value mappings, etc.), and destinations (output files) to write to
@@ -650,6 +652,7 @@ Valid aggregation functions are
 * `std(column)` - the standard deviation of (numeric) values in `column` for each group
 * `var(column)` - the variance of (numeric) values in `column` for each group
 * `agg(column,separator)` - the values of `column` in each group are concatenated, delimited by `separator` (default `separator` is none)
+* `json_array_agg(column,[str])` - the values of `column` in each group are concatenated into a JSON array (`[1,2,3]`). If the optional `str` argument is provided, the values in the array are quoted (`["1", "2", "3"]`)
 
 Numeric aggregation functions will fail with errors if used on non-numeric column values.
 
@@ -728,6 +731,8 @@ Once you have the required [setup](#setup) and your source data, run the transfo
 earthmover run -c path/to/config.yaml
 ```
 If you omit the optional `-c` flag, `earthmover` will look for an `earthmover.yaml` in the current directory.
+
+To remove all files created by Earthmover, run `earthmover clean`
 
 See a help message with
 ```bash
