@@ -4,6 +4,7 @@ import json
 import logging
 import tempfile
 import networkx as nx
+import pathlib
 import os
 import shutil
 import time
@@ -395,9 +396,10 @@ class Earthmover:
 
     def test(self, tests_dir: str):
         # delete files in tests/output/
-        output_dir = os.path.join(tests_dir, "outputs")
-        for fp in os.listdir(output_dir):
-            os.remove(os.path.join(output_dir, fp))
+        output_dir = pathlib.Path(tests_dir, "outputs")
+        output_dir.mkdir(exist_ok=True)
+        for fp in (output_dir).iterdir():
+            pathlib.Path(fp).unlink()
 
         # run earthmover!
         self.generate(selector="*")
@@ -551,14 +553,20 @@ class Earthmover:
 
     def clean(self):
         """
-        Removes local artifacts created by `earthmover run`
+        Removes local artifacts created by `earthmover run` and `earthmover compile`
         :return:
         """
 
         was_noop = True
-        if os.path.isdir(self.state_configs['output_dir']):
-            shutil.rmtree(self.state_configs['output_dir'], ignore_errors = True)
-            was_noop = False
+        output_dir = self.state_configs['output_dir']
+        if os.path.isdir(output_dir):
+            if os.path.isfile(os.path.join(output_dir, "earthmover.yaml")) or os.path.isfile(os.path.join(output_dir, "earthmover.yml")):
+                # only remove directory if it doesn't contain the config file
+                # (output_dir contains earthmover.yaml by default)
+                self.logger.warning(f"Not removing directory '{output_dir}' because it contains the project's config file")
+            else:
+                shutil.rmtree(output_dir, ignore_errors = True)
+                was_noop = False
 
         if os.path.isfile(self.compiled_yaml_file):
             os.remove(self.compiled_yaml_file)
