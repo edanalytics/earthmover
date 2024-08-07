@@ -16,6 +16,9 @@ class Destination(Node):
     mode: str = None  # Documents which class was chosen.
     allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition', 'source',)
 
+    NULL_REPR: object = None  # Representation for Nones, NaNs, and NAs on output.
+    STRING_DTYPES: Tuple[object] = ()  # Datatypes to be forced to strings on output (default none).
+
     def __new__(cls, *args, **kwargs):
         return object.__new__(FileDestination)
 
@@ -23,6 +26,20 @@ class Destination(Node):
         super().__init__(*args, **kwargs)
         self.source: str = self.error_handler.assert_get_key(self.config, 'source', dtype=str)
         self.upstream_sources[self.source] = None
+
+    @classmethod
+    def cast_output_dtype(cls, value: object) -> object:
+        """
+        Helper method for casting row values to correct datatypes.
+        Null-representation and dtype-to-string conversion differ by destination subclass.
+        """
+        if pd.isna(value):
+            return cls.NULL_REPR
+        
+        if isinstance(value, cls.STRING_DTYPES):
+            return str(value)
+        
+        return value
 
 
 class FileDestination(Destination):
@@ -34,6 +51,9 @@ class FileDestination(Destination):
         'debug', 'expect', 'show_progress', 'repartition', 'source',
         'template', 'extension', 'linearize', 'header', 'footer',
     )
+
+    NULL_REPR: object = ""  # Templates use empty strings as nulls.
+    STRING_DTYPES: Tuple[object] = (bool, int, float)  # All scalars are converted to strings in templates.
 
     EXP = re.compile(r"\s+")
     TEMPLATED_COL = "____OUTPUT____"
@@ -115,11 +135,8 @@ class FileDestination(Destination):
         self.size = os.path.getsize(self.file)
 
     def render_row(self, row: pd.Series):
-        types_to_cast = (bool, int, float)
-
-        # this line converts the keys_to_cast to string, and also converts all Nones to empty string:
         row_data = {
-            field: str(value) if isinstance(field, types_to_cast) else (value or "")
+            field: self.cast_output_dtype(value)
             for field, value in row.to_dict().items()
         }
         row_data["__row_data__"] = row_data

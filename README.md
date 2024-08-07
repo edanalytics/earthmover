@@ -33,9 +33,11 @@ Guides and Resources -->
 pip install earthmover
 ```
 
+To see Earthmover in action, run `earthmover init` to spin up a ready-to-run starter project.
 
 # Setup
-Running the tool requires
+
+In general, the tool requires
 1. [source data](#source-data), such as CSV or TSV files or a relational database table
 1. Jinja [templates](#templates) defining the desired output format (JSON, XML, etc.)
 1. a [YAML configuration](#yaml-configuration) file specifying the source data, doing any necessary transformations (joins, value mappings, etc.), and destinations (output files) to write to
@@ -58,7 +60,7 @@ After transforming the source data, this tool converts it to a text-based file l
 
 Briefly, Jinja interpolates variables in double curly braces `{{...}}` to actual values, as well as providing other convenience functionality, such as string manipulation functions, logic blocks like if-tests, looping functionality, and much more. See the examples in `example_projects/`, or check out [the official Jinja documentation](https://jinja.palletsprojects.com/en/3.1.x/).
 
-Note that templates may [include](https://jinja.palletsprojects.com/en/3.1.x/templates/#include) other templates, specified relative to the path from which `earthmover` is run - see `example_projects/06_subtemplates/earthmover.yaml` and `example_projects/06_subtemplates/mood.jsont` for an example.
+Note that templates may [include](https://jinja.palletsprojects.com/en/3.1.x/templates/#include) other templates, specified relative to the location of the `earthmover` YAML configuration file - see `example_projects/06_subtemplates/earthmover.yaml` and `example_projects/06_subtemplates/mood.jsont` for an example.
 
 
 ## YAML configuration
@@ -208,7 +210,7 @@ packages:
 ```
 Each package must have a name (which will be used to name the folder where it is installed in `/packages`) such as `year_end_assessment` or `student_id_macros` in this example. Two sources of `packages` are currently supported:
 * GitHub packages: Specify the URL of the repository containing the package. If the package YAML configuration is not in the top level of the repository, include the path to the folder with the the optional `subdirectory`.
-* Local packages: Specify the relative or absolute path to the folder containing the package YAML configuration.
+* Local packages: Specify the path to the folder containing the package YAML configuration. Paths may be absolute or relative paths to the location of the `earthmover` YAML configuration file.
 
 
 ### **`sources`**
@@ -248,7 +250,7 @@ sources:
       - low_grade|int <= high_grade|int
 ```
 Each source must have a name (which is how it is referenced by transformations and destinations) such as `districts`, `courses`, `tx_schools`, or `more_schools` in this example. Three types of `sources` are currently supported:
-* File sources must specify the relative or absolute path to the source `file`. Supported file types are
+* File sources must specify the path to the source `file`. Paths may be absolute or relative paths to the location of the `earthmover` YAML configuration file. Supported file types are
   - Row-based formats:
     - `.csv`: Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8).
     - `.tsv`: Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8).
@@ -483,7 +485,8 @@ Map the values of a column.
         mapping:
           old_value_1: new_value_1
           old_value_2: new_value_2
-        # or a CSV/TSV with two columns (from, to) and header row:
+        # or a CSV/TSV with two columns (from, to) and header row
+        # paths may be absolute or relative paths to the location of the `earthmover` YAML configuration file
         map_file: path/to/mapping.csv
 ```
 </details>
@@ -651,6 +654,7 @@ Valid aggregation functions are
 * `std(column)` - the standard deviation of (numeric) values in `column` for each group
 * `var(column)` - the variance of (numeric) values in `column` for each group
 * `agg(column,separator)` - the values of `column` in each group are concatenated, delimited by `separator` (default `separator` is none)
+* `json_array_agg(column,[str])` - the values of `column` in each group are concatenated into a JSON array (`[1,2,3]`). If the optional `str` argument is provided, the values in the array are quoted (`["1", "2", "3"]`)
 
 Numeric aggregation functions will fail with errors if used on non-numeric column values.
 
@@ -729,6 +733,8 @@ Once you have the required [setup](#setup) and your source data, run the transfo
 earthmover run -c path/to/config.yaml
 ```
 If you omit the optional `-c` flag, `earthmover` will look for an `earthmover.yaml` in the current directory.
+
+To remove all files created by Earthmover, run `earthmover clean`
 
 See a help message with
 ```bash
@@ -938,9 +944,11 @@ destinations:
 </details>
 
 ### Project Composition Considerations
-There is no limit to the number of packages that can be imported and no limit to how deeply they can be nested (i.e. packages can import other packages). However, there are a few things to keep in mind with using multiple packages.
-* If multiple packages at the same level (e.g. `projA/packages/pkgB` and `projA/packages/pkgC`, not `projA/packages/pkgB/packages/pkgC`) include same-named nodes, the package specified later in the `packages` list will overwrite. If the node is also specified in the top-level project, its version of the node will overwrite as usual.
-* A similar limitation exists for macros &ndash; a single definition of each macro will be applied everywhere in the project and packages using the same overwrite logic used for the nodes. When you are creating projects that are likely to be used as packages, consider including a namespace in the names of macros with more common operations, such as `assessment123_filter()` instead of the more generic `filter()`. 
+* The `config` section is **not** composed from the installed packages, with the exception of `macros` and `parameter_defaults`. Specify all desired configuration in the top-level project.
+
+* There is no limit to the number of packages that can be imported and no limit to how deeply they can be nested (i.e. packages can import other packages). However, there are a few things to keep in mind with using multiple packages.
+  - If multiple packages at the same level (e.g. `projA/packages/pkgB` and `projA/packages/pkgC`, not `projA/packages/pkgB/packages/pkgC`) include same-named nodes, the package specified later in the `packages` list will overwrite. If the node is also specified in the top-level project, its version of the node will overwrite as usual.
+  - A similar limitation exists for macros &ndash; a single definition of each macro will be applied everywhere in the project and packages using the same overwrite logic used for the nodes. When you are creating projects that are likely to be used as packages, consider including a namespace in the names of macros with more common operations, such as `assessment123_filter()` instead of the more generic `filter()`. 
 
 
 # Tests
@@ -1022,17 +1030,17 @@ Generally you should separate the mappings, transformations, and structure of yo
 
 When dealing with sensitive source data, you may have to comply with security protocols, such as referencing sensitive data from a network storage location rather than copying it to your own computer. In this situation, option 2 above is a good choice.
 
-To facilitate [operationalization]($operationalization-practices), we recommended using [environment variables](#environment-variable-references) or [command-line parameters](#command-line-parameters) to pass input and output directories and filenames to `earthmover`, rather than hard-coding them into `earthmover.yaml`. For example, rather than
+To facilitate [operationalization]($operationalization-practices), we recommended using relative paths from the location of the `earthmover.yaml` file and [environment variables](#environment-variable-references) or [command-line parameters](#command-line-parameters) to pass filenames to `earthmover`, rather than hard-coding them into `earthmover.yaml`. For example, rather than
 ```yaml
 config:
-  output_dir: path/to/outputs/
+  output_dir: /path/to/outputs/
 ...
 sources:
   source_1:
-    file: path/to/inputs/source_file_1.csv
+    file: /path/to/inputs/source_file_1.csv
     header_rows: 1
   source_2:
-    file: path/to/inputs/source_file_2.csv
+    file: /path/to/inputs/source_file_2.csv
     header_rows: 1
 ...
 destinations:
@@ -1050,11 +1058,13 @@ config:
 ...
 sources:
   source_1:
-    file: ${INPUT_DIR}${INPUT_FILE_1}
+    file: ${INPUT_FILE_1}
     header_rows: 1
   source_2:
-    file: ${INPUT_DIR}${INPUT_FILE_2}
+    file: ${INPUT_FILE_2}
     header_rows: 1
+  seed_1:
+    file: ./seeds/seed_1.csv
 ...
 destinations:
   output_1:
@@ -1066,11 +1076,11 @@ destinations:
 ```
 and then run with
 ```bash
-earthmover earthmover.yaml -p '{ "OUTPUT_DIR": "path/to/outputs/", "INPUT_DIR": "path/to/inputs/", "INPUT_FILE_1": "source_file_1.csv", "INPUT_FILE_2": "source_file_2.csv" }'
+earthmover earthmover.yaml -p '{ "OUTPUT_DIR": "path/to/outputs/", "INPUT_FILE_1": "/path/source_file_1.csv", "INPUT_FILE_2": "/path/source_file_2.csv" }'
 ```
 Note that with this pattern you can also use [optional sources](#optional-sources) to only create one of the outputs if needed, for example
 ```bash
-earthmover earthmover.yaml -p '{ "OUTPUT_DIR": "path/to/outputs/", "INPUT_DIR": "path/to/inputs/", "INPUT_FILE_1": "source_file_1.csv" }'
+earthmover earthmover.yaml -p '{ "OUTPUT_DIR": "path/to/outputs/", "INPUT_FILE_1": "/path/source_file_1.csv" }'
 ```
 would only create `output_1` if `source_1` had `required: False` (since `INPUT_FILE_2` is missing).
 
