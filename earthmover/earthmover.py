@@ -62,12 +62,9 @@ class Earthmover:
         self.skip_hashing = skip_hashing
 
         self.results_file = results_file
-        self.config_file = config_file
+        self.config_file = os.path.abspath(config_file)
         self.compiled_yaml_file = COMPILED_YAML_FILE
         self.error_handler = ErrorHandler(file=self.config_file)
-
-        # Set a directory for installing packages
-        self.packages_dir = os.path.join(os.getcwd(), 'packages')
 
         ### Parse the user-provided config file and retrieve project-configs, macros, and parameter defaults.
         self.params = json.loads(params) if params else {}
@@ -89,11 +86,17 @@ class Earthmover:
             logging.getLevelName( self.state_configs['log_level'].upper() )
         )
 
+        # Set current working directory to the location of the config file.
+        os.chdir(os.path.dirname(self.config_file))
+        
         # Prepare the output directory for destinations.
         self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
 
         # Set the temporary directory in cases of disk-spillage.
         dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
+
+        # Set a directory for installing packages.
+        self.packages_dir = os.path.join(os.getcwd(), 'packages')
 
         ### Initialize a dictionary for tracking run metadata (for structured output)
         self.metadata = {
@@ -481,7 +484,7 @@ class Earthmover:
         package_graph = Graph(error_handler=self.error_handler)  # Tracks package hierarchy
 
         # Create a root package to be the root of the packages directed graph
-        root_package = Package('root', configs, earthmover=self, package_path=os.getcwd())
+        root_package = Package('root', configs, earthmover=self, package_path=os.path.dirname(self.config_file))
         root_package.config_file = self.config_file
         package_graph.add_node('root', package=root_package)
 

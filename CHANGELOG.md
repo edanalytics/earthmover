@@ -1,8 +1,15 @@
-### Unreleased
+### v0.3.6
+<details>
+<summary>Released 2024-08-07</summary>
 
 * feature: add `json_array_agg` function to `group_by` operator
+* internal: set working directory to the location of the `earthmover.yaml` file
 * documentation: add information on `earthmover init` and `earthmover clean` to the README
 * bugfix: fix bug with `earthmover clean` that could have removed earthmover.yaml files
+
+
+</details>
+
 
 ### v0.3.5
 <details>
