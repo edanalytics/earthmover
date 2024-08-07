@@ -2,6 +2,7 @@
 
 * feature: add `json_array_agg` function to `group_by` operator
 * documentation: add information on `earthmover init` and `earthmover clean` to the README
+* bugfix: fix bug with `earthmover clean` that could have removed earthmover.yaml files
 
 ### v0.3.5
 <details>
