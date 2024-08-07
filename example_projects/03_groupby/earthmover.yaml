@@ -24,6 +24,8 @@ transformations:
           max_score: max(score)
           avg_score: mean(score)
           item_scores: agg(score,,)
+          item_scores_json: json_array_agg(score)
+          item_scores_json_str: json_array_agg(score,str)
 
 destinations:
   grouped_score:

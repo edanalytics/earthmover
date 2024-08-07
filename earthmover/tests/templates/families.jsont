@@ -1,0 +1,5 @@
+{
+    "family": "{{family}}",
+    "all_lifespans": {{all_lifespans}},
+    "all_lifespans_quoted": {{all_lifespans_quoted}}
+}
