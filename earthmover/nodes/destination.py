@@ -109,7 +109,7 @@ class FileDestination(Destination):
         # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
         self.data = (
             self.upstream_sources[self.source].data
-                .map_partitions(lambda x: x.apply(self.render_row, axis=1), meta=pd.Series('str'))
+                .map_partitions(self.apply_render_to_partition, meta=pd.Series('str'))
         )
 
         # Repartition before writing, if specified.
@@ -134,6 +134,10 @@ class FileDestination(Destination):
         self.logger.debug(f"output `{self.file}` written")
         self.size = os.path.getsize(self.file)
 
+    def apply_render_to_partition(self, partition):
+        print(type(partition))
+        return partition.apply(self.render_row, axis=1)
+        
     def render_row(self, row: pd.Series):
         row_data = {
             field: self.cast_output_dtype(value)

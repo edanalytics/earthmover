@@ -11,6 +11,7 @@ import time
 import datetime
 import pandas as pd
 import yaml
+from dask.distributed import LocalCluster, Client
 
 from earthmover.error_handler import ErrorHandler
 from earthmover.graph import Graph
@@ -111,6 +112,21 @@ class Earthmover:
         self.user_configs: 'YamlMapping' = None
         self.package_graph: Graph = None
         self.graph: Graph = None
+        
+        cluster = LocalCluster(n_workers=3, # number of available cores minus 2?
+                        threads_per_worker=1,# number of threads per core
+                        memory_limit='4GB', #'2.3GB', # per worker; threads on a worker share this memory
+                        processes=False,
+                        silence_logs=logging.ERROR,
+                        # dashboard_address=None, # to disable dashboard
+                        local_directory='./')
+        self.logger.info(f"View the dask profiling dashboard at {cluster.dashboard_link}")
+        # Find how many cores and threads-per-core your system has with `lscpu`
+        # Find how much memory is available on your system with `grep MemTotal /proc/meminfo`
+        self.dask_client = Client(cluster,
+                        serializers=['msgpack'],
+                        deserializers=['msgpack'])
+        # simply instantiating this makes Dask use the LocalCluster
 
 
     ### Template-Parsing Methods
@@ -335,6 +351,7 @@ class Earthmover:
         :param selector:
         :return:
         """
+
         ### Compile and execute selected Nodes in Dask.
         # Compile the YAML file and build the full graph.
         self.compile()
@@ -351,6 +368,8 @@ class Earthmover:
 
         # Iterate the graph and execute each Node.
         self.execute(active_graph)
+        
+        self.dask_client.close()
 
         ### Save run log only after a successful run! (in case of errors)
         # Note: `runs_file` is only defined in certain circumstances.
