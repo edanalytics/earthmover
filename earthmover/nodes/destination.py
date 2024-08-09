@@ -82,8 +82,9 @@ class FileDestination(Destination):
         # Prepare the Jinja template for rendering rows.
         try:
             if self.template:
-                with open(self.template, 'r', encoding='utf-8') as fp:
-                    template_string = fp.read()
+                # with open(self.template, 'r', encoding='utf-8') as fp:
+                #     template_string = fp.read()
+                template_string = ''
             else:
                 template_string = self.DEFAULT_TEMPLATE
 
@@ -109,7 +110,7 @@ class FileDestination(Destination):
         # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
         self.data = (
             self.upstream_sources[self.source].data
-                .map_partitions(self.apply_render_to_partition, meta=pd.Series('str'))
+                .map_partitions(self.apply_render_to_partition, args=(self.jinja_template, self.template), meta=pd.Series('str'))
         )
 
         # Repartition before writing, if specified.
@@ -120,37 +121,43 @@ class FileDestination(Destination):
 
         # Write the optional header, each line, and the optional footer.
         with open(self.file, 'w+', encoding='utf-8') as fp:
-
             if self.header:
                 fp.write(self.header)
-
-            for partition in self.data.partitions:
-                fp.writelines(partition.compute())
-                partition = None  # Remove partition from memory immediately after write.
-
+        
+        with open(self.file, 'a+', encoding='utf-8') as fp:
+            fp.writelines(self.data.compute())
+        # for partition in self.data.partitions:
+            # lines = partition.compute().result()
+            # with open(self.file, 'a+', encoding='utf-8') as fp:
+            #     fp.writelines(lines)
+            # partition = None  # Remove partition from memory immediately after write.
+        
+        with open(self.file, 'a+', encoding='utf-8') as fp:
             if self.footer:
                 fp.write(self.footer)
 
         self.logger.debug(f"output `{self.file}` written")
         self.size = os.path.getsize(self.file)
 
-    def apply_render_to_partition(self, partition):
-        print(type(partition))
-        return partition.apply(self.render_row, axis=1)
-        
-    def render_row(self, row: pd.Series):
+    @classmethod
+    def apply_render_to_partition(cls, partition, template, template_file):
+        return partition.apply(cls.render_row, args=(template, template_file), axis=1)
+    
+    @classmethod
+    def render_row(cls, row: pd.Series, template, template_file):
+        print(row)
         row_data = {
-            field: self.cast_output_dtype(value)
+            field: cls.cast_output_dtype(value)
             for field, value in row.to_dict().items()
         }
         row_data["__row_data__"] = row_data
 
         try:
-            json_string = self.jinja_template.render(row_data) + "\n"
+            json_string = template.render(row_data) + "\n"
 
         except Exception as err:
-            self.error_handler.throw(
-                f"error rendering Jinja template in `template` file {self.template} ({err})"
+            cls.error_handler.throw(
+                f"error rendering Jinja template in `template` file {template_file} ({err})"
             )
             raise
 

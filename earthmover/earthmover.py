@@ -113,10 +113,10 @@ class Earthmover:
         self.package_graph: Graph = None
         self.graph: Graph = None
         
-        cluster = LocalCluster(n_workers=3, # number of available cores minus 2?
+        cluster = LocalCluster(n_workers=4, # number of available cores minus 2?
                         threads_per_worker=1,# number of threads per core
                         memory_limit='4GB', #'2.3GB', # per worker; threads on a worker share this memory
-                        processes=False,
+                        processes=True,
                         silence_logs=logging.ERROR,
                         # dashboard_address=None, # to disable dashboard
                         local_directory='./')
