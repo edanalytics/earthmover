@@ -92,8 +92,6 @@ class FileDestination(Destination):
             if self.linearize:
                 template_string = self.EXP.sub(" ", template_string)
 
-            self.jinja_template = util.build_jinja_template(template_string, macros=self.earthmover.macros)
-
         except OSError as err:
             self.error_handler.throw(
                 f"`template` file {self.template} cannot be opened ({err})"
@@ -110,7 +108,7 @@ class FileDestination(Destination):
         # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
         self.data = (
             self.upstream_sources[self.source].data
-                .map_partitions(self.apply_render_to_partition, args=(self.jinja_template, self.template), meta=pd.Series('str'))
+                .map_partitions(self.apply_render_to_partition, meta=pd.Series('str'))
         )
 
         # Repartition before writing, if specified.
@@ -140,11 +138,12 @@ class FileDestination(Destination):
         self.size = os.path.getsize(self.file)
 
     @classmethod
-    def apply_render_to_partition(cls, partition, template, template_file):
-        return partition.apply(cls.render_row, args=(template, template_file), axis=1)
+    def apply_render_to_partition(cls, partition):
+        return partition.apply(cls.render_row, axis=1)
     
     @classmethod
-    def render_row(cls, row: pd.Series, template, template_file):
+    def render_row(cls, row: pd.Series):
+        jinja_template = util.build_jinja_template(cls.template_string, macros=cls.earthmover.macros)
         print(row)
         row_data = {
             field: cls.cast_output_dtype(value)
@@ -153,11 +152,11 @@ class FileDestination(Destination):
         row_data["__row_data__"] = row_data
 
         try:
-            json_string = template.render(row_data) + "\n"
+            json_string = jinja_template.render(row_data) + "\n"
 
         except Exception as err:
             cls.error_handler.throw(
-                f"error rendering Jinja template in `template` file {template_file} ({err})"
+                f"error rendering Jinja template in `template` file {cls.template_file} ({err})"
             )
             raise
 
