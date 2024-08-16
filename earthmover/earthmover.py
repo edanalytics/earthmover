@@ -458,7 +458,6 @@ class Earthmover:
         for param in self.params:
             try:
                 if os.path.exists(self.params[param]):
-                    logging.info(f"Converting path: {self.params[param]}")
                     self.params[param] = os.path.abspath(self.params[param])
             finally:
                 continue
