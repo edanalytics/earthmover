@@ -123,6 +123,35 @@ class SortRowsOperation(Operation):
 
             return data.sort_values(by=self.columns_list, ascending=(not self.descending))
 
+class LimitRowsOperation(Operation):
+        """
+
+        """
+        allowed_configs: Tuple[str] = (
+            'operation', 'count',
+            'offset',
+        )
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.count = self.error_handler.assert_get_key(self.config, 'count', dtype=int, required=True)
+            self.offset = self.error_handler.assert_get_key(self.config, 'offset', dtype=int, required=False, default=0)
+
+        def execute(self, data: 'DataFrame', **kwargs):
+            """
+
+            :return:
+            """
+            super().execute(data, **kwargs)
+
+            if self.count < 1:
+                self.error_handler.throw(
+                    "count for a limit operation must be a positive integer"
+                )
+                raise
+
+            return data.head(self.count + self.offset, compute=False).tail(self.count, compute=False)
+
 
 class FlattenOperation(Operation):
     """
