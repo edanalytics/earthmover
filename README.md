@@ -712,7 +712,7 @@ destinations:
     header: <html><body><h1>Course List:</h1>
     footer: </body></html>
 ```
-For each file you want materialized, provide the `source` and the `template` file &mdash; a text file (JSON, XML, HTML, etc.) containing Jinja with references to the columns of `source`. The materialized file will contain `template` rendered for each row of `source`, with an optional `header` prefix and `footer` postfix. Files are materialized using your specified `extension` (which is required).
+For each file you want materialized, provide the `source` and the `template` file &mdash; a text file (JSON, XML, HTML, etc.) containing Jinja with references to the columns of `source`. The materialized file will contain `template` rendered for each row of `source`, with an optional `header` prefix and `footer` postfix (both of which may contain Jinja, and which may reference `__row_data__` which is the first row of the data frame... a formulation such as `{%raw%}{% for k in __row_data__.pop('__row_data__').keys() %}{{k}}{% if not loop.last %},{% endif %}{% endfor %}{%endraw%}` may be useful). Files are materialized using your specified `extension` (which is required).
 
 If `linearize` is `True`, all line breaks are removed from the template, resulting in one output line per row. (This is useful for creating JSONL and other linear output formats.) If omitted, `linearize` is `True`.
 
