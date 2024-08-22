@@ -24,7 +24,7 @@ class Node:
 
     """
     type: str = None
-    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition','require_rows')
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'require_rows', 'show_progress', 'repartition')
 
     def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         self.name: str = name
