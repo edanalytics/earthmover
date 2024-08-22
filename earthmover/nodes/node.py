@@ -6,7 +6,6 @@ import pandas as pd
 import warnings
 
 from dask.diagnostics import ProgressBar
-from dask.graph_manipulation import bind
 
 from earthmover import util
 
