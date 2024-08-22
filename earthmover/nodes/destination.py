@@ -14,7 +14,7 @@ class Destination(Node):
     """
     type: str = 'destination'
     mode: str = None  # Documents which class was chosen.
-    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition', 'source',)
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'require_rows', 'show_progress', 'repartition', 'source',)
 
     NULL_REPR: object = None  # Representation for Nones, NaNs, and NAs on output.
     STRING_DTYPES: Tuple[object] = ()  # Datatypes to be forced to strings on output (default none).
