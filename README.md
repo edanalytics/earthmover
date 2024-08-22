@@ -719,13 +719,11 @@ If `linearize` is `True`, all line breaks are removed from the template, resulti
 
 ## Global options
 
-Any source, transformation, or destination may also specify `debug: True` which will output the dataframe shape and columns after the node completes processing. This can be very useful while building and debugging.
-
-Additionally, the `show_progress` boolean flag can be specified on any source, transformation, or destination to display a progress bar while processing.
-
-Finally, `repartition` can be passed to any node to repartition the node in memory before continuing to the next node.
-Set either the number of bytes, or a text representation (e.g., "100MB") to shuffle data into new partitions of that size.
-(Note: this configuration is advanced, and its use may drastically affect performance.)
+Any source, transformation, or destination node may also specify
+* `debug: True`, which outputs the dataframe shape and columns after the node completes processing (this can be helpful for building and debugging)
+* `require_rows: True` or `require_rows: 10` to have earthmover exit with an error if 0 (for `True`) or less then 10 (for `10`) rows are present in the dataframe after the node completes processing
+* `show_progress: True` to display a progress bar while processing this node
+* `repartition: True` to repartition the node in memory before continuing to the next node; set either the number of bytes, or a text representation (e.g., "100MB") to shuffle data into new partitions of that size (Note: this configuration is advanced, and its use may drastically affect performance)
 
 # Usage
 Once you have the required [setup](#setup) and your source data, run the transformations with
