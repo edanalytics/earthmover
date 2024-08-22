@@ -243,6 +243,8 @@ transformations:
           - species
         new_column: scientific_name
         separator: " "
+      - operation: limit_rows
+        count: 10 # this should do nothing, since there are only 4 big cats in the dataset
 
   total_of_each_species:
     source: $transformations.joined_inventories
