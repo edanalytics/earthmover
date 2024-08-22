@@ -108,7 +108,8 @@ class FileDestination(Destination):
         # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
         self.data = (
             self.upstream_sources[self.source].data
-                .map_partitions(self.apply_render_to_partition, meta=pd.Series('str'))
+                .apply(self.render_row, axis=1, meta=pd.Series('str'))
+                # .map_partitions(self.apply_render_to_partition, meta=pd.Series('str'))
         )
 
         # Repartition before writing, if specified.
@@ -144,6 +145,14 @@ class FileDestination(Destination):
     @classmethod
     def render_row(cls, row: pd.Series):
         jinja_template = util.build_jinja_template(cls.template_string, macros=cls.earthmover.macros)
+        # jinja_template = jinja2.Environment(
+        #     loader=jinja2.FileSystemLoader(os.path.dirname('./'))
+        # ).from_string(cls.earthmover.macros.strip() + cls.template_string)
+
+        # # jinja_template.globals['md5'] = lambda x: hashlib.md5(x.encode('utf-8')).hexdigest()
+        # # jinja_template.globals['fromjson'] = json.loads(x)
+        # jinja_template.globals['md5'] = cls.jinja_md5
+        # jinja_template.globals['fromjson'] = json.loads
         print(row)
         row_data = {
             field: cls.cast_output_dtype(value)

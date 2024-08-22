@@ -131,7 +131,10 @@ def build_jinja_template(template_string: str, macros: str = ""):
         loader=jinja2.FileSystemLoader(os.path.dirname('./'))
     ).from_string(macros.strip() + template_string)
 
-    template.globals['md5'] = lambda x: hashlib.md5(x.encode('utf-8')).hexdigest()
-    template.globals['fromjson'] = lambda x: json.loads(x)
+    template.globals['md5'] = jinja_md5
+    template.globals['fromjson'] = json.loads
 
     return template
+
+def jinja_md5(x):
+    return hashlib.md5(x.encode('utf-8')).hexdigest()
