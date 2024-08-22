@@ -109,7 +109,7 @@ class FileDestination(Destination):
         # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
         self.data = (
             self.upstream_sources[self.source].data
-                .map_partitions(lambda x: x.apply(self.render_row, axis=1), meta=pd.Series('str'))
+                .map_partitions(lambda x: x.apply(self.render_row, jinja_template=self.jinja_template, axis=1), meta=pd.Series('str'))
         )
 
         # Repartition before writing, if specified.
@@ -121,20 +121,28 @@ class FileDestination(Destination):
         # Write the optional header, each line, and the optional footer.
         with open(self.file, 'w+', encoding='utf-8') as fp:
 
+            if self.header or self.footer:
+                first_partition = self.upstream_sources[self.source].data.get_partition(0)
+                first_row = first_partition.head(1).reset_index(drop=True).iloc[0]
+                
             if self.header:
-                fp.write(self.header)
+                jinja_template = util.build_jinja_template(self.header, macros=self.earthmover.macros)
+                rendered_template = self.render_row(first_row, jinja_template=jinja_template)
+                fp.write(rendered_template)
 
             for partition in self.data.partitions:
                 fp.writelines(partition.compute())
                 partition = None  # Remove partition from memory immediately after write.
 
             if self.footer:
-                fp.write(self.footer)
+                jinja_template = util.build_jinja_template(self.footer, macros=self.earthmover.macros)
+                rendered_template = self.render_row(first_row, jinja_template)
+                fp.write(rendered_template)
 
         self.logger.debug(f"output `{self.file}` written")
         self.size = os.path.getsize(self.file)
 
-    def render_row(self, row: pd.Series):
+    def render_row(self, row: pd.Series, jinja_template):
         row_data = {
             field: self.cast_output_dtype(value)
             for field, value in row.to_dict().items()
@@ -142,7 +150,7 @@ class FileDestination(Destination):
         row_data["__row_data__"] = row_data
 
         try:
-            json_string = self.jinja_template.render(row_data) + "\n"
+            json_string = jinja_template.render(row_data) + "\n"
 
         except Exception as err:
             self.error_handler.throw(
