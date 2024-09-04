@@ -1,3 +1,15 @@
+### v0.3.7
+<details>
+<summary>Released 2024-09-04</summary>
+
+* feature: implementing a limit_rows operation
+* feature: add support for a `require_rows` boolean or non-negative int on any node
+* feature: add support for Jinja in a destination node header and footer
+* bugfix: union fails with duplicate columns
+
+</details>
+
+
 ### v0.3.6
 <details>
 <summary>Released 2024-08-07</summary>
