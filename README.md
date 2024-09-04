@@ -574,6 +574,19 @@ By default, rows are sorted ascendingly. Set `descending: True` to reverse this 
 
 
 <details>
+<summary><code>limit_rows</code></summary>
+
+Limit the number of rows in the dataframe.
+```yaml
+      - operation: limit_rows
+        count: 5 # required, no default
+        offset: 10 # optional, default 0
+```
+(If fewer than `count` rows in the dataframe, they will all be returned.)
+</details>
+
+
+<details>
 <summary><code>flatten</code></summary>
 
 Split values in a column and create a copy of the row for each value.
