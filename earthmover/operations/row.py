@@ -1,5 +1,6 @@
 from earthmover.operations.operation import Operation
 
+import warnings
 from typing import Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -149,8 +150,10 @@ class LimitRowsOperation(Operation):
                     "count for a limit operation must be a positive integer"
                 )
                 raise
-
-            return data.head(self.count + self.offset, npartitions=-1, compute=False).tail(self.count, compute=False)
+            
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", message="Insufficient elements for `head`")
+                return data.head(self.count + self.offset, npartitions=-1, compute=False).tail(self.count, compute=False)
 
 
 class FlattenOperation(Operation):

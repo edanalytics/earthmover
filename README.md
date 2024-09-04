@@ -582,7 +582,7 @@ Limit the number of rows in the dataframe.
         count: 5 # required, no default
         offset: 10 # optional, default 0
 ```
-(If fewer than `count` rows in in the dataframe, they will all be returned.)
+(If fewer than `count` rows in the dataframe, they will all be returned.)
 </details>
 
 
