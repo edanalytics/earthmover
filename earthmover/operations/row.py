@@ -150,7 +150,7 @@ class LimitRowsOperation(Operation):
                 )
                 raise
 
-            return data.head(self.count + self.offset, compute=False).tail(self.count, compute=False)
+            return data.head(self.count + self.offset, npartitions=-1, compute=False).tail(self.count, compute=False)
 
 
 class FlattenOperation(Operation):
