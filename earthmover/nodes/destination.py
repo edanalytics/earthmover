@@ -57,7 +57,7 @@ class FileDestination(Destination):
 
     EXP = re.compile(r"\s+")
     TEMPLATED_COL = "____OUTPUT____"
-    DEFAULT_TEMPLATE = """{ {% for col, val in __row_data__.items() %}"{{ col }}": {{ val | tojson }}{% if not loop.last %}, {% endif %}{% endfor %} }"""
+    DEFAULT_TEMPLATE = """{ {% for col, val in __row_data__.pop('__row_data__').items() %}"{{ col }}": {{ val | tojson }}{% if not loop.last %}, {% endif %}{% endfor %} }"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -121,23 +121,31 @@ class FileDestination(Destination):
         # Write the optional header, each line, and the optional footer.
         with open(self.file, 'w+', encoding='utf-8') as fp:
 
-            if self.header or self.footer:
-                first_partition = self.upstream_sources[self.source].data.get_partition(0)
-                first_row = first_partition.head(1).reset_index(drop=True).iloc[0]
+            # only load the first row if header/footer contain Jinja that might need it:
+            if (
+                (self.header and util.contains_jinja(self.header))
+                or (self.footer and util.contains_jinja(self.footer))
+            ):
+                # (use `npartitions=-1` because the first N partitions could be empty)
+                first_row = self.upstream_sources[self.source].data.head(1, npartitions=-1).reset_index(drop=True).iloc[0]
                 
-            if self.header:
+            if self.header and util.contains_jinja(self.header):
                 jinja_template = util.build_jinja_template(self.header, macros=self.earthmover.macros)
                 rendered_template = self.render_row(first_row, jinja_template=jinja_template)
                 fp.write(rendered_template)
+            elif self.header: # no jinja
+                fp.write(self.header)
 
             for partition in self.data.partitions:
                 fp.writelines(partition.compute())
                 partition = None  # Remove partition from memory immediately after write.
 
-            if self.footer:
+            if self.footer and util.contains_jinja(self.footer):
                 jinja_template = util.build_jinja_template(self.footer, macros=self.earthmover.macros)
                 rendered_template = self.render_row(first_row, jinja_template)
                 fp.write(rendered_template)
+            elif self.footer: # no jinja
+                fp.write(self.footer)
 
         self.logger.debug(f"output `{self.file}` written")
         self.size = os.path.getsize(self.file)
@@ -153,6 +161,7 @@ class FileDestination(Destination):
             json_string = jinja_template.render(row_data) + "\n"
 
         except Exception as err:
+            print(err)
             self.error_handler.throw(
                 f"error rendering Jinja template in `template` file {self.template} ({err})"
             )
