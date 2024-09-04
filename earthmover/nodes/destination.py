@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import re
+import warnings
 
 from earthmover.nodes.node import Node
 from earthmover import util
@@ -126,8 +127,10 @@ class FileDestination(Destination):
                 (self.header and util.contains_jinja(self.header))
                 or (self.footer and util.contains_jinja(self.footer))
             ):
-                # (use `npartitions=-1` because the first N partitions could be empty)
-                first_row = self.upstream_sources[self.source].data.head(1, npartitions=-1).reset_index(drop=True).iloc[0]
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", message="Insufficient elements for `head`")
+                    # (use `npartitions=-1` because the first N partitions could be empty)
+                    first_row = self.upstream_sources[self.source].data.head(1, npartitions=-1).reset_index(drop=True).iloc[0]
                 
             if self.header and util.contains_jinja(self.header):
                 jinja_template = util.build_jinja_template(self.header, macros=self.earthmover.macros)
