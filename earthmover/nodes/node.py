@@ -122,7 +122,6 @@ class Node:
 
         # Only actually compute() and count the rows if `require_rows` was defined for this node.
         if self.require_rows > 0:
-            self.num_rows = dask.compute(self.num_rows)[0]
             self.check_require_rows(self.require_rows)
 
         # Display row-count and dataframe shape if debug is enabled.
@@ -132,6 +131,7 @@ class Node:
         pass
 
     def check_require_rows(self, num_required_rows):
+        self.num_rows = dask.compute(self.num_rows)[0]
         if self.num_rows < num_required_rows:
             self.error_handler.throw(
                 f"Source `{self.full_name}` failed require_rows >= {num_required_rows}` (only {self.num_rows} rows found)"
