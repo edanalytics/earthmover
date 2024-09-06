@@ -128,7 +128,11 @@ class FileDestination(Destination):
                 or (self.footer and util.contains_jinja(self.footer))
             ):
                 try:
-                    first_row = self.upstream_sources[self.source].data.head(1, npartitions=-1).reset_index(drop=True).iloc[0]
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings("ignore", message="Insufficient elements for `head`")
+                        # (use `npartitions=-1` because the first N partitions could be empty)
+                        first_row = self.upstream_sources[self.source].data.head(1, npartitions=-1).reset_index(drop=True).iloc[0]
+                
                 except IndexError:  # If no rows are present, build a representation of the row with empty values
                     first_row = {col: "" for col in self.upstream_sources[self.source].data.columns}
                     first_row['__row_data__'] = first_row
