@@ -1,3 +1,12 @@
+### v0.3.8
+<details>
+<summary>Released 2024-09-06</summary>
+
+* bugfix: Jinja in destination `header` failed if dataframe is empty
+
+</details>
+
+
 ### v0.3.7
 <details>
 <summary>Released 2024-09-04</summary>
