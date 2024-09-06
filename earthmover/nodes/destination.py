@@ -122,19 +122,13 @@ class FileDestination(Destination):
         # Write the optional header, each line, and the optional footer.
         with open(self.file, 'w+', encoding='utf-8') as fp:
 
-            # only load the first row if header/footer contain Jinja that might need it:
-            if (
-                (self.header and util.contains_jinja(self.header))
-                or (self.footer and util.contains_jinja(self.footer))
-            ):
-                with warnings.catch_warnings():
-                    warnings.filterwarnings("ignore", message="Insufficient elements for `head`")
-                    # (use `npartitions=-1` because the first N partitions could be empty)
-                    first_row = self.upstream_sources[self.source].data.head(1, npartitions=-1).reset_index(drop=True).iloc[0]
+            # Build a representation of the row to pass to optional jinja render in header and footer
+            row_jinja_dict = {col: "" for col in self.upstream_sources[self.source].data.columns}
+            row_jinja_dict['__row_data__'] = row_jinja_dict
                 
             if self.header and util.contains_jinja(self.header):
                 jinja_template = util.build_jinja_template(self.header, macros=self.earthmover.macros)
-                rendered_template = self.render_row(first_row, jinja_template=jinja_template)
+                rendered_template = self.render_row(row_jinja_dict, jinja_template=jinja_template)
                 fp.write(rendered_template)
             elif self.header: # no jinja
                 fp.write(self.header)
@@ -145,7 +139,7 @@ class FileDestination(Destination):
 
             if self.footer and util.contains_jinja(self.footer):
                 jinja_template = util.build_jinja_template(self.footer, macros=self.earthmover.macros)
-                rendered_template = self.render_row(first_row, jinja_template)
+                rendered_template = self.render_row(row_jinja_dict, jinja_template)
                 fp.write(rendered_template)
             elif self.footer: # no jinja
                 fp.write(self.footer)
@@ -154,9 +148,10 @@ class FileDestination(Destination):
         self.size = os.path.getsize(self.file)
 
     def render_row(self, row: pd.Series, jinja_template):
+        row_data = row if isinstance(row, dict) else row.to_dict()
         row_data = {
             field: self.cast_output_dtype(value)
-            for field, value in row.to_dict().items()
+            for field, value in row_data.items()
         }
         row_data["__row_data__"] = row_data
 
