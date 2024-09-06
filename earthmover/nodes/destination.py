@@ -127,10 +127,15 @@ class FileDestination(Destination):
                 (self.header and util.contains_jinja(self.header))
                 or (self.footer and util.contains_jinja(self.footer))
             ):
-                with warnings.catch_warnings():
-                    warnings.filterwarnings("ignore", message="Insufficient elements for `head`")
-                    # (use `npartitions=-1` because the first N partitions could be empty)
-                    first_row = self.upstream_sources[self.source].data.head(1, npartitions=-1).reset_index(drop=True).iloc[0]
+                try:
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings("ignore", message="Insufficient elements for `head`")
+                        # (use `npartitions=-1` because the first N partitions could be empty)
+                        first_row = self.upstream_sources[self.source].data.head(1, npartitions=-1).reset_index(drop=True).iloc[0]
+                
+                except IndexError:  # If no rows are present, build a representation of the row with empty values
+                    first_row = {col: "" for col in self.upstream_sources[self.source].data.columns}
+                    first_row['__row_data__'] = first_row
                 
             if self.header and util.contains_jinja(self.header):
                 jinja_template = util.build_jinja_template(self.header, macros=self.earthmover.macros)
@@ -154,9 +159,10 @@ class FileDestination(Destination):
         self.size = os.path.getsize(self.file)
 
     def render_row(self, row: pd.Series, jinja_template):
+        row_data = row if isinstance(row, dict) else row.to_dict()
         row_data = {
             field: self.cast_output_dtype(value)
-            for field, value in row.to_dict().items()
+            for field, value in row_data.items()
         }
         row_data["__row_data__"] = row_data
 
