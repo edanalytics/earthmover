@@ -122,13 +122,20 @@ class FileDestination(Destination):
         # Write the optional header, each line, and the optional footer.
         with open(self.file, 'w+', encoding='utf-8') as fp:
 
-            # Build a representation of the row to pass to optional jinja render in header and footer
-            row_jinja_dict = {col: "" for col in self.upstream_sources[self.source].data.columns}
-            row_jinja_dict['__row_data__'] = row_jinja_dict
+            # only load the first row if header/footer contain Jinja that might need it:
+            if (
+                (self.header and util.contains_jinja(self.header))
+                or (self.footer and util.contains_jinja(self.footer))
+            ):
+                try:
+                    first_row = self.upstream_sources[self.source].data.head(1, npartitions=-1).reset_index(drop=True).iloc[0]
+                except IndexError:  # If no rows are present, build a representation of the row with empty values
+                    first_row = {col: "" for col in self.upstream_sources[self.source].data.columns}
+                    first_row['__row_data__'] = first_row
                 
             if self.header and util.contains_jinja(self.header):
                 jinja_template = util.build_jinja_template(self.header, macros=self.earthmover.macros)
-                rendered_template = self.render_row(row_jinja_dict, jinja_template=jinja_template)
+                rendered_template = self.render_row(first_row, jinja_template=jinja_template)
                 fp.write(rendered_template)
             elif self.header: # no jinja
                 fp.write(self.header)
@@ -139,7 +146,7 @@ class FileDestination(Destination):
 
             if self.footer and util.contains_jinja(self.footer):
                 jinja_template = util.build_jinja_template(self.footer, macros=self.earthmover.macros)
-                rendered_template = self.render_row(row_jinja_dict, jinja_template)
+                rendered_template = self.render_row(first_row, jinja_template)
                 fp.write(rendered_template)
             elif self.footer: # no jinja
                 fp.write(self.footer)
