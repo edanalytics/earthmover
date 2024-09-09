@@ -276,7 +276,6 @@ class FileSource(Source):
                 raise
         elif file_type == 'excel':
             try:
-                import pyarrow
                 import openpyxl
             except ImportError:
                 self.error_handler.throw(
