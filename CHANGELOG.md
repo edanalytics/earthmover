@@ -1,3 +1,7 @@
+### Unreleased changes
+
+* feature: add support for Python 3.12, with corresponding updates to core dataframe dependencies
+
 ### v0.3.6
 <details>
 <summary>Released 2024-08-07</summary>
