@@ -574,6 +574,19 @@ By default, rows are sorted ascendingly. Set `descending: True` to reverse this 
 
 
 <details>
+<summary><code>limit_rows</code></summary>
+
+Limit the number of rows in the dataframe.
+```yaml
+      - operation: limit_rows
+        count: 5 # required, no default
+        offset: 10 # optional, default 0
+```
+(If fewer than `count` rows in the dataframe, they will all be returned.)
+</details>
+
+
+<details>
 <summary><code>flatten</code></summary>
 
 Split values in a column and create a copy of the row for each value.
@@ -712,20 +725,18 @@ destinations:
     header: <html><body><h1>Course List:</h1>
     footer: </body></html>
 ```
-For each file you want materialized, provide the `source` and the `template` file &mdash; a text file (JSON, XML, HTML, etc.) containing Jinja with references to the columns of `source`. The materialized file will contain `template` rendered for each row of `source`, with an optional `header` prefix and `footer` postfix. Files are materialized using your specified `extension` (which is required).
+For each file you want materialized, provide the `source` and the `template` file &mdash; a text file (JSON, XML, HTML, etc.) containing Jinja with references to the columns of `source`. The materialized file will contain `template` rendered for each row of `source`, with an optional `header` prefix and `footer` postfix (both of which may contain Jinja, and which may reference `__row_data__` which is the first row of the data frame... a formulation such as `{%raw%}{% for k in __row_data__.pop('__row_data__').keys() %}{{k}}{% if not loop.last %},{% endif %}{% endfor %}{%endraw%}` may be useful). Files are materialized using your specified `extension` (which is required).
 
 If `linearize` is `True`, all line breaks are removed from the template, resulting in one output line per row. (This is useful for creating JSONL and other linear output formats.) If omitted, `linearize` is `True`.
 
 
 ## Global options
 
-Any source, transformation, or destination may also specify `debug: True` which will output the dataframe shape and columns after the node completes processing. This can be very useful while building and debugging.
-
-Additionally, the `show_progress` boolean flag can be specified on any source, transformation, or destination to display a progress bar while processing.
-
-Finally, `repartition` can be passed to any node to repartition the node in memory before continuing to the next node.
-Set either the number of bytes, or a text representation (e.g., "100MB") to shuffle data into new partitions of that size.
-(Note: this configuration is advanced, and its use may drastically affect performance.)
+Any source, transformation, or destination node may also specify
+* `debug: True`, which outputs the dataframe shape and columns after the node completes processing (this can be helpful for building and debugging)
+* `require_rows: True` or `require_rows: 10` to have earthmover exit with an error if 0 (for `True`) or less then 10 (for `10`) rows are present in the dataframe after the node completes processing
+* `show_progress: True` to display a progress bar while processing this node
+* `repartition: True` to repartition the node in memory before continuing to the next node; set either the number of bytes, or a text representation (e.g., "100MB") to shuffle data into new partitions of that size (Note: this configuration is advanced, and its use may drastically affect performance)
 
 # Usage
 Once you have the required [setup](#setup) and your source data, run the transformations with

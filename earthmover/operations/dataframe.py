@@ -171,6 +171,12 @@ class UnionOperation(Operation):
                     self.error_handler.throw('dataframes to union do not share identical columns')
                     raise
 
+            # Raise an error if duplicate columns are found in either data source.
+            # These can cause `AttributeError: 'DataFrame' object has no attribute 'dtype'` because a DataFrame is returned during union instead of a column.
+            if len(source_data.columns) != len(set(source_data.columns)) or len(data.columns) != len(set(data.columns)):
+                self.error_handler.throw("One or more columns in either dataframe are duplicated. Union cannot be performed consistently.")
+                raise
+
             try:
                 data = dd.concat([data, source_data], ignore_index=True)
             

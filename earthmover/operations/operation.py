@@ -46,6 +46,7 @@ class Operation(Node):
             'distinct_rows': row_operations.DistinctRowsOperation,
             'filter_rows': row_operations.FilterRowsOperation,
             'sort_rows': row_operations.SortRowsOperation,
+            'limit_rows': row_operations.LimitRowsOperation,
             'flatten': row_operations.FlattenOperation,
 
             'group_by_with_rank': groupby_operations.GroupByWithRankOperation,
