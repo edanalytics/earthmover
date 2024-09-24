@@ -71,6 +71,11 @@ class Earthmover:
         self.macros: str = ""
 
         project_configs = self.load_project_configs(self.config_file)  # Merge the optional user configs into the defaults.
+        from pprint import pprint
+        pprint(f"project_configs: {project_configs}")
+        pprint(f"self.params: {self.params}")
+
+        # TODO: apply params to project_configs...
 
         ### Update environment with state-config settings.
         # Overload state_configs with defaults, YAML configs, then CLI configs
@@ -79,6 +84,9 @@ class Earthmover:
             **project_configs,
             **(cli_state_configs or {})
         }
+
+        
+        pprint(f"self.state_configs: {self.state_configs}")
 
         # Set up the logger
         self.logger = logger
@@ -123,7 +131,16 @@ class Earthmover:
 
         # Update project parameter defaults from the template, if any
         for key, val in configs.get("parameter_defaults", {}).items():
+            print(f"key, val --> {key}, {val}")
             self.params.setdefault(key, val)
+
+        for key, val in configs.items():
+
+            if isinstance(val, str):
+                # FIXME: also should probably check that it actually has the ${} pattern
+                val_as_env_var = val.replace("$", "").replace("{", "").replace("}", "")
+                if val_as_env_var in self.params:
+                    configs[key] = self.params[val_as_env_var]
 
         # Prepend package macros to the project macro string. Later macro definitions in the string will overwrite earlier ones
         self.macros = configs.get("macros", "").strip() + self.macros
