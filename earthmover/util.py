@@ -127,6 +127,9 @@ def fromjson(obj: Union[str, dict]) -> dict:
     """
     Helper method to parse malformed JSON with single quotes.
     """
+    if isinstance(obj, dict):
+        return obj
+
     try:
         return json.loads(obj)
     except json.decoder.JSONDecodeError:
