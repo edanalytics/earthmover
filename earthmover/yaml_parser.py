@@ -36,7 +36,7 @@ class YamlMapping(dict):
         current = self
         for path_piece in path_pieces[:-1]:
             if path_piece not in current.keys():
-                current[path_piece]  =YamlMapping()
+                current[path_piece] = YamlMapping()
             current = current[path_piece]
         current[path_pieces[-1]] = self.autocast(value)
     
