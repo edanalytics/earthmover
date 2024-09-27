@@ -1,3 +1,4 @@
+import ast  # Used for malformed JSON
 import jinja2
 import hashlib
 import json
@@ -5,7 +6,7 @@ import os
 
 from sys import exc_info
 
-from typing import Optional
+from typing import Optional, Union
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from earthmover.error_handler import ErrorHandler
@@ -122,6 +123,17 @@ def jinja2_template_error_lineno():
             return tb.tb_lineno
         tb = tb.tb_next
 
+def fromjson(obj: Union[str, dict]) -> dict:
+    """
+    Helper method to parse malformed JSON with single quotes.
+    """
+    if isinstance(obj, dict):
+        return obj
+
+    try:
+        return json.loads(obj)
+    except json.decoder.JSONDecodeError:
+        return ast.literal_eval(obj)
 
 def build_jinja_template(template_string: str, macros: str = ""):
     """
@@ -132,6 +144,6 @@ def build_jinja_template(template_string: str, macros: str = ""):
     ).from_string(macros.strip() + template_string)
 
     template.globals['md5'] = lambda x: hashlib.md5(x.encode('utf-8')).hexdigest()
-    template.globals['fromjson'] = lambda x: json.loads(x)
+    template.globals['fromjson'] = fromjson
 
     return template

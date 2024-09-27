@@ -280,13 +280,13 @@ transformations:
       - operation: add_columns
         columns:
           {% for month in months %}
-          avg_days_rain_{{month}}: "{%raw%}{{weather.avg_days_of_rain.{%endraw%}{{month}}{%raw%}}}{%endraw%}"
-          avg_high_temp_{{month}}: "{%raw%}{{weather.temperatures.avg_highs.{%endraw%}{{month}}{%raw%}}}{%endraw%}"
-          avg_low_temp_{{month}}: "{%raw%}{{weather.temperatures.avg_lows.{%endraw%}{{month}}{%raw%}}}{%endraw%}"
+          avg_days_rain_{{month}}: "{%raw%}{{fromjson(weather).avg_days_of_rain.{%endraw%}{{month}}{%raw%}}}{%endraw%}"
+          avg_high_temp_{{month}}: "{%raw%}{{fromjson(weather).temperatures.avg_highs.{%endraw%}{{month}}{%raw%}}}{%endraw%}"
+          avg_low_temp_{{month}}: "{%raw%}{{fromjson(weather).temperatures.avg_lows.{%endraw%}{{month}}{%raw%}}}{%endraw%}"
           {% endfor %}
-          avg_days_rain_year: "{%raw%}{{{%endraw%}{%for month in months%}weather.avg_days_of_rain.{{month}}|int{%if not loop.last%} + {%endif%}{%endfor%}{%raw%}}}{%endraw%}"
-          avg_high_temp: "{%raw%}{{(({%endraw%}{%for month in months%}weather.temperatures.avg_highs.{{month}}|int{%if not loop.last%} + {%endif%}{%endfor%}{%raw%})/12)|int}}{%endraw%}"
-          avg_low_temp: "{%raw%}{{(({%endraw%}{%for month in months%}weather.temperatures.avg_lows.{{month}}|int{%if not loop.last%} + {%endif%}{%endfor%}{%raw%})/12)|int}}{%endraw%}"
+          avg_days_rain_year: "{%raw%}{{{%endraw%}{%for month in months%}fromjson(weather).avg_days_of_rain.{{month}}|int{%if not loop.last%} + {%endif%}{%endfor%}{%raw%}}}{%endraw%}"
+          avg_high_temp: "{%raw%}{{(({%endraw%}{%for month in months%}fromjson(weather).temperatures.avg_highs.{{month}}|int{%if not loop.last%} + {%endif%}{%endfor%}{%raw%})/12)|int}}{%endraw%}"
+          avg_low_temp: "{%raw%}{{(({%endraw%}{%for month in months%}fromjson(weather).temperatures.avg_lows.{{month}}|int{%if not loop.last%} + {%endif%}{%endfor%}{%raw%})/12)|int}}{%endraw%}"
       - operation: drop_columns
         columns:
           - weather
