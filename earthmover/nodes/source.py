@@ -159,7 +159,6 @@ class FileSource(Source):
             if self.optional and not os.path.exists(self.file) or (os.path.isdir(self.file) and not os.listdir(self.file)):
                 self.data = pd.DataFrame(columns=self.columns_list, dtype="string")
             else:
-                dask_config.set({'dataframe.convert-string': False})
                 self.data = self.read_lambda(self.file, self.config)
                 if not self.is_remote:
                     self.size = os.path.getsize(self.file)
