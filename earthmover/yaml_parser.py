@@ -33,10 +33,12 @@ class YamlMapping(dict):
     # enables setting values inside the YamlMapping by path, e.g. `configs.set_path("config.tmp_dir", "/mypath")`
     def set_path(self, path, value):
         path_pieces = path.split(".")
-        if len(path_pieces)==1:
-            self[path] = self.autocast(value)
-        else:
-            self[path_pieces[0]].set_path(".".join(path_pieces[1:]), value)
+        current = self
+        for path_piece in path_pieces[:-1]:
+            if path_piece not in current.keys():
+                current[path_piece]  =YamlMapping()
+            current = current[path_piece]
+        current[path_pieces[-1]] = self.autocast(value)
     
     @staticmethod
     def autocast(value):
