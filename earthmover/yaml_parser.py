@@ -34,9 +34,26 @@ class YamlMapping(dict):
     def set_path(self, path, value):
         path_pieces = path.split(".")
         if len(path_pieces)==1:
-            self[path] = value
+            self[path] = self.autocast(value)
         else:
             self[path_pieces[0]].set_path(".".join(path_pieces[1:]), value)
+    
+    @staticmethod
+    def autocast(value):
+        if value.lower() in ['true', 'yes', 'on']:
+            return True
+        elif value.lower() in ['false', 'no', 'off']:
+            return False
+        elif '.' in value:
+            try:
+                return float(value)
+            except ValueError:
+                return value
+        else:
+            try:
+                return int(value)
+            except ValueError:
+                return value
     
     def to_dict(self):
         """

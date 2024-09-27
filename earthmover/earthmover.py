@@ -20,6 +20,7 @@ from earthmover.nodes.destination import Destination
 from earthmover.nodes.source import Source
 from earthmover.nodes.transformation import Transformation
 from earthmover.yaml_parser import JinjaEnvironmentYamlLoader
+from earthmover.yaml_parser import YamlMapping
 from earthmover import util
 
 from typing import List, Optional
@@ -90,6 +91,10 @@ class Earthmover:
 
         # Set current working directory to the location of the config file.
         os.chdir(os.path.dirname(self.config_file))
+
+        # convert state_configs to YamlMapping so we can inject CLI overrides
+        self.state_configs = YamlMapping().update(self.state_configs)
+        self.state_configs = self.inject_cli_overrides(self.state_configs, "config.")
         
         # Prepare the output directory for destinations.
         self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
@@ -132,12 +137,13 @@ class Earthmover:
 
         return configs
 
-    def inject_cli_overrides(self, configs):
+    def inject_cli_overrides(self, configs, prefix=None):
         # parse self.overrides into configs:
         for i in range(0, len(self.overrides), 2):
             key = self.overrides[i]
-            value = self.overrides[i+1]
-            configs.set_path(key, value)
+            if not prefix or key.startswith(prefix):
+                value = self.overrides[i+1]
+                configs.set_path(key.lstrip(prefix), value)
         return configs
 
     def compile(self, to_disk: bool = False):
