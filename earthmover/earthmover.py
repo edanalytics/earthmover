@@ -6,6 +6,7 @@ import tempfile
 import networkx as nx
 import pathlib
 import os
+import re
 import shutil
 import time
 import datetime
@@ -71,11 +72,6 @@ class Earthmover:
         self.macros: str = ""
 
         project_configs = self.load_project_configs(self.config_file)  # Merge the optional user configs into the defaults.
-        from pprint import pprint
-        pprint(f"project_configs: {project_configs}")
-        pprint(f"self.params: {self.params}")
-
-        # TODO: apply params to project_configs...
 
         ### Update environment with state-config settings.
         # Overload state_configs with defaults, YAML configs, then CLI configs
@@ -84,9 +80,6 @@ class Earthmover:
             **project_configs,
             **(cli_state_configs or {})
         }
-
-        
-        pprint(f"self.state_configs: {self.state_configs}")
 
         # Set up the logger
         self.logger = logger
@@ -129,15 +122,17 @@ class Earthmover:
         """
         configs = JinjaEnvironmentYamlLoader.load_project_configs(filepath, params=self.params)
 
-        # Update project parameter defaults from the template, if any
+        # 1. Update project parameter defaults from the template, if any
         for key, val in configs.get("parameter_defaults", {}).items():
-            print(f"key, val --> {key}, {val}")
             self.params.setdefault(key, val)
 
-        for key, val in configs.items():
+        # 2. Populate project configs whose values were not passed at the command line
+        #     with their defaults
+        env_var_pattern = r'^\$\{[A-Z_]+\}$'
+        regex = re.compile(env_var_pattern)
 
-            if isinstance(val, str):
-                # FIXME: also should probably check that it actually has the ${} pattern
+        for key, val in configs.items():
+            if isinstance(val, str) and regex.match(val):
                 val_as_env_var = val.replace("$", "").replace("{", "").replace("}", "")
                 if val_as_env_var in self.params:
                     configs[key] = self.params[val_as_env_var]
