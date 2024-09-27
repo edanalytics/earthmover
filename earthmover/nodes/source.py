@@ -245,7 +245,7 @@ class FileSource(Source):
 
         # We don't want to activate the function inside this helper function.
         read_lambda_mapping = {
-            'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
+            'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype="string", encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
             'excel'     : lambda file, config: pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False),
             'feather'   : lambda file, _     : pd.read_feather(file),
             'fixedwidth': lambda file, _     : dd.read_fwf(file),
@@ -258,7 +258,7 @@ class FileSource(Source):
             'spss'      : lambda file, _     : pd.read_spss(file),
             'stata'     : lambda file, _     : pd.read_stata(file),
             'xml'       : lambda file, config: pd.read_xml(file, xpath=config.get('xpath', "./*")),
-            'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
+            'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype="string", encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
         }
         return read_lambda_mapping.get(file_type)
 
