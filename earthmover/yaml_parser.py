@@ -30,6 +30,14 @@ class YamlMapping(dict):
                 self[key] = val
         return self
 
+    # enables setting values inside the YamlMapping by path, e.g. `configs.set_path("config.tmp_dir", "/mypath")`
+    def set_path(self, path, value):
+        path_pieces = path.split(".")
+        if len(path_pieces)==1:
+            self[path] = value
+        else:
+            self[path_pieces[0]].set_path(".".join(path_pieces[1:]), value)
+    
     def to_dict(self):
         """
         Convert a YAML Mapping to a standard dictionary.
