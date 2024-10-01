@@ -1,7 +1,8 @@
 version: 2
 
 config:
-  output_dir: ${BASE_DIR}/outputs/
+  output_dir: ${OUTPUT_DIR} # test the case where an env var can be passed 
+                            #     but a default is also allowed
   log_level: INFO
   show_stacktrace: False
   show_graph: False
@@ -14,6 +15,7 @@ config:
     {%- endmacro %}
   parameter_defaults:
     BASE_DIR: "."
+    OUTPUT_DIR: "./outputs"
 
 
 sources:
