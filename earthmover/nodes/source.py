@@ -447,3 +447,16 @@ class SqlSource(Source):
                     "connecting to a database requires additional libraries... please install using `pip install earthmover[sql]`"
                 )
                 raise
+
+class inLineSource(Source):
+    mode: str = 'inLineSource'
+    is_remote: bool = False
+    allowed_configs: Tuple[str] = ('file', 'orientation')
+
+    def __init(self):
+        super().__init()
+        self.data = self.error_handler.assert_get_key(self.config, 'data', dtype=list)
+
+    def read_inLineSource(self):
+        df = pd.DataFrame(self.data)
+        return df
