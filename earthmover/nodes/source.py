@@ -5,6 +5,7 @@ import io
 import os
 import pandas as pd
 import re
+import yaml
 
 from earthmover.nodes.node import Node
 from earthmover import util
@@ -44,10 +45,13 @@ class Source(Node):
 
         elif 'file' in config:
             return object.__new__(FileSource)
+        
+        elif 'data' in config:
+            return object.__new__(inLineSource)
 
         else:
             earthmover.error_handler.throw(
-                "sources must specify either a `file` and/or `connection` string and `query`"
+                "sources must specify either a `file` and/or `connection` string and `query` or `data`"
             )
             raise
 
@@ -451,12 +455,31 @@ class SqlSource(Source):
 class inLineSource(Source):
     mode: str = 'inLineSource'
     is_remote: bool = False
-    allowed_configs: Tuple[str] = ('file', 'orientation')
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
+                                    'data', 'orientation')
 
-    def __init(self):
-        super().__init()
-        self.data = self.error_handler.assert_get_key(self.config, 'data', dtype=list)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.df = self.error_handler.assert_get_key(self.config, 'data')
+        print(self.df)
+        self.orientation = self.error_handler.assert_get_key(self.config, 'orientation')
+
+
+    def execute(self):
+        super().execute()
+
+        try:
+            self.data = self.read_inLineSource()
+            self.logger.debug(f"source `{self.name}` loaded )"
+            )
+
+        except Exception as err:
+            self.error_handler.throw(
+                f"source {self.name} error ({err}); check `data`"
+            )
+            raise
 
     def read_inLineSource(self):
-        df = pd.DataFrame(self.data)
+        df = pd.DataFrame(self.df)
+        print(df)
         return df
