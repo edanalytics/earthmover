@@ -172,7 +172,7 @@ def main(argv=None):
     if not args.config_file:
         logger.error("config file not specified with `-c` flag, and no default {" + ", ".join(DEFAULT_CONFIG_FILES) + "} found")
 
-    if len(args.set)%2 != 0: # odd number of overrides
+    if args.set and len(args.set)%2 != 0: # odd number of overrides
         logger.error("overrides specified with --set must be followed by an even number of strings (key value key value ...)")
 
     # Update state configs with those forced via the command line.

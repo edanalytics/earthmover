@@ -139,11 +139,12 @@ class Earthmover:
 
     def inject_cli_overrides(self, configs, prefix=None):
         # parse self.overrides into configs:
-        for i in range(0, len(self.overrides), 2):
-            key = self.overrides[i]
-            if not prefix or key.startswith(prefix):
-                value = self.overrides[i+1]
-                configs.set_path(key.lstrip(prefix), value)
+        if self.overrides:
+            for i in range(0, len(self.overrides), 2):
+                key = self.overrides[i]
+                if not prefix or key.startswith(prefix):
+                    value = self.overrides[i+1]
+                    configs.set_path(key.lstrip(prefix), value)
         return configs
 
     def compile(self, to_disk: bool = False):
