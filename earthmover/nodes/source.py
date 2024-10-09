@@ -481,10 +481,10 @@ class inLineSource(Source):
 
     def read_inLineSource(self):
         try:
-            if self.orientation == 'rows':
+            if self.orientation == 'columns':
                 df = pd.DataFrame(self.df.to_dict())
             
-            elif self.orientation == 'columns':
+            elif self.orientation == 'rows':
                 YamlMappingList = []
                 for YamlMappingObject in self.df:
                     YamlMappingList.append(YamlMappingObject.to_dict())
