@@ -461,12 +461,12 @@ class inLineSource(Source):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.df = self.error_handler.assert_get_key(self.config, 'data')
-        print(self.df)
-        self.orientation = self.error_handler.assert_get_key(self.config, 'orientation')
+        self.orientation = self.error_handler.assert_get_key(self.config, 'orientation', dtype= str)
 
 
     def execute(self):
         super().execute()
+        print(self.orientation)
 
         try:
             self.data = self.read_inLineSource()
@@ -480,6 +480,23 @@ class inLineSource(Source):
             raise
 
     def read_inLineSource(self):
-        df = pd.DataFrame(self.df)
-        print(df)
-        return df
+        try:
+            if self.orientation == 'rows':
+                df = pd.DataFrame(self.df.to_dict())
+            
+            elif self.orientation == 'columns':
+                YamlMappingList = []
+                for YamlMappingObject in self.df:
+                    YamlMappingList.append(YamlMappingObject.to_dict())
+                df = pd.DataFrame(YamlMappingList) 
+            else:
+                self.error_handler.throw(
+                    f"Invalid {self.orientation}. Must be `rows` or `columns`"
+                )
+            return df
+        
+        except Exception as err:
+            self.error_handler.throw(
+                f"source {self.orientation} error ({err}); check `orientation`"
+            )
+            raise
