@@ -48,3 +48,13 @@
 { "id": "4_7", "name": "Northern Crested Newt", "family": "reptile", "genus": "Triturus", "species": "cristatus", "avg_lifespan_yrs": 8, "avg_weight_kg": 0.1 }
 { "id": "4_8", "name": "Timber Rattlesnake", "family": "reptile", "genus": "Crotalus", "species": "horridus", "avg_lifespan_yrs": 15, "avg_weight_kg": 1.1 }
 { "id": "4_9", "name": "Leatherback Sea Turtle", "family": "reptile", "genus": "Dermochelys", "species": "coriacea", "avg_lifespan_yrs": 45, "avg_weight_kg": 500 }
+{ "id": "5_1", "name": "Monarch Butterfly", "family": "invertebrate", "genus": "Danaus", "species": "plexippus", "avg_lifespan_yrs": 0.25, "avg_weight_kg": 0.0005 }
+{ "id": "5_2", "name": "Giant African Snail", "family": "invertebrate", "genus": "Achatina", "species": "fulica", "avg_lifespan_yrs": 5.0, "avg_weight_kg": 0.32 }
+{ "id": "5_3", "name": "Common Octopus", "family": "invertebrate", "genus": "Octopus", "species": "vulgaris", "avg_lifespan_yrs": 1.5, "avg_weight_kg": 10.0 }
+{ "id": "5_4", "name": "Atlantic Horseshoe Crab", "family": "invertebrate", "genus": "Limulus", "species": "polyphemus", "avg_lifespan_yrs": 20.0, "avg_weight_kg": 1.5 }
+{ "id": "5_5", "name": "Black Widow Spider", "family": "invertebrate", "genus": "Latrodectus", "species": "mactans", "avg_lifespan_yrs": 3.0, "avg_weight_kg": 0.001 }
+{ "id": "5_6", "name": "American Lobster", "family": "invertebrate", "genus": "Homarus", "species": "americanus", "avg_lifespan_yrs": 50.0, "avg_weight_kg": 7.0 }
+{ "id": "5_7", "name": "Honeybee", "family": "invertebrate", "genus": "Apis", "species": "mellifera", "avg_lifespan_yrs": 0.2, "avg_weight_kg": 0.0001 }
+{ "id": "5_8", "name": "Blue Ringed Octopus", "family": "invertebrate", "genus": "Hapalochlaena", "species": "maculosa", "avg_lifespan_yrs": 0.5, "avg_weight_kg": 0.026 }
+{ "id": "5_9", "name": "Japanese Spider Crab", "family": "invertebrate", "genus": "Macrocheira", "species": "kaempferi", "avg_lifespan_yrs": 100.0, "avg_weight_kg": 19.0 }
+{ "id": "5_10", "name": "European Garden Spider", "family": "invertebrate", "genus": "Araneus", "species": "diadematus", "avg_lifespan_yrs": 1.0, "avg_weight_kg": 0.0007 }
