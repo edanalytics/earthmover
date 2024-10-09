@@ -466,7 +466,6 @@ class inLineSource(Source):
 
     def execute(self):
         super().execute()
-        print(self.orientation)
 
         try:
             self.data = self.read_inLineSource()
