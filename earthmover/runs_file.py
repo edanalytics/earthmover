@@ -6,6 +6,8 @@ import time
 
 from typing import Dict, List, Optional
 from typing import TYPE_CHECKING
+
+from earthmover.nodes.source import inLineSource
 if TYPE_CHECKING:
     from earthmover.earthmover import Earthmover
     from earthmover.nodes.node import Node
@@ -157,9 +159,10 @@ class RunsFile:
 
             if f"$sources.{source.name}" not in node_data.keys():
                 continue
-
-            if not source.is_remote and source.file and not os.path.isdir(source.file):
-                sources_hash += self._get_file_hash(source.file)
+            
+            if not isinstance(source, inLineSource):
+                if not source.is_remote and source.file and not os.path.isdir(source.file):
+                    sources_hash += self._get_file_hash(source.file)
 
         if sources_hash:
             sources_hash = self._get_string_hash(sources_hash)

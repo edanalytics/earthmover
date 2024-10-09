@@ -93,7 +93,7 @@ class GroupByOperation(Operation):
         for new_col_name, func in self.create_columns_dict.items():
 
             _pieces = re.findall(
-                "([A-Za-z0-9_]*)\(([A-Za-z0-9_]*)?,?(.*)?\)",
+                r"([A-Za-z0-9_]*)\(([A-Za-z0-9_]*)?,?(.*)?\)",
                 func
             )[0]
 
