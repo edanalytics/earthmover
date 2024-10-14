@@ -57,7 +57,7 @@ class Earthmover:
         skip_hashing: bool = False,
         cli_state_configs: Optional[dict] = None,
         results_file: str = "",
-        overrides: Optional[str] = [],
+        overrides: Optional[dict] = None,
     ):
         self.do_generate = True
         self.force = force
