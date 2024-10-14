@@ -174,6 +174,9 @@ def main(argv=None):
 
     if args.set and len(args.set)%2 != 0: # odd number of overrides
         logger.error("overrides specified with --set must be followed by an even number of strings (key value key value ...)")
+    overrides = None
+    if args.set:
+        overrides = dict(zip(args.set[::2], args.set[1::2]))
 
     # Update state configs with those forced via the command line.
     cli_state_configs = {}
@@ -196,7 +199,7 @@ def main(argv=None):
             skip_hashing=args.skip_hashing,
             cli_state_configs=cli_state_configs,
             results_file=args.results_file,
-            overrides=args.set,
+            overrides=overrides,
         )
 
     except Exception as err:

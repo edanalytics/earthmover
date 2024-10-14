@@ -42,9 +42,9 @@ class YamlMapping(dict):
     
     @staticmethod
     def autocast(value):
-        if value.lower() in ['true', 'yes', 'on']:
+        if value.lower() in ['true', 'yes', 'on', 't', 'y']:
             return True
-        elif value.lower() in ['false', 'no', 'off']:
+        elif value.lower() in ['false', 'no', 'off', 'f', 'n']:
             return False
         elif '.' in value:
             try:
