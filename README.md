@@ -759,6 +759,14 @@ earthmover -v
 earthmover --version
 ```
 
+Override values in the [config file](#yaml-configuration) with `--set`, for example
+```bash
+earthmover run --set config.tmp_dir path/to/another/dir/
+earthmover run --set sources.schools.file './my schools with spaces.csv'
+earthmover run --set destinations.my_dest.extension ndjson destinations.my_dest.linearize True
+```
+(The flag must be followed by a set of key-value pairs.)
+
 
 # Features
 This tool includes several special features:
