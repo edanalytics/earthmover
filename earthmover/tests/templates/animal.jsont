@@ -4,6 +4,6 @@
     "family": "{{family}}",
     "genus": "{{genus}}",
     "species": "{{species}}",
-    "avg_lifespan_yrs": {{av_lifespan_yrs}},
+    "avg_lifespan_yrs": {{avg_lifespan_yrs}},
     "avg_weight_kg": {{avg_weight_kg}}
 }

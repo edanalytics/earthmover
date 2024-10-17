@@ -1,3 +1,114 @@
+### v0.4.0
+<details>
+<summary>Released 2024-10-16</summary>
+
+* feature: add support for Python 3.12, with corresponding updates to core dataframe dependencies
+* feature: add `--set` flag for overriding values within `earthmover.yml` from the command line
+
+</details>
+
+
+### v0.3.8
+<details>
+<summary>Released 2024-09-06</summary>
+
+* bugfix: Jinja in destination `header` failed if dataframe is empty
+
+</details>
+
+
+### v0.3.7
+<details>
+<summary>Released 2024-09-04</summary>
+
+* feature: implementing a limit_rows operation
+* feature: add support for a `require_rows` boolean or non-negative int on any node
+* feature: add support for Jinja in a destination node header and footer
+* bugfix: union fails with duplicate columns
+
+</details>
+
+
+### v0.3.6
+<details>
+<summary>Released 2024-08-07</summary>
+
+* feature: add `json_array_agg` function to `group_by` operation
+* feature: select all columns using "*" in `modify_columns` operation
+* internal: set working directory to the location of the `earthmover.yaml` file
+* documentation: add information on `earthmover init` and `earthmover clean` to the README
+* bugfix: fix bug with `earthmover clean` that could have removed earthmover.yaml files
+
+</details>
+
+
+### v0.3.5
+<details>
+<summary>Released 2024-07-12</summary>
+
+* feature: add `earthmover init` command to initialize a new sample project in the expected bundle structure
+* internal: expand test run to include the new `debug` and `flatten` operations, as well as a nested JSON source file
+* internal: improve customization in write behavior in new file destinations
+* bugfix: Fix bug when writing null values in `FileDestination`
+
+</details>
+
+
+### v0.3.4
+<details>
+<summary>Released 2024-06-26</summary>
+
+* hotfix: Fix bug when writing out JSON in `FileDestination`
+
+</details>
+
+
+### v0.3.3
+<details>
+<summary>Released 2024-06-18</summary>
+
+* hotfix: Resolve incompatible package dependencies
+* hotfix: Fix type casting of nested JSON for destination templates
+
+</details>
+
+### v0.3.2
+<details>
+
+<summary>Released 2024-06-14</summary>
+
+* feature: Add `DebugOperation` for logging data head, tail, columns, or metadata midrun
+* feature: Add `FlattenOperation` for splitting and exploding string columns into values
+* feature: Add optional 'fill_missing_columns' field to `UnionOperation` to fill disjunct columns with nulls, instead of raising an error (default `False`)
+* feature: Add `git_auth_timeout` config when entering Git credentials during package composition
+* feature: [Add `earthmover clean` command that removes local project artifacts](https://github.com/edanalytics/earthmover/pull/87)
+* feature: only output compiled template during `earthmover compile`
+* feature: Render full row into JSON lines when `template` is undefined in `FileDestination`
+* internal: Move `FileSource` size-checking and `FtpSource` FTP-connecting from compile to execute
+* internal: Move template-file check from compile to execute in `FileDestination`
+* internal: Allow filepaths to be passed to an optional `FileSource`, and check for file before creating empty dataframe
+* internal: Build an empty dataframe if an empty folder is passed to an optional `FileSource`
+* internal: fix some examples in README
+* internal: remove GitPython dependency
+* bugfix: fix bug in `FileDestination` where `linearize: False` resulted in BOM characters
+* bugfix: fix bug where nested JSON would be loaded as a stringified Python dictionary
+* bugfix: [Ensure command list in help menu and log output is always consistent](https://github.com/edanalytics/earthmover/pull/87)
+* bugfix: fix bug in `ModifyColumnsOperation` where `__row_data__` was not exposed in Jinja templating
+
+</details>
+
+
+### v0.3.1
+<details>
+
+<summary>Released 2024-04-26</summary>
+
+* internal: allow any ordering of Transformations during graph-building in compile
+* internal: only create a `/packages` dir when `earthmover deps` succeeds
+
+</details>
+
+
 ### v0.3.0
 <details>
 

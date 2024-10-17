@@ -93,7 +93,7 @@ class GroupByOperation(Operation):
         for new_col_name, func in self.create_columns_dict.items():
 
             _pieces = re.findall(
-                "([A-Za-z0-9_]*)\(([A-Za-z0-9_]*)?,?(.*)?\)",
+                r"([A-Za-z0-9_]*)\(([A-Za-z0-9_]*)?,?(.*)?\)",
                 func
             )[0]
 
@@ -145,12 +145,13 @@ class GroupByOperation(Operation):
 
         :param agg_type:
         :param column:
-        :param separator:
+        :param separator: usually a string to separate list elements, except in the case of json_array_agg where it specifies a data type
         :return:
         """
         agg_lambda_mapping = {
             'agg'      : lambda x: separator.join(x[column]),
             'aggregate': lambda x: separator.join(x[column]),
+            'json_array_agg': lambda x: x[column].to_json(orient="records") if separator == "str" else f"[{','.join(x[column])}]",
             'avg'      : lambda x: pd.to_numeric(x[column]).sum() / max(1, len(x)),
             'count'    : lambda x: len(x),
             'max'      : lambda x: pd.to_numeric(x[column]).max(),
@@ -171,4 +172,3 @@ class GroupByOperation(Operation):
             'variance' : lambda x: pd.to_numeric(x[column]).var(),
         }
         return agg_lambda_mapping.get(agg_type)
-

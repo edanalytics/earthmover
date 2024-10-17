@@ -41,6 +41,9 @@ sources:
   zoo_inventories:
     file: ${BASE_DIR}/sources/inventories.csv
     header_rows: 1
+  
+  cities:
+    file: ${BASE_DIR}/sources/cities.jsonl
 
 
 
@@ -56,6 +59,7 @@ transformations:
       - operation: modify_columns
         columns:
           id: {%raw%}1_{{value}}{%endraw%}
+          "*": "{%raw%}{{value|trim}}{%endraw%}"
 
   bird_species:
     source: $sources.bird_species
@@ -239,6 +243,8 @@ transformations:
           - species
         new_column: scientific_name
         separator: " "
+      - operation: limit_rows
+        count: 10 # this should do nothing, since there are only 4 big cats in the dataset
 
   total_of_each_species:
     source: $transformations.joined_inventories
@@ -262,6 +268,93 @@ transformations:
           entity: species
           count_column: total_count
 
+  {% set months = ["January","February","March","April","May","June","July","August","September","October","November","December"] %}
+  cities_avg_weather_wide:
+    source: $sources.cities
+    operations:
+      - operation: keep_columns
+        columns:
+          - city
+          - state
+          - weather
+      - operation: add_columns
+        columns:
+          {% for month in months %}
+          avg_days_rain_{{month}}: "{%raw%}{{weather.avg_days_of_rain.{%endraw%}{{month}}{%raw%}}}{%endraw%}"
+          avg_high_temp_{{month}}: "{%raw%}{{weather.temperatures.avg_highs.{%endraw%}{{month}}{%raw%}}}{%endraw%}"
+          avg_low_temp_{{month}}: "{%raw%}{{weather.temperatures.avg_lows.{%endraw%}{{month}}{%raw%}}}{%endraw%}"
+          {% endfor %}
+          avg_days_rain_year: "{%raw%}{{{%endraw%}{%for month in months%}weather.avg_days_of_rain.{{month}}|int{%if not loop.last%} + {%endif%}{%endfor%}{%raw%}}}{%endraw%}"
+          avg_high_temp: "{%raw%}{{(({%endraw%}{%for month in months%}weather.temperatures.avg_highs.{{month}}|int{%if not loop.last%} + {%endif%}{%endfor%}{%raw%})/12)|int}}{%endraw%}"
+          avg_low_temp: "{%raw%}{{(({%endraw%}{%for month in months%}weather.temperatures.avg_lows.{{month}}|int{%if not loop.last%} + {%endif%}{%endfor%}{%raw%})/12)|int}}{%endraw%}"
+      - operation: drop_columns
+        columns:
+          - weather
+  cities_area_codes:
+    source: $sources.cities
+    operations:
+      - operation: keep_columns
+        columns:
+          - city
+          - state
+          - area_codes
+      - operation: flatten
+        flatten_column: area_codes
+        value_column: area_code
+      - operation: group_by
+        group_by_columns:
+          - city
+          - state
+        create_columns:
+          num_area_codes: count()
+  cities_zip_codes:
+    source: $sources.cities
+    operations:
+      - operation: keep_columns
+        columns:
+          - city
+          - state
+          - zip_codes
+      - operation: flatten
+        flatten_column: zip_codes
+        value_column: zip_code
+      - operation: group_by
+        group_by_columns:
+          - city
+          - state
+        create_columns:
+          num_zip_codes: count()
+  cities_code_stats:
+    source: $transformations.cities_area_codes
+    operations:
+      - operation: join
+        sources:
+          - $transformations.cities_zip_codes
+        join_type: inner
+        left_keys:
+          - city
+          - state
+        right_keys:
+          - city
+          - state
+      - operation: debug
+        function: head
+        rows: 2
+        transpose: True
+  families:
+    source: $transformations.animal_species
+    operations:
+      - operation: group_by
+        group_by_columns:
+          - family
+        create_columns:
+          all_lifespans: json_array_agg(avg_lifespan_yrs)
+          all_lifespans_quoted: json_array_agg(avg_lifespan_yrs,str)
+      - operation: keep_columns
+        columns:
+          - family
+          - all_lifespans
+          - all_lifespans_quoted
 
 
 destinations:
@@ -291,3 +384,21 @@ destinations:
     extension: jsonl
     linearize: True
   {% endfor %}
+
+  cities_weather:
+    source: $transformations.cities_avg_weather_wide
+    template: ${BASE_DIR}/templates/verbatim.jsont
+    extension: jsonl
+    linearize: False
+
+  cities_code_stats:
+    source: $transformations.cities_code_stats
+    template: ${BASE_DIR}/templates/verbatim.jsont
+    extension: jsonl
+    linearize: True
+
+  families:
+    source: $transformations.families
+    template: ${BASE_DIR}/templates/families.jsont
+    extension: jsonl
+    linearize: True

@@ -4,7 +4,9 @@ import json
 import logging
 import tempfile
 import networkx as nx
+import pathlib
 import os
+import shutil
 import time
 import datetime
 import pandas as pd
@@ -18,10 +20,12 @@ from earthmover.nodes.destination import Destination
 from earthmover.nodes.source import Source
 from earthmover.nodes.transformation import Transformation
 from earthmover.yaml_parser import JinjaEnvironmentYamlLoader
+from earthmover.yaml_parser import YamlMapping
 from earthmover import util
 
 from typing import List, Optional
 
+COMPILED_YAML_FILE = "./earthmover_compiled.yaml"
 
 class Earthmover:
     """
@@ -38,6 +42,7 @@ class Earthmover:
         "show_stacktrace": False,
         "tmp_dir": tempfile.gettempdir(),
         "show_progress": False,
+        "git_auth_timeout": 60
     }
 
     sources: List[Source] = []
@@ -52,17 +57,17 @@ class Earthmover:
         skip_hashing: bool = False,
         cli_state_configs: Optional[dict] = None,
         results_file: str = "",
+        overrides: Optional[dict] = None,
     ):
         self.do_generate = True
         self.force = force
         self.skip_hashing = skip_hashing
 
         self.results_file = results_file
-        self.config_file = config_file
+        self.config_file = os.path.abspath(config_file)
+        self.overrides = overrides
+        self.compiled_yaml_file = COMPILED_YAML_FILE
         self.error_handler = ErrorHandler(file=self.config_file)
-
-        # Set a directory for installing packages
-        self.packages_dir = os.path.join(os.getcwd(), 'packages')
 
         ### Parse the user-provided config file and retrieve project-configs, macros, and parameter defaults.
         self.params = json.loads(params) if params else {}
@@ -84,16 +89,21 @@ class Earthmover:
             logging.getLevelName( self.state_configs['log_level'].upper() )
         )
 
+        # Set current working directory to the location of the config file.
+        os.chdir(os.path.dirname(self.config_file))
+
+        # convert state_configs to YamlMapping so we can inject CLI overrides
+        self.state_configs = YamlMapping().update(self.state_configs)
+        self.state_configs = self.inject_cli_overrides(self.state_configs, "config.")
+        
         # Prepare the output directory for destinations.
         self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
-        if not os.path.isdir(self.state_configs['output_dir']):
-            self.logger.info(
-                f"creating output directory {self.state_configs['output_dir']}"
-            )
-            os.makedirs(self.state_configs['output_dir'], exist_ok=True)
 
         # Set the temporary directory in cases of disk-spillage.
         dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
+
+        # Set a directory for installing packages.
+        self.packages_dir = os.path.join(os.getcwd(), 'packages')
 
         ### Initialize a dictionary for tracking run metadata (for structured output)
         self.metadata = {
@@ -127,8 +137,15 @@ class Earthmover:
 
         return configs
 
+    def inject_cli_overrides(self, configs, prefix=None):
+        # parse self.overrides into configs:
+        if self.overrides:
+            for key, value in self.overrides.items():
+                if not prefix or key.startswith(prefix):
+                    configs.set_path(key.lstrip(prefix), value)
+        return configs
 
-    def compile(self):
+    def compile(self, to_disk: bool = False):
         """
         Parse optional packages, iterate the node configs, compile each Node, and build the graph.
         Save the Nodes to their `Earthmover.{node_type}` objects.
@@ -141,7 +158,9 @@ class Earthmover:
 
         ### Optionally merge packages to update user-configs and write the composed YAML to disk.
         self.user_configs = self.merge_packages() or self.user_configs
-        self.user_configs.to_disk("./earthmover_compiled.yaml")
+        if to_disk:
+            self.user_configs.to_disk(self.compiled_yaml_file)
+        self.user_configs = self.inject_cli_overrides(self.user_configs)
 
         ### Compile the nodes and add to the graph type-by-type.
         self.sources = self.compile_node_configs(
@@ -174,12 +193,14 @@ class Earthmover:
         """
         compiled_nodes = []
 
+        # Complete first pass to add nodes to graph.
         for name, config in node_configs.items():
             node = node_class(name, config, earthmover=self)
             compiled_nodes.append(node)
-
-            # Add the node and any source edges to the graph.
             self.graph.add_node(node.full_name, data=node)
+        
+        # Complete second pass to add edges between nodes.
+        for node in compiled_nodes:
             for source in node.upstream_sources:
                 try:
                     self.graph.add_edge(source, node.full_name)
@@ -222,6 +243,12 @@ class Earthmover:
         Iterate subgraphs in `Earthmover.graph` and execute each Node in order.
         :return:
         """
+        if not os.path.isdir(self.state_configs['output_dir']):
+            self.logger.info(
+                f"creating output directory {self.state_configs['output_dir']}"
+            )
+            os.makedirs(self.state_configs['output_dir'], exist_ok=True)
+
         for idx, component in enumerate(nx.weakly_connected_components(graph)):
             self.logger.debug(f"processing component {idx}")
 
@@ -384,9 +411,10 @@ class Earthmover:
 
     def test(self, tests_dir: str):
         # delete files in tests/output/
-        output_dir = os.path.join(tests_dir, "outputs")
-        for fp in os.listdir(output_dir):
-            os.remove(os.path.join(output_dir, fp))
+        output_dir = pathlib.Path(tests_dir, "outputs")
+        output_dir.mkdir(exist_ok=True)
+        for fp in (output_dir).iterdir():
+            pathlib.Path(fp).unlink()
 
         # run earthmover!
         self.generate(selector="*")
@@ -425,6 +453,7 @@ class Earthmover:
         # Check that at least one package is defined
         if all(False for _ in self.package_graph.successors('root')):
             self.logger.warning("No packages have been defined!")
+            exit(1)
 
         # Install each package (and any nested sub-packages) into the packages directory
         self.build_package_graph(root_node='root', package_subgraph=self.package_graph, packages_dir=self.packages_dir, install=True)
@@ -470,7 +499,7 @@ class Earthmover:
         package_graph = Graph(error_handler=self.error_handler)  # Tracks package hierarchy
 
         # Create a root package to be the root of the packages directed graph
-        root_package = Package('root', configs, earthmover=self, package_path=os.getcwd())
+        root_package = Package('root', configs, earthmover=self, package_path=os.path.dirname(self.config_file))
         root_package.config_file = self.config_file
         package_graph.add_node('root', package=root_package)
 
@@ -514,7 +543,7 @@ class Earthmover:
             # Install packages if necessary, or retrieve path to package yaml file
             package_node = self.package_graph.nodes[package_name]
             if install:
-                installed_package_yaml = package_node['package'].install(packages_dir)
+                installed_package_yaml = package_node['package'].install(packages_dir, git_auth_timeout=self.state_configs['git_auth_timeout'])
             else:
                 package_node['package'].package_path = os.path.join(packages_dir, package_name)
                 installed_package_yaml = package_node['package'].get_installed_config_file()
@@ -536,3 +565,28 @@ class Earthmover:
                 nested_package_dir = os.path.join(package_node['package'].package_path, 'packages')
                 nested_package_subgraph = nx.ego_graph(self.package_graph, package_name)
                 self.build_package_graph(root_node=package_name, package_subgraph=nested_package_subgraph, packages_dir=nested_package_dir, install=install)
+
+    def clean(self):
+        """
+        Removes local artifacts created by `earthmover run` and `earthmover compile`
+        :return:
+        """
+
+        was_noop = True
+        output_dir = self.state_configs['output_dir']
+        if os.path.isdir(output_dir):
+            if os.path.isfile(os.path.join(output_dir, "earthmover.yaml")) or os.path.isfile(os.path.join(output_dir, "earthmover.yml")):
+                # only remove directory if it doesn't contain the config file
+                # (output_dir contains earthmover.yaml by default)
+                self.logger.warning(f"Not removing directory '{output_dir}' because it contains the project's config file")
+            else:
+                shutil.rmtree(output_dir, ignore_errors = True)
+                was_noop = False
+
+        if os.path.isfile(self.compiled_yaml_file):
+            os.remove(self.compiled_yaml_file)
+            was_noop = False
+
+        if was_noop:
+            self.logger.warning("Nothing to remove!")
+            exit(1)

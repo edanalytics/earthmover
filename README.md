@@ -33,9 +33,11 @@ Guides and Resources -->
 pip install earthmover
 ```
 
+To see Earthmover in action, run `earthmover init` to spin up a ready-to-run starter project.
 
 # Setup
-Running the tool requires
+
+In general, the tool requires
 1. [source data](#source-data), such as CSV or TSV files or a relational database table
 1. Jinja [templates](#templates) defining the desired output format (JSON, XML, etc.)
 1. a [YAML configuration](#yaml-configuration) file specifying the source data, doing any necessary transformations (joins, value mappings, etc.), and destinations (output files) to write to
@@ -58,7 +60,7 @@ After transforming the source data, this tool converts it to a text-based file l
 
 Briefly, Jinja interpolates variables in double curly braces `{{...}}` to actual values, as well as providing other convenience functionality, such as string manipulation functions, logic blocks like if-tests, looping functionality, and much more. See the examples in `example_projects/`, or check out [the official Jinja documentation](https://jinja.palletsprojects.com/en/3.1.x/).
 
-Note that templates may [include](https://jinja.palletsprojects.com/en/3.1.x/templates/#include) other templates, specified relative to the path from which `earthmover` is run - see `example_projects/06_subtemplates/earthmover.yaml` and `example_projects/06_subtemplates/mood.jsont` for an example.
+Note that templates may [include](https://jinja.palletsprojects.com/en/3.1.x/templates/#include) other templates, specified relative to the location of the `earthmover` YAML configuration file - see `example_projects/06_subtemplates/earthmover.yaml` and `example_projects/06_subtemplates/mood.jsont` for an example.
 
 
 ## YAML configuration
@@ -85,8 +87,8 @@ transA:                           transA:
     - operation: add_columns          - operation: add_columns
       source: $sources.A
       columns:                          columns:
-        - A: "a"                          - A: "a"
-        - B: "b"                          - B: "b"
+        A: "a"                            A: "a"
+        B: "b"                            B: "b"
     - operation: union                - operation: union
       sources:                          sources:
       - $transformations.transA
@@ -133,6 +135,7 @@ config:
   parameter_defaults:
     SOURCE_DIR: ./sources/
   show_progress: True
+  git_auth_timeout: 120
 
 ```
 * (optional) `output_dir` determines where generated JSONL is stored. The default is `./`.
@@ -148,7 +151,7 @@ config:
 * (optional) Specify Jinja `macros` which will be available within any Jinja template content throughout the project. (This can slow performance.)
 * (optional) Specify `parameter_defaults` which will be used if the user fails to specify a particular [parameter](#command-line-parameters) or [environment variable](#environment-variable-references).
 * (optional) Specify whether to `show_progress` while processing, via a Dask progress bar.
-
+* (optional) Specify the `git_auth_timeout` (in seconds) to wait for the user to enter Git credentials if needed during package installation; default is 60. See [project composition](#project-composition) for more details on package installation.
 
 ### **`definitions`**
 The `definitions` section of the [YAML configuration](#yaml-configuration) is an optional section you can use to define configurations which are reused throughout the rest of the configuration. `earthmover` does nothing special with this section, it's just interpreted by the YAML parser. However, this can be a very useful way to keep your YAML configuration [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) &ndash; rather than redefine the same values, Jinja phrases, etc. throughout your config, define them once in this section and refer to them later using [YAML anchors, aliases, and overrides](https://www.linode.com/docs/guides/yaml-anchors-aliases-overrides-extensions/).
@@ -207,7 +210,7 @@ packages:
 ```
 Each package must have a name (which will be used to name the folder where it is installed in `/packages`) such as `year_end_assessment` or `student_id_macros` in this example. Two sources of `packages` are currently supported:
 * GitHub packages: Specify the URL of the repository containing the package. If the package YAML configuration is not in the top level of the repository, include the path to the folder with the the optional `subdirectory`.
-* Local packages: Specify the relative or absolute path to the folder containing the package YAML configuration.
+* Local packages: Specify the path to the folder containing the package YAML configuration. Paths may be absolute or relative paths to the location of the `earthmover` YAML configuration file.
 
 
 ### **`sources`**
@@ -247,7 +250,7 @@ sources:
       - low_grade|int <= high_grade|int
 ```
 Each source must have a name (which is how it is referenced by transformations and destinations) such as `districts`, `courses`, `tx_schools`, or `more_schools` in this example. Three types of `sources` are currently supported:
-* File sources must specify the relative or absolute path to the source `file`. Supported file types are
+* File sources must specify the path to the source `file`. Paths may be absolute or relative paths to the location of the `earthmover` YAML configuration file. Supported file types are
   - Row-based formats:
     - `.csv`: Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8).
     - `.tsv`: Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8).
@@ -318,7 +321,10 @@ Concatenates the transformation source with one or more sources sources of the s
           - $sources.courses_list_1
           - $sources.courses_list_2
           - $sources.courses_list_3
+        fill_missing_columns: False
 ```
+By default, unioning sources with different columns raises an error.
+Set `fill_missing_columns` to `True` to union all columns into the output dataframe.
 </details>
 
 
@@ -371,10 +377,10 @@ Adds columns with specified values.
 ```yaml
       - operation: add_columns
         columns:
-          - new_column_1: value_1
-          - new_column_2: "{%raw%}{% if True %}Jinja works here{% endif %}{%endraw%}"
-          - new_column_3: "{%raw%}Reference values from {{AnotherColumn}} in this new column{%endraw%}"
-          - new_column_4: "{%raw%}{% if col1>col2 %}{{col1|float + col2|float}}{% else %}{{col1|float - col2|float}}{% endif %}{%endraw%}"
+          new_column_1: value_1
+          new_column_2: "{%raw%}{% if True %}Jinja works here{% endif %}{%endraw%}"
+          new_column_3: "{%raw%}Reference values from {{AnotherColumn}} in this new column{%endraw%}"
+          new_column_4: "{%raw%}{% if col1>col2 %}{{col1|float + col2|float}}{% else %}{{col1|float - col2|float}}{% endif %}{%endraw%}"
 ```
 Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers to another column's value. Any [Jinja filters](https://jinja.palletsprojects.com/en/3.1.x/templates/#builtin-filters) and [math operations](https://jinja.palletsprojects.com/en/3.0.x/templates/#math) should work. Reference the current row number with `{{__row_number__}}` or a dictionary containing the row data with `{{__row_data__['column_name']}}`. *You must wrap Jinja expressions* in `{%raw%}...{%endraw%}` to avoid them being parsed at YAML load time.
 </details>
@@ -459,6 +465,7 @@ Modify the values in the specified columns.
           state_abbr: "{%raw%}XXX{{value|reverse}}XXX{%endraw%}"
           school_year: "{%raw%}20{{value[-2:]}}{%endraw%}"
           zipcode: "{%raw%}{{ value|int ** 2 }}{%endraw%}"
+          "*": "{%raw%}{{value|trim}}{%endraw%}" # Edit all values in dataframe
 ```
 Use Jinja: `{{value}}` refers to this column's value; `{{AnotherColumn}}` refers to another column's value. Any [Jinja filters](https://jinja.palletsprojects.com/en/3.1.x/templates/#builtin-filters) and [math operations](https://jinja.palletsprojects.com/en/3.0.x/templates/#math) should work. Reference the current row number with `{{__row_number__}}` or a dictionary containing the row data with `{{__row_data__['column_name']}}`. *You must wrap Jinja expressions* in `{%raw%}...{%endraw%}` to avoid them being parsed at YAML load time.
 </details>
@@ -478,7 +485,8 @@ Map the values of a column.
         mapping:
           old_value_1: new_value_1
           old_value_2: new_value_2
-        # or a CSV/TSV with two columns (from, to) and header row:
+        # or a CSV/TSV with two columns (from, to) and header row
+        # paths may be absolute or relative paths to the location of the `earthmover` YAML configuration file
         map_file: path/to/mapping.csv
 ```
 </details>
@@ -565,6 +573,72 @@ By default, rows are sorted ascendingly. Set `descending: True` to reverse this 
 </details>
 
 
+<details>
+<summary><code>limit_rows</code></summary>
+
+Limit the number of rows in the dataframe.
+```yaml
+      - operation: limit_rows
+        count: 5 # required, no default
+        offset: 10 # optional, default 0
+```
+(If fewer than `count` rows in the dataframe, they will all be returned.)
+</details>
+
+
+<details>
+<summary><code>flatten</code></summary>
+
+Split values in a column and create a copy of the row for each value.
+```yaml
+      - operation: flatten
+        flatten_column: my_column
+        left_wrapper: '["' # characters to trim from the left of values in `flatten_column`
+        right_wrapper: '"]' # characters to trim from the right of values in `flatten_column`
+        separator: ","  # the string by which to split values in `flatten_column`
+        value_column: my_value # name of the new column to create with flattened values
+        trim_whitespace: " \t\r\n\"" # characters to trim from `value_column` _after_ flattening
+```
+The defaults above are designed to allow flattening JSON arrays (in a string) with simply
+```yaml
+      - operation: flatten
+        flatten_column: my_column
+        value_column: my_value
+```
+Note that for empty string values or empty arrays, a row will still be preserved. These can be removed in a second step with a `filter_rows` operation. Example:
+```yaml
+# Given a dataframe like this:
+#   foo     bar    to_flatten
+#   ---     ---    ----------
+#   foo1    bar1   "[\"test1\",\"test2\",\"test3\"]"
+#   foo2    bar2   ""
+#   foo3    bar3   "[]"
+#   foo4    bar4   "[\"test4\",\"test5\",\"test6\"]"
+# 
+# a flatten operation like this:
+      - operation: flatten
+        flatten_column: to_flatten
+        value_column: my_value
+# will produce a dataframe like this:
+#   foo     bar    my_value
+#   ---     ---    --------
+#   foo1    bar1   test1
+#   foo1    bar1   test2
+#   foo1    bar1   test3
+#   foo2    bar2   ""
+#   foo3    bar3   ""
+#   foo4    bar4   test4
+#   foo4    bar4   test5
+#   foo4    bar4   test6
+#
+# and you can remove the blank rows if needed with a further operation:
+      - operation: filter_rows
+        query: my_value == ''
+        behavior: exclude
+```
+</details>
+
+
 #### Group operations
 
 <details>
@@ -593,6 +667,7 @@ Valid aggregation functions are
 * `std(column)` - the standard deviation of (numeric) values in `column` for each group
 * `var(column)` - the variance of (numeric) values in `column` for each group
 * `agg(column,separator)` - the values of `column` in each group are concatenated, delimited by `separator` (default `separator` is none)
+* `json_array_agg(column,[str])` - the values of `column` in each group are concatenated into a JSON array (`[1,2,3]`). If the optional `str` argument is provided, the values in the array are quoted (`["1", "2", "3"]`)
 
 Numeric aggregation functions will fail with errors if used on non-numeric column values.
 
@@ -607,6 +682,23 @@ Note the difference between `min()`/`max()` and `str_min()`/`str_max()`: given a
 
 </details>
 
+
+#### Debug operation
+
+<details>
+<summary><code>debug</code></summary>
+
+Sort rows by one or more columns.
+```yaml
+      - operation: debug
+        function: head | tail | describe | columns # default=head
+        rows: 10 # (optional, default=5; ignored if function=describe|columns)
+        transpose: True # (default=False; ignored when function=columns)
+        skip_columns: [a, b, c] # to avoid logging PII
+        keep_columns: [x, y, z] # to look only at specific columns
+```
+`function=head|tail` displays the `rows` first or last rows of the dataframe, respectively. (Note that on large dataframes, these may not truly be the first/last rows, due to Dask's memory optimizations.) `function=describe` shows statistics about the values in the dataframe. `function=columns` shows the column names in the dataframe. `transpose` can be helpful with very wide dataframes. `keep_columns` defaults to all columns, `skip_columns` defaults to no columns.
+</details>
 
 
 ### **`destinations`**
@@ -633,20 +725,18 @@ destinations:
     header: <html><body><h1>Course List:</h1>
     footer: </body></html>
 ```
-For each file you want materialized, provide the `source` and the `template` file &mdash; a text file (JSON, XML, HTML, etc.) containing Jinja with references to the columns of `source`. The materialized file will contain `template` rendered for each row of `source`, with an optional `header` prefix and `footer` postfix. Files are materialized using your specified `extension` (which is required).
+For each file you want materialized, provide the `source` and the `template` file &mdash; a text file (JSON, XML, HTML, etc.) containing Jinja with references to the columns of `source`. The materialized file will contain `template` rendered for each row of `source`, with an optional `header` prefix and `footer` postfix (both of which may contain Jinja, and which may reference `__row_data__` which is the first row of the data frame... a formulation such as `{%raw%}{% for k in __row_data__.pop('__row_data__').keys() %}{{k}}{% if not loop.last %},{% endif %}{% endfor %}{%endraw%}` may be useful). Files are materialized using your specified `extension` (which is required).
 
 If `linearize` is `True`, all line breaks are removed from the template, resulting in one output line per row. (This is useful for creating JSONL and other linear output formats.) If omitted, `linearize` is `True`.
 
 
 ## Global options
 
-Any source, transformation, or destination may also specify `debug: True` which will output the dataframe shape and columns after the node completes processing. This can be very useful while building and debugging.
-
-Additionally, the `show_progress` boolean flag can be specified on any source, transformation, or destination to display a progress bar while processing.
-
-Finally, `repartition` can be passed to any node to repartition the node in memory before continuing to the next node.
-Set either the number of bytes, or a text representation (e.g., "100MB") to shuffle data into new partitions of that size.
-(Note: this configuration is advanced, and its use may drastically affect performance.)
+Any source, transformation, or destination node may also specify
+* `debug: True`, which outputs the dataframe shape and columns after the node completes processing (this can be helpful for building and debugging)
+* `require_rows: True` or `require_rows: 10` to have earthmover exit with an error if 0 (for `True`) or less then 10 (for `10`) rows are present in the dataframe after the node completes processing
+* `show_progress: True` to display a progress bar while processing this node
+* `repartition: True` to repartition the node in memory before continuing to the next node; set either the number of bytes, or a text representation (e.g., "100MB") to shuffle data into new partitions of that size (Note: this configuration is advanced, and its use may drastically affect performance)
 
 # Usage
 Once you have the required [setup](#setup) and your source data, run the transformations with
@@ -654,6 +744,8 @@ Once you have the required [setup](#setup) and your source data, run the transfo
 earthmover run -c path/to/config.yaml
 ```
 If you omit the optional `-c` flag, `earthmover` will look for an `earthmover.yaml` in the current directory.
+
+To remove all files created by Earthmover, run `earthmover clean`
 
 See a help message with
 ```bash
@@ -666,6 +758,14 @@ See the tool version with
 earthmover -v
 earthmover --version
 ```
+
+Override values in the [config file](#yaml-configuration) with `--set`, for example
+```bash
+earthmover run --set config.tmp_dir path/to/another/dir/
+earthmover run --set sources.schools.file './my schools with spaces.csv'
+earthmover run --set destinations.my_dest.extension ndjson destinations.my_dest.linearize True
+```
+(The flag must be followed by a set of key-value pairs.)
 
 
 # Features
@@ -700,7 +800,7 @@ transformations:
     operations:
       - operation: add_columns
         columns:
-          - source_file: {{i}}
+          source_file: {{i}}
 {% endfor %}
   stacked:
     source: $transformations.source1
@@ -863,9 +963,11 @@ destinations:
 </details>
 
 ### Project Composition Considerations
-There is no limit to the number of packages that can be imported and no limit to how deeply they can be nested (i.e. packages can import other packages). However, there are a few things to keep in mind with using multiple packages.
-* If multiple packages at the same level (e.g. `projA/packages/pkgB` and `projA/packages/pkgC`, not `projA/packages/pkgB/packages/pkgC`) include same-named nodes, the package specified later in the `packages` list will overwrite. If the node is also specified in the top-level project, its version of the node will overwrite as usual.
-* A similar limitation exists for macros &ndash; a single definition of each macro will be applied everywhere in the project and packages using the same overwrite logic used for the nodes. When you are creating projects that are likely to be used as packages, consider including a namespace in the names of macros with more common operations, such as `assessment123_filter()` instead of the more generic `filter()`. 
+* The `config` section is **not** composed from the installed packages, with the exception of `macros` and `parameter_defaults`. Specify all desired configuration in the top-level project.
+
+* There is no limit to the number of packages that can be imported and no limit to how deeply they can be nested (i.e. packages can import other packages). However, there are a few things to keep in mind with using multiple packages.
+  - If multiple packages at the same level (e.g. `projA/packages/pkgB` and `projA/packages/pkgC`, not `projA/packages/pkgB/packages/pkgC`) include same-named nodes, the package specified later in the `packages` list will overwrite. If the node is also specified in the top-level project, its version of the node will overwrite as usual.
+  - A similar limitation exists for macros &ndash; a single definition of each macro will be applied everywhere in the project and packages using the same overwrite logic used for the nodes. When you are creating projects that are likely to be used as packages, consider including a namespace in the names of macros with more common operations, such as `assessment123_filter()` instead of the more generic `filter()`. 
 
 
 # Tests
@@ -890,6 +992,8 @@ Some details of the design of this tool are discussed below.
 1. Load the plain YAML string as a nested dictionary and begin building and processing the [DAG](#dag).
 
 Note that due to step (3) above, *runtime* Jinja expressions (such as column definitions for `add_columns` or `modify_columns` operations) should be wrapped with `{%raw%}...{%endraw%}` to avoid being parsed when the YAML is being loaded.
+
+The parsed YAML is written to a file called `earthmover_compiled.yaml` in your working directory during a `compile` command. This file can be used to debug issues related to compile-time Jinja or [project composition](#project-composition).
 
 
 ## DAG
@@ -945,17 +1049,17 @@ Generally you should separate the mappings, transformations, and structure of yo
 
 When dealing with sensitive source data, you may have to comply with security protocols, such as referencing sensitive data from a network storage location rather than copying it to your own computer. In this situation, option 2 above is a good choice.
 
-To facilitate [operationalization]($operationalization-practices), we recommended using [environment variables](#environment-variable-references) or [command-line parameters](#command-line-parameters) to pass input and output directories and filenames to `earthmover`, rather than hard-coding them into `earthmover.yaml`. For example, rather than
+To facilitate [operationalization]($operationalization-practices), we recommended using relative paths from the location of the `earthmover.yaml` file and [environment variables](#environment-variable-references) or [command-line parameters](#command-line-parameters) to pass filenames to `earthmover`, rather than hard-coding them into `earthmover.yaml`. For example, rather than
 ```yaml
 config:
-  output_dir: path/to/outputs/
+  output_dir: /path/to/outputs/
 ...
 sources:
   source_1:
-    file: path/to/inputs/source_file_1.csv
+    file: /path/to/inputs/source_file_1.csv
     header_rows: 1
   source_2:
-    file: path/to/inputs/source_file_2.csv
+    file: /path/to/inputs/source_file_2.csv
     header_rows: 1
 ...
 destinations:
@@ -973,11 +1077,13 @@ config:
 ...
 sources:
   source_1:
-    file: ${INPUT_DIR}${INPUT_FILE_1}
+    file: ${INPUT_FILE_1}
     header_rows: 1
   source_2:
-    file: ${INPUT_DIR}${INPUT_FILE_2}
+    file: ${INPUT_FILE_2}
     header_rows: 1
+  seed_1:
+    file: ./seeds/seed_1.csv
 ...
 destinations:
   output_1:
@@ -989,11 +1095,11 @@ destinations:
 ```
 and then run with
 ```bash
-earthmover earthmover.yaml -p '{ "OUTPUT_DIR": "path/to/outputs/", "INPUT_DIR": "path/to/inputs/", "INPUT_FILE_1": "source_file_1.csv", "INPUT_FILE_2": "source_file_2.csv" }'
+earthmover earthmover.yaml -p '{ "OUTPUT_DIR": "path/to/outputs/", "INPUT_FILE_1": "/path/source_file_1.csv", "INPUT_FILE_2": "/path/source_file_2.csv" }'
 ```
 Note that with this pattern you can also use [optional sources](#optional-sources) to only create one of the outputs if needed, for example
 ```bash
-earthmover earthmover.yaml -p '{ "OUTPUT_DIR": "path/to/outputs/", "INPUT_DIR": "path/to/inputs/", "INPUT_FILE_1": "source_file_1.csv" }'
+earthmover earthmover.yaml -p '{ "OUTPUT_DIR": "path/to/outputs/", "INPUT_FILE_1": "/path/source_file_1.csv" }'
 ```
 would only create `output_1` if `source_1` had `required: False` (since `INPUT_FILE_2` is missing).
 
