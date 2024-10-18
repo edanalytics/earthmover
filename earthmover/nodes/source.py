@@ -203,6 +203,7 @@ class FileSource(Source):
             'csv'     : 'csv',
             'dta'     : 'stata',
             'feather' : 'feather',
+            'fwf'     : 'fixedwidth',
             'html'    : 'html',
             'json'    : 'json',
             'jsonl'   : 'jsonl',
