@@ -36,6 +36,28 @@ sources:
     file: https://raw.githubusercontent.com/Teradata/kylo/master/samples/sample-data/csv/userdata3.csv
     # ^ from https://github.com/Teradata/kylo/tree/master/samples/sample-data/csv
     header_rows: 1
+  users4:
+    file: https://raw.githubusercontent.com/CerebralMastication/R-Cookbook/master/data/datafile.fwf
+    columns:
+      - last_name
+      - first_name
+      - birth_year
+      - death_year
+    colspec:
+      - [0,10]
+      - [11,20]
+      - [21,24]
+      - [25,29]
+
+transformations:
+  users4:
+    source: $sources.users4
+    operations:
+      - operation: add_columns
+        columns:
+          id: '{%raw%}{{range(1, 10000)|random}}{%endraw%}'
+          gender: '{%raw%}{{["M","F","O"]|random}}{%endraw%}'
+          country: 'United States'
 
 destinations:
   users/1:
@@ -50,6 +72,11 @@ destinations:
     linearize: True
   users/3:
     source: $sources.users3
+    template: ./templates/user.jsont
+    extension: jsonl
+    linearize: True
+  users/4:
+    source: $transformations.users4
     template: ./templates/user.jsont
     extension: jsonl
     linearize: True
