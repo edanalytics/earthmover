@@ -6,6 +6,7 @@ import tempfile
 import networkx as nx
 import pathlib
 import os
+import re
 import shutil
 import time
 import datetime
@@ -128,11 +129,23 @@ class Earthmover:
         """
         configs = JinjaEnvironmentYamlLoader.load_project_configs(filepath, params=self.params)
 
-        # Update project parameter defaults from the template, if any
+        # 1. Update project parameter defaults from the template, if any
         for key, val in configs.get("parameter_defaults", {}).items():
             self.params.setdefault(key, val)
 
-        # Prepend package macros to the project macro string. Later macro definitions in the string will overwrite earlier ones
+        # 2. There may be config keys that expect an environment variable but for which a default is also defined.
+        #     If no env var was passed by the user, apply the default value.
+        env_var_pattern = r'^\$\{[A-Z_]+\}$'
+        regex = re.compile(env_var_pattern)
+
+        for key, val in configs.items():
+            if isinstance(val, str) and regex.match(val):
+                # Combine `key: ${VAL}` with `VAL: default_val` to get `key: default_val`
+                val_as_env_var = val.replace("$", "").replace("{", "").replace("}", "")
+                if val_as_env_var in self.params:
+                    configs[key] = self.params[val_as_env_var]
+
+        # 3. Prepend package macros to the project macro string. Later macro definitions in the string will overwrite earlier ones
         self.macros = configs.get("macros", "").strip() + self.macros
 
         return configs
