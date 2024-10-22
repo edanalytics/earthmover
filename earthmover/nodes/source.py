@@ -95,7 +95,7 @@ class FileSource(Source):
     is_remote: bool = False
     allowed_configs: Tuple[str] = (
         'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
-        'file', 'type', 'columns', 'header_rows',
+        'file', 'type', 'columns', 'header_rows', 'rename_cols',
         'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
     )
 
@@ -121,6 +121,7 @@ class FileSource(Source):
                 raise
 
         # Columns are required if a source is optional.
+        self.rename_cols = self.error_handler.assert_get_key(self.config, 'rename_cols', dtype=bool, required=False, default=True)
         self.columns_list = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
 
         if self.optional and not self.columns_list:
@@ -165,7 +166,7 @@ class FileSource(Source):
                     self.size = os.path.getsize(self.file)
 
             # Verify the column list provided matches the number of columns in the dataframe.
-            if self.columns_list:
+            if self.columns_list and self.rename_cols:
                 _num_data_cols = len(self.data.columns)
                 _num_list_cols = len(self.columns_list)
                 if _num_data_cols != _num_list_cols:
@@ -174,8 +175,20 @@ class FileSource(Source):
                     )
                     raise
 
-            if self.columns_list:
                 self.data.columns = self.columns_list
+
+            # Or verify the required columns exist to be selected.
+            elif self.columns_list:
+                undefined_optional_fields = set(self.optional_fields).difference(self.data.columns)  # Columns to be added in post_execute()
+
+                for col in self.columns_list:
+                    if col not in self.data.columns and col not in self.optional_fields:
+                        self.error_handler.throw(
+                            f"Column not found in dataset and not marked as optional using `optional_fields`: {col}"
+                        )
+
+                self.data = self.data[set(self.columns_list).difference(undefined_optional_fields)]  # Subset columns, ignored undefined optionals.
+
 
             self.logger.debug(
                 f"source `{self.name}` loaded"
