@@ -144,7 +144,10 @@ class LocalPackage(Package):
         """
         super().install(packages_dir)
 
-        source_path = self.error_handler.assert_get_key(self.config, 'local', dtype=str, required=False)
+        # In order to handle nested dependencies, search for sub-packages
+        #   relative to the parent package's earthmover.yaml
+        source_dir = self.error_handler.assert_get_key(self.config, 'local', dtype=str, required=False)
+        source_path = os.path.join(os.path.dirname(self.config.__file__), source_dir)
 
         if not os.path.exists(source_path):
             self.error_handler.throw(
