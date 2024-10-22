@@ -180,14 +180,15 @@ class FileSource(Source):
             # Or verify the required columns exist to be selected.
             elif self.columns_list:
                 undefined_optional_fields = set(self.optional_fields).difference(self.data.columns)  # Columns to be added in post_execute()
+                expected_cols = list(set(self.columns_list).difference(undefined_optional_fields))   # Subset columns, ignoring undefined optionals.
 
-                for col in self.columns_list:
-                    if col not in self.data.columns and col not in self.optional_fields:
+                for col in expected_cols:
+                    if col not in self.data.columns:
                         self.error_handler.throw(
                             f"Column not found in dataset and not marked as optional using `optional_fields`: {col}"
                         )
 
-                self.data = self.data[set(self.columns_list).difference(undefined_optional_fields)]  # Subset columns, ignored undefined optionals.
+                self.data = self.data[expected_cols]  
 
 
             self.logger.debug(
