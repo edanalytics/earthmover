@@ -103,7 +103,7 @@ class Package:
                 for file_config in ('file', 'template'):
                     filepath = self.error_handler.assert_get_key(yaml_mapping[node_type][node], file_config, dtype=str, required=False, default=None)
                     if filepath and not os.path.isabs(filepath):
-                        yaml_mapping[node_type][node][file_config] = os.path.join(self.package_path, filepath.strip('./'))
+                        yaml_mapping[node_type][node][file_config] = os.path.abspath(os.path.join(self.package_path, filepath))
 
         # Replace relative paths for any map files in map_values operations
         for transformation in self.error_handler.assert_get_key(yaml_mapping, 'transformations', dtype=dict, required=False, default={}):
