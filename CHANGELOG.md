@@ -1,3 +1,7 @@
+### Unreleased changes
+* bugfix: `earthmover deps` failed to find nested local packages
+* bugfix: relative paths not resolved correct when using project composition
+
 ### v0.4.0
 <details>
 <summary>Released 2024-10-16</summary>
