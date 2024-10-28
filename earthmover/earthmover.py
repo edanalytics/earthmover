@@ -63,7 +63,7 @@ class Earthmover:
         self.force = force
         self.skip_hashing = skip_hashing
 
-        self.results_file = results_file
+        self.results_file = os.path.abspath(results_file)
         self.config_file = os.path.abspath(config_file)
         self.overrides = overrides
         self.compiled_yaml_file = COMPILED_YAML_FILE
@@ -397,16 +397,13 @@ class Earthmover:
             active_graph.draw()
         
         ### Create structured output results_file if necessary
-        if self.results_file:
-            results_path = os.path.abspath(self.results_file)
-
-            # create directory if not exists
-            os.makedirs(os.path.dirname(results_path), exist_ok=True)
+        if self.results_file:# create directory if not exists
+            os.makedirs(os.path.dirname(self.results_file), exist_ok=True)
 
             self.end_timestamp = datetime.datetime.now()
             self.metadata.update({"completed_at": self.end_timestamp.isoformat(timespec='microseconds')})
             self.metadata.update({"runtime_sec": (self.end_timestamp - self.start_timestamp).total_seconds()})
-            with open(results_path, 'w') as fp:
+            with open(self.results_file, 'w') as fp:
                 fp.write(json.dumps(self.metadata, indent=4))
 
 
