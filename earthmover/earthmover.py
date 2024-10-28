@@ -64,7 +64,6 @@ class Earthmover:
         self.skip_hashing = skip_hashing
 
         self.results_file = os.path.abspath(results_file) if results_file else None
-        print(self.results_file)
         self.config_file = os.path.abspath(config_file)
         self.overrides = overrides
         self.compiled_yaml_file = COMPILED_YAML_FILE
