@@ -397,7 +397,9 @@ class Earthmover:
             active_graph.draw()
         
         ### Create structured output results_file if necessary
-        if self.results_file:# create directory if not exists
+        if self.results_file:
+
+            # create directory if not exists
             os.makedirs(os.path.dirname(self.results_file), exist_ok=True)
 
             self.end_timestamp = datetime.datetime.now()
