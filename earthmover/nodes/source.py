@@ -102,7 +102,6 @@ class FileSource(Source):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.file = self.error_handler.assert_get_key(self.config, 'file', dtype=str, required=False)
-        print(f"self.file: {self.file}")
 
         #
         if not self.file:
