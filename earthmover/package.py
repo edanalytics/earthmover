@@ -102,7 +102,7 @@ class Package:
                 # These are the current key names that denote filepaths
                 for file_config in ('file', 'template'):
                     filepath = self.error_handler.assert_get_key(yaml_mapping[node_type][node], file_config, dtype=str, required=False, default=None)
-                    if filepath and not os.path.isabs(filepath) and "://" not in self.file:
+                    if filepath and not os.path.isabs(filepath) and "://" not in filepath:
                         # remap LOCAL + RELATIVE filepaths
                         yaml_mapping[node_type][node][file_config] = os.path.abspath(os.path.join(self.package_path, filepath))
 
