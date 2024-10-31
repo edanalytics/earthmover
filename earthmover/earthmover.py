@@ -21,6 +21,7 @@ from earthmover.nodes.destination import Destination
 from earthmover.nodes.source import Source
 from earthmover.nodes.transformation import Transformation
 from earthmover.yaml_parser import JinjaEnvironmentYamlLoader
+from earthmover.yaml_parser import YamlMapping
 from earthmover import util
 
 from typing import List, Optional
@@ -57,6 +58,7 @@ class Earthmover:
         skip_hashing: bool = False,
         cli_state_configs: Optional[dict] = None,
         results_file: str = "",
+        overrides: Optional[dict] = None,
     ):
         self.do_generate = True
         self.force = force
@@ -64,6 +66,7 @@ class Earthmover:
 
         self.results_file = results_file
         self.config_file = os.path.abspath(config_file)
+        self.overrides = overrides
         self.compiled_yaml_file = COMPILED_YAML_FILE
         self.error_handler = ErrorHandler(file=self.config_file)
 
@@ -89,6 +92,10 @@ class Earthmover:
 
         # Set current working directory to the location of the config file.
         os.chdir(os.path.dirname(self.config_file))
+
+        # convert state_configs to YamlMapping so we can inject CLI overrides
+        self.state_configs = YamlMapping().update(self.state_configs)
+        self.state_configs = self.inject_cli_overrides(self.state_configs, "config.")
         
         # Prepare the output directory for destinations.
         self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
@@ -143,6 +150,13 @@ class Earthmover:
 
         return configs
 
+    def inject_cli_overrides(self, configs, prefix=None):
+        # parse self.overrides into configs:
+        if self.overrides:
+            for key, value in self.overrides.items():
+                if not prefix or key.startswith(prefix):
+                    configs.set_path(key.lstrip(prefix), value)
+        return configs
 
     def compile(self, to_disk: bool = False):
         """
@@ -159,6 +173,7 @@ class Earthmover:
         self.user_configs = self.merge_packages() or self.user_configs
         if to_disk:
             self.user_configs.to_disk(self.compiled_yaml_file)
+        self.user_configs = self.inject_cli_overrides(self.user_configs)
 
         ### Compile the nodes and add to the graph type-by-type.
         self.sources = self.compile_node_configs(

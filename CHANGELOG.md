@@ -1,3 +1,13 @@
+### v0.4.0
+<details>
+<summary>Released 2024-10-16</summary>
+
+* feature: add support for Python 3.12, with corresponding updates to core dataframe dependencies
+* feature: add `--set` flag for overriding values within `earthmover.yml` from the command line
+
+</details>
+
+
 ### v0.3.8
 <details>
 <summary>Released 2024-09-06</summary>

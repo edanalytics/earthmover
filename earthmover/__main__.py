@@ -99,9 +99,14 @@ def main(argv=None):
         action='store_true',
         help='overwrites `show_stacktrace` config in the config file to true; sets `log_level` to DEBUG'
     )
-    parser.add_argument("--results-file",
+    parser.add_argument("-r", "--results-file",
         type=str,
         help='produces a JSON output file with structured information about run results'
+    )
+    parser.add_argument("--set",
+        type=str,
+        nargs="*",
+        help='overrides a setting in the config YAML; example: --set config.tmp_dir /tmp'
     )
 
     # Set empty defaults in case they've not been populated by the user.
@@ -117,7 +122,7 @@ def main(argv=None):
         unknown_args_str = ', '.join(f"`{c}`" for c in unknown_args)
         print(f"unknown arguments {unknown_args_str} passed, use -h flag for help")
         exit(1)
-    
+
     if args.command is not None and args.command not in ALLOWED_COMMANDS:
         print(f"unknown command '{args.command}' passed, use -h flag for help")
         exit(1)
@@ -167,6 +172,12 @@ def main(argv=None):
     if not args.config_file:
         logger.error("config file not specified with `-c` flag, and no default {" + ", ".join(DEFAULT_CONFIG_FILES) + "} found")
 
+    if args.set and len(args.set)%2 != 0: # odd number of overrides
+        logger.error("overrides specified with --set must be followed by an even number of strings (key value key value ...)")
+    overrides = None
+    if args.set:
+        overrides = dict(zip(args.set[::2], args.set[1::2]))
+
     # Update state configs with those forced via the command line.
     cli_state_configs = {}
 
@@ -188,6 +199,7 @@ def main(argv=None):
             skip_hashing=args.skip_hashing,
             cli_state_configs=cli_state_configs,
             results_file=args.results_file,
+            overrides=overrides,
         )
 
     except Exception as err:
