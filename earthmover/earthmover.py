@@ -6,8 +6,8 @@ import tempfile
 import networkx as nx
 import pathlib
 import os
-import re
 import shutil
+import string
 import time
 import datetime
 import pandas as pd
@@ -135,15 +135,11 @@ class Earthmover:
 
         # 2. There may be config keys that expect an environment variable but for which a default is also defined.
         #     If no env var was passed by the user, apply the default value.
-        env_var_pattern = r'^\$\{[A-Z_]+\}$'
-        regex = re.compile(env_var_pattern)
-
         for key, val in configs.items():
-            if isinstance(val, str) and regex.match(val):
+            if isinstance(val, str):
                 # Combine `key: ${VAL}` with `VAL: default_val` to get `key: default_val`
-                val_as_env_var = val.replace("$", "").replace("{", "").replace("}", "")
-                if val_as_env_var in self.params:
-                    configs[key] = self.params[val_as_env_var]
+                template = string.Template(val)
+                configs[key] = template.substitute(self.params)
 
         # 3. Prepend package macros to the project macro string. Later macro definitions in the string will overwrite earlier ones
         self.macros = configs.get("macros", "").strip() + self.macros
