@@ -164,18 +164,22 @@ class FileSource(Source):
                 if not self.is_remote:
                     self.size = os.path.getsize(self.file)
 
-            # Verify the column list provided matches the number of columns in the dataframe.
+            # Select columns if specified, being aware of optional fields
             if self.columns_list:
-                _num_data_cols = len(self.data.columns)
-                _num_list_cols = len(self.columns_list)
-                if _num_data_cols != _num_list_cols:
-                    self.error_handler.throw(
-                        f"source file {self.file} specified {_num_list_cols} `columns` but has {_num_data_cols} columns"
-                    )
-                    raise
+                undefined_optional_fields = set(self.optional_fields).difference(self.data.columns)  # Columns to be ignored in the select and added in post_execute()
+                expected_cols = list(set(self.columns_list).difference(undefined_optional_fields))   # Subset columns, ignoring undefined optionals.
 
-            if self.columns_list:
-                self.data.columns = self.columns_list
+                undefined_cols = []
+                for col in expected_cols:
+                    if col not in self.data.columns:
+                        undefined_cols.append(col)
+                
+                if undefined_cols:
+                    self.error_handler.throw(
+                        f"One or more columns not found in dataset and not marked as optional using `optional_fields`: [{', '.join(undefined_cols)}]"
+                    )
+
+                self.data = self.data[expected_cols]
 
             self.logger.debug(
                 f"source `{self.name}` loaded"
