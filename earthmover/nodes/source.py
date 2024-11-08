@@ -95,7 +95,7 @@ class FileSource(Source):
     is_remote: bool = False
     allowed_configs: Tuple[str] = (
         'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
-        'file', 'type', 'columns', 'header_rows', 'colspecs', 'colnames',
+        'file', 'type', 'columns', 'header_rows', 'colspecs',
         'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
     )
 
@@ -249,7 +249,7 @@ class FileSource(Source):
             'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
             'excel'     : lambda file, config: pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False),
             'feather'   : lambda file, _     : pd.read_feather(file),
-            'fixedwidth': lambda file, config: dd.read_fwf(file, colspecs=config.get('colspecs', "infer"), header=config.get('header_rows', "infer"), names=config.get('colnames')),
+            'fixedwidth': lambda file, config: dd.read_fwf(file, colspecs=config.get('colspecs', "infer"), header=config.get('header_rows', "infer"), names=config.get('columns'), converters={c:str for c in config.get('columns')}),
             'html'      : lambda file, config: pd.read_html(file, match=config.get('match', ".+"), keep_default_na=False)[0],
             'orc'       : lambda file, _     : dd.read_orc(file),
             'json'      : lambda file, config: dd.read_json(file, typ=config.get('object_type', "frame"), orient=config.get('orientation', "columns")),
