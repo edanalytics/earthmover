@@ -95,7 +95,7 @@ class FileSource(Source):
     is_remote: bool = False
     allowed_configs: Tuple[str] = (
         'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
-        'file', 'type', 'columns', 'header_rows',
+        'file', 'type', 'columns', 'header_rows', 'rename_cols',
         'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
     )
 
@@ -126,6 +126,13 @@ class FileSource(Source):
         if self.optional and not self.columns_list:
             self.error_handler.throw(
                 f"source `{self.name}` is optional, but does not specify `columns` (which are required in this case)"
+            )
+            raise
+
+        self.rename_cols = self.error_handler.assert_get_key(self.config, 'rename_cols', dtype=bool, required=False, default=False)
+        if self.rename_cols and not self.columns_list:
+            self.error_handler.throw(
+                f"argument `rename_cols` is set, but does not specify `columns` (which are required in this case)"
             )
             raise
 
@@ -164,8 +171,20 @@ class FileSource(Source):
                 if not self.is_remote:
                     self.size = os.path.getsize(self.file)
 
-            # Select columns if specified, being aware of optional fields
-            if self.columns_list:
+            # Rename columns if specified. Note that optional columns are ignored in this case.
+            if self.columns_list and self.rename_cols:
+                _num_data_cols = len(self.data.columns)
+                _num_list_cols = len(self.columns_list)
+                if _num_data_cols != _num_list_cols:
+                    self.error_handler.throw(
+                        f"source file {self.file} specified {_num_list_cols} `columns` but has {_num_data_cols} columns"
+                    )
+                    raise
+
+                self.data.columns = self.columns_list
+                
+            # Select columns if specified, being aware of optional fields.
+            elif self.columns_list:
                 undefined_optional_fields = set(self.optional_fields).difference(self.data.columns)  # Columns to be ignored in the select and added in post_execute()
                 expected_cols = list(set(self.columns_list).difference(undefined_optional_fields))   # Subset columns, ignoring undefined optionals.
 
