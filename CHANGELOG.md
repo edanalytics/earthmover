@@ -2,6 +2,7 @@
 * bugfix: `earthmover deps` failed to find nested local packages
 * bugfix: relative paths not resolved correct when using project composition
 * bugfix: bugfix: `--results-file` required a directory prefix
+* bugfix: some functionality was broken for Python versions < 3.10
 
 ### v0.4.0
 <details>
