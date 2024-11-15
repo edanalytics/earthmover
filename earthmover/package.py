@@ -102,8 +102,9 @@ class Package:
                 # These are the current key names that denote filepaths
                 for file_config in ('file', 'template'):
                     filepath = self.error_handler.assert_get_key(yaml_mapping[node_type][node], file_config, dtype=str, required=False, default=None)
-                    if filepath and not os.path.isabs(filepath):
-                        yaml_mapping[node_type][node][file_config] = os.path.join(self.package_path, filepath.strip('./'))
+                    if filepath and not os.path.isabs(filepath) and "://" not in filepath:
+                        # remap LOCAL + RELATIVE filepaths
+                        yaml_mapping[node_type][node][file_config] = os.path.abspath(os.path.join(self.package_path, filepath))
 
         # Replace relative paths for any map files in map_values operations
         for transformation in self.error_handler.assert_get_key(yaml_mapping, 'transformations', dtype=dict, required=False, default={}):
@@ -144,7 +145,10 @@ class LocalPackage(Package):
         """
         super().install(packages_dir)
 
-        source_path = self.error_handler.assert_get_key(self.config, 'local', dtype=str, required=False)
+        # In order to handle nested dependencies, search for sub-packages
+        #   relative to the parent package's earthmover.yaml
+        source_dir = self.error_handler.assert_get_key(self.config, 'local', dtype=str, required=False)
+        source_path = os.path.join(os.path.dirname(self.config.__file__), source_dir)
 
         if not os.path.exists(source_path):
             self.error_handler.throw(

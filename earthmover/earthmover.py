@@ -7,6 +7,7 @@ import networkx as nx
 import pathlib
 import os
 import shutil
+import string
 import time
 import datetime
 import pandas as pd
@@ -63,7 +64,7 @@ class Earthmover:
         self.force = force
         self.skip_hashing = skip_hashing
 
-        self.results_file = results_file
+        self.results_file = os.path.abspath(results_file) if results_file else None
         self.config_file = os.path.abspath(config_file)
         self.overrides = overrides
         self.compiled_yaml_file = COMPILED_YAML_FILE
@@ -128,11 +129,19 @@ class Earthmover:
         """
         configs = JinjaEnvironmentYamlLoader.load_project_configs(filepath, params=self.params)
 
-        # Update project parameter defaults from the template, if any
+        # 1. Update project parameter defaults from the template, if any
         for key, val in configs.get("parameter_defaults", {}).items():
             self.params.setdefault(key, val)
 
-        # Prepend package macros to the project macro string. Later macro definitions in the string will overwrite earlier ones
+        # 2. There may be config keys that expect an environment variable but for which a default is also defined.
+        #     If no env var was passed by the user, apply the default value.
+        for key, val in configs.items():
+            if isinstance(val, str):
+                # Combine `key: ${VAL}` with `VAL: default_val` to get `key: default_val`
+                template = string.Template(val)
+                configs[key] = template.substitute(self.params)
+
+        # 3. Prepend package macros to the project macro string. Later macro definitions in the string will overwrite earlier ones
         self.macros = configs.get("macros", "").strip() + self.macros
 
         return configs
