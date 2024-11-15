@@ -1,3 +1,7 @@
+### Unreleased changes
+* bugfix: some functionality was broken for Python versions < 3.10
+
+
 ### v0.4.0
 <details>
 <summary>Released 2024-10-16</summary>
