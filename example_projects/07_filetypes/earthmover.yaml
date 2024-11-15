@@ -17,6 +17,7 @@ sources:
     # ^ from https://github.com/Teradata/kylo/tree/master/samples/sample-data/orc
     #   (note that you need to `pip install pyarrow` before you can run earthmover with parquet files)
     type: orc # this is necessary because the file doesn't end in .orc
+    rename_cols: True
     columns:
       - registration_dttm
       - id
