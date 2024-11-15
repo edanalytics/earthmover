@@ -1,8 +1,17 @@
-### Unreleased changes
-* bugfix: `earthmover deps` failed to find nested local packages
-* bugfix: relative paths not resolved correct when using project composition
-* bugfix: bugfix: `--results-file` required a directory prefix
-* bugfix: some functionality was broken for Python versions < 3.10
+### v0.4.1
+<details>
+<summary>Released 2024-11-15</summary>
+
+* feature: [allow specifying `colspecs` for fixed-width files](https://github.com/edanalytics/earthmover/pull/133)
+* feature: [allow `config` params to be passable at the CLI and have a `parameter_default`](https://github.com/edanalytics/earthmover/pull/130)
+* feature: [refactor Source columns list logic as a select instead of a rename](https://github.com/edanalytics/earthmover/pull/137)
+* bugfix: []`earthmover deps` failed to find nested local packages](https://github.com/edanalytics/earthmover/pull/134)
+* bugfix: [relative paths not resolved correct when using project composition](https://github.com/edanalytics/earthmover/pull/134)
+* bugfix: `--results-file` required a directory prefix
+* bugfix: [some functionality was broken for Python versions < 3.10](https://github.com/edanalytics/earthmover/pull/136)
+
+</details>
+
 
 ### v0.4.0
 <details>
