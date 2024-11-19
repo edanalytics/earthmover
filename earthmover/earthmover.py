@@ -136,6 +136,7 @@ class Earthmover:
         # 2. There may be config keys that expect an environment variable but for which a default is also defined.
         #     If no env var was passed by the user, apply the default value.
         for key, val in configs.items():
+            print(f'(key, val): {(key, val)}')
             if isinstance(val, str):
                 print('params')
                 print(self.params)
