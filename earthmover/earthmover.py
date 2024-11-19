@@ -139,8 +139,6 @@ class Earthmover:
             if isinstance(val, str):
                 # Combine `key: ${VAL}` with `VAL: default_val` to get `key: default_val`
                 template = string.Template(val)
-                if True:
-                    raise Exception("mooooooo")
                 configs[key] = template.substitute(self.params)
 
         # 3. Prepend package macros to the project macro string. Later macro definitions in the string will overwrite earlier ones
