@@ -137,6 +137,8 @@ class Earthmover:
         #     If no env var was passed by the user, apply the default value.
         for key, val in configs.items():
             if isinstance(val, str):
+                print('params')
+                print(self.params)
                 # Combine `key: ${VAL}` with `VAL: default_val` to get `key: default_val`
                 template = string.Template(val)
                 configs[key] = template.substitute(self.params)
