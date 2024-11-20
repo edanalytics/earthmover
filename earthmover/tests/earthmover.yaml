@@ -19,6 +19,69 @@ config:
 
 
 sources:
+  invertebrate_species:
+    orientation: rows
+    data:
+    - name: Monarch Butterfly
+      genus: Danaus
+      species: plexippus
+      avg_lifespan_yrs: 0.25
+      avg_weight_kg: 0.0005
+      id: 1
+    - name: Giant African Snail
+      genus: Achatina
+      species: fulica
+      avg_lifespan_yrs: 5
+      avg_weight_kg: 0.32
+      id: 2
+    - name: Common Octopus
+      genus: Octopus
+      species: vulgaris
+      avg_lifespan_yrs: 1.5
+      avg_weight_kg: 10
+      id: 3
+    - name: Atlantic Horseshoe Crab
+      genus: Limulus
+      species: polyphemus
+      avg_lifespan_yrs: 20
+      avg_weight_kg: 1.5
+      id: 4
+    - name: Black Widow Spider
+      genus: Latrodectus
+      species: mactans
+      avg_lifespan_yrs: 3
+      avg_weight_kg: 0.001
+      id: 5
+    - name: American Lobster
+      genus: Homarus
+      species: americanus
+      avg_lifespan_yrs: 50
+      avg_weight_kg: 7
+      id: 6
+    - name: Honeybee
+      genus: Apis
+      species: mellifera
+      avg_lifespan_yrs: 0.2
+      avg_weight_kg: 0.0001
+      id: 7
+    - name: Blue Ringed Octopus
+      genus: Hapalochlaena
+      species: maculosa
+      avg_lifespan_yrs: 0.5
+      avg_weight_kg: 0.026
+      id: 8
+    - name: Japanese Spider Crab
+      genus: Macrocheira
+      species: kaempferi
+      avg_lifespan_yrs: 100
+      avg_weight_kg: 19
+      id: 9
+    - name: European Garden Spider
+      genus: Araneus
+      species: diadematus
+      avg_lifespan_yrs: 1
+      avg_weight_kg: 0.0007
+      id: 10
 
   mammal_species:
     file: ${BASE_DIR}/sources/mammals.csv
@@ -94,6 +157,17 @@ transformations:
       - operation: modify_columns
         columns:
           id: {%raw%}4_{{value}}{%endraw%}
+  
+  invertebrate_species:
+    source: $sources.invertebrate_species
+    operations:
+      - operation: add_columns
+        columns:
+          family: invertebrate
+      - operation: modify_columns
+        columns:
+          id: {%raw%}5_{{value}}{%endraw%}
+          "*": "{%raw%}{{value|trim}}{%endraw%}"
 
   animal_species:
     source: $transformations.mammal_species
@@ -103,6 +177,7 @@ transformations:
           - $transformations.bird_species
           - $transformations.fish_species
           - $transformations.reptile_species
+          - $transformations.invertebrate_species
     debug: True
 
   joined_inventories:

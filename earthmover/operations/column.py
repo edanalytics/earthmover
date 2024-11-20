@@ -284,7 +284,7 @@ class CombineColumnsOperation(Operation):
             raise
 
         data[self.new_column] = data.apply(
-            lambda x: self.separator.join(x[col] for col in self.columns_list),
+            lambda x: self.separator.join(str(x[col]) for col in self.columns_list),
             axis=1,
             meta=pd.Series(dtype='str', name=self.new_column)
         )
