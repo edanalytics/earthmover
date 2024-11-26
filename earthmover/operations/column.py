@@ -476,3 +476,32 @@ class SnakeCaseColumnsOperation(Operation):
         text = re.sub(r'_+', '_', text)  # Consolidate underscores
         text = re.sub(r'^_', '', text)  # Remove leading underscores
         return text.lower()
+
+
+class LowercaseColumnsOperation(Operation):
+    """
+
+    """
+    allowed_configs: Tuple[str] = (
+        'operation', 'repartition', 
+    )
+
+    def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
+        """
+
+        :return:
+        """
+        super().execute(data, **kwargs)
+
+        data_columns  = list(data.columns)
+        lower_columns = list(map(lambda col: col.lower(), data_columns))
+
+        if len(set(data_columns)) != len(set(lower_columns)):
+            self.error_handler.throw(
+                f"Lowercase operation creates duplicate columns!\n"
+                f"Columns before: {len(set(data_columns))}\n"
+                f"Columns after : {len(set(lower_columns))}"
+            )
+
+        data = data.rename(columns=dict(zip(data_columns, lower_columns)))
+        return data
