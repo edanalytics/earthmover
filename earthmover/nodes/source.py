@@ -266,15 +266,15 @@ class FileSource(Source):
             return int(_header_rows) - 1  # If header_rows = 1, skip none.
 
         def __read_fwf(file: str, config: 'YamlMapping'):
-            colspec_file = os.path.join(os.path.dirname(self.config.__file__), config.get('colspec_file'))
+            colspec_file = config.get('colspec_file')
             if colspec_file:
                 try:
-                    file_format = pd.read_csv(colspec_file)
+                    file_format = pd.read_csv(os.path.join(os.path.dirname(self.config.__file__), colspec_file))
                 # we need to handle this separately because otherwise EM will report that the source file
                 # (instead of the colspec file) could not be found
                 except FileNotFoundError:
                     self.error_handler.throw(
-                        f"colspec file {colspec_file} not found"
+                        f"colspec file '{colspec_file}' not found"
                     )
                 colnames = file_format.field_name
                 colspecs = list(zip(file_format.start_index, file_format.end_index))
