@@ -140,6 +140,9 @@ class Earthmover:
                 # Combine `key: ${VAL}` with `VAL: default_val` to get `key: default_val`
                 template = string.Template(val)
                 try:
+                   # Especially in cases like 'deps' and 'compile,' there may be no params passed 
+                   # and no default defined. We should allow this but alert the user so that
+                   # any downstream errors during 'run' are more traceable
                    configs[key] = template.substitute(self.params)
                 except KeyError:
                     self.logger.warning(f"No value passed for config.{key}: {val} and no default defined")
