@@ -41,7 +41,7 @@ class Operation(Node):
             'combine_columns': column_operations.CombineColumnsOperation,
             'map_values': column_operations.MapValuesOperation,
             'date_format': column_operations.DateFormatOperation,
-            'snake_case_columns': column_operations.CaseColumnsOperation,
+            'snake_case_columns': column_operations.SnakeCaseColumnsOperation,
             'lowercase_columns': column_operations.LowercaseColumnsOperation,
             'uppercase_columns': column_operations.UppercaseColumnsOperation,
 

@@ -435,7 +435,7 @@ class DateFormatOperation(Operation):
 
 class CaseColumnsOperation(Operation):
     """
-
+    Generic casing operation to be overridden by child classes.
     """
     allowed_configs: Tuple[str] = (
         'operation', 'repartition', 
@@ -464,10 +464,16 @@ class CaseColumnsOperation(Operation):
     @staticmethod
     def apply_case(text: str) -> str:
         """
-        Convert camelCase names to snake_case names.
-        :param text: A camelCase string value to be converted to snake_case.
-        :return: A string in snake_case.
+        :param text: A string to apply the casing to.
         """
+        raise NotImplementedError("Generic CaseColumnsOperation must be inherited by a child class.")
+
+class SnakeCaseColumnsOperation(CaseColumnsOperation):
+    """
+    Convert camelCase names to snake_case names.
+    """
+    @staticmethod
+    def apply_case(text: str) -> str:
         punctuation_regex = re.compile("[" + re.escape(string.punctuation) + " ]")  # Include space
 
         text = re.sub(r'(.)([A-Z][a-z]+)', r'\1_\2', text)
