@@ -2,6 +2,10 @@ import argparse
 import logging
 import os
 import sys
+import dask
+
+from dask.distributed import LocalCluster, Client
+from concurrent.futures import ThreadPoolExecutor
 
 from earthmover.earthmover import Earthmover
 from earthmover.init import run_init
@@ -264,6 +268,27 @@ def main(argv=None):
         logger.exception(f"unknown command '{args.command}', use -h flag for help")
         raise
 
+dask.config.set({"tokenize.ensure-deterministic": False})
+cluster = LocalCluster(n_workers=2, # number of available cores minus 2?
+                threads_per_worker=1,# number of threads per core
+                memory_limit='2.0GB', # per worker; threads on a worker share this memory
+                processes=True,
+                silence_logs=logging.ERROR,
+                # dashboard_address=None, # to disable dashboard
+                local_directory='./',
+                # executor="loky",
+                )
+# Find how many cores and threads-per-core your system has with `lscpu`
+# Find how much memory is available on your system with `grep MemTotal /proc/meminfo`
+print(f"View the dask profiling dashboard at {cluster.dashboard_link}")
+dask_client = Client(cluster,
+                serializers=['pickle', 'msgpack'], # ['dill', 'msgpack', 'pickle']
+                deserializers=['pickle', 'msgpack'])
+
+# dask_client.get_versions(check=True)
+# dask.config.set(scheduler='processes')
+# dask.config.set(pool=ThreadPoolExecutor(4))
+# dask.config.set({"multiprocessing.context": "fork"})
 
 if __name__ == "__main__":
     sys.exit(main())

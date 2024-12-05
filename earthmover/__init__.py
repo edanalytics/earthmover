@@ -5,6 +5,7 @@
 #    the bugs that emerge when we use it with Earthmover will have been fixed.
 import dask
 dask.config.set({'dataframe.query-planning': False})
+dask.config.set({"distributed.scheduler.worker-saturation": 1.0})
 
 # performance enhancements
 dask.config.set({"dataframe.convert-string": True})

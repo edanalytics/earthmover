@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 
+from functools import partial
 from sys import exc_info
 
 from typing import Optional
@@ -70,7 +71,7 @@ def contains_jinja(string: str) -> bool:
         return False
 
 
-def render_jinja_template(row: 'Series', template: jinja2.Template, template_str: str, *, error_handler: 'ErrorHandler') -> str:
+def render_jinja_template(row: 'Series', template: str, template_str: str, macros: str, *, error_handler: 'ErrorHandler') -> str:
     """
 
     :param row:
@@ -79,6 +80,7 @@ def render_jinja_template(row: 'Series', template: jinja2.Template, template_str
     :param error_handler:
     :return:
     """
+    template = build_jinja_template(template, macros)
     try:
         row_data = row.to_dict()
         row_data.update({"__row_data__": row.to_dict()})
@@ -131,7 +133,10 @@ def build_jinja_template(template_string: str, macros: str = ""):
         loader=jinja2.FileSystemLoader(os.path.dirname('./'))
     ).from_string(macros.strip() + template_string)
 
-    template.globals['md5'] = lambda x: hashlib.md5(x.encode('utf-8')).hexdigest()
-    template.globals['fromjson'] = lambda x: json.loads(x)
+    template.globals['md5'] = partial(md5_hash)
+    template.globals['fromjson'] = partial(json.loads)
 
     return template
+
+def md5_hash(x):
+    return hashlib.md5(x.encode('utf-8')).hexdigest()

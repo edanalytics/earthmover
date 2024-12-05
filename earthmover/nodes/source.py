@@ -9,6 +9,7 @@ import re
 from earthmover.nodes.node import Node
 from earthmover import util
 
+from functools import partial
 from typing import List, Optional, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -136,10 +137,10 @@ class FileSource(Source):
             )
             raise
 
-        # Initialize the read_lambda.
-        _sep = util.get_sep(self.file_type)
+        # Initialize the partial.
+        # _sep = util.get_sep(self.file_type)
         try:
-            self.read_lambda = self._get_read_lambda(self.file_type, sep=_sep)
+            self.read_partial = self._get_read_partial(self.file_type) #, sep=_sep)
 
         except Exception as _:
             self.error_handler.throw(
@@ -167,7 +168,8 @@ class FileSource(Source):
                 self.data = pd.DataFrame(columns=self.columns_list, dtype="string")
             else:
                 dask_config.set({'dataframe.convert-string': False})
-                self.data = self.read_lambda(self.file, self.config)
+                get_data = partial(self.read_partial, self.file, self.config)
+                self.data = get_data()
                 if not self.is_remote:
                     self.size = os.path.getsize(self.file)
 
@@ -252,8 +254,7 @@ class FileSource(Source):
         ext = file.lower().rsplit('.', 1)[-1]
         return ext_mapping.get(ext)
 
-    @staticmethod
-    def _get_read_lambda(file_type: str, sep: Optional[str] = None):
+    def _get_read_partial(self, file_type: str):
         """
 
         :param file_type:
@@ -261,15 +262,15 @@ class FileSource(Source):
         :return:
         """
         # Define any other helpers that will be used below.
-        def __get_skiprows(config: 'YamlMapping'):
-            """ Retrieve or set default for header_rows value for CSV reads. """
-            _header_rows = config.get('header_rows', 1)
-            return int(_header_rows) - 1  # If header_rows = 1, skip none.
+        # def __get_skiprows(config: 'YamlMapping'):
+        #     """ Retrieve or set default for header_rows value for CSV reads. """
+        #     _header_rows = config.get('header_rows', 1)
+        #     return int(_header_rows) - 1  # If header_rows = 1, skip none.
 
 
         # We don't want to activate the function inside this helper function.
-        read_lambda_mapping = {
-            'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
+        read_partial_mapping = {
+            'csv'       : FileSource.read_csv_tsv,
             'excel'     : lambda file, config: pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False),
             'feather'   : lambda file, _     : pd.read_feather(file),
             'fixedwidth': lambda file, config: dd.read_fwf(file, colspecs=config.get('colspecs', "infer"), header=config.get('header_rows', "infer"), names=config.get('columns'), converters={c:str for c in config.get('columns')}),
@@ -282,10 +283,21 @@ class FileSource(Source):
             'spss'      : lambda file, _     : pd.read_spss(file),
             'stata'     : lambda file, _     : pd.read_stata(file),
             'xml'       : lambda file, config: pd.read_xml(file, xpath=config.get('xpath', "./*")),
-            'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
+            'tsv'       : FileSource.read_csv_tsv,
         }
-        return read_lambda_mapping.get(file_type)
+        return read_partial_mapping.get(file_type)
 
+    @staticmethod
+    def read_csv_tsv(file, config):
+        return dd.read_csv(
+            file,
+            sep = util.get_sep(config.get("type", FileSource._get_filetype(file))),
+            dtype = str,
+            encoding = config.get('encoding', "utf8"),
+            keep_default_na = False,
+            skiprows = int(config.get('header_rows', 1)) - 1
+            )
+    
     def _verify_packages(self, file_type: str):
         """
         Verify necessary packages are installed before attempting load.
