@@ -1,4 +1,5 @@
-import pandas as pd
+# import pandas as pd
+import modin.pandas as pd
 import re
 
 from earthmover.operations.operation import Operation
@@ -6,7 +7,7 @@ from earthmover.operations.operation import Operation
 from typing import Dict, List, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from dask.dataframe.core import DataFrame
+    from pandas import DataFrame # from dask.dataframe.core import DataFrame
 
 
 class GroupByWithRankOperation(Operation):
@@ -62,7 +63,7 @@ class GroupByOperation(Operation):
         "var", "variance"
     ]
 
-    GROUP_SIZE_COL = "__GROUP_SIZE__"
+    GROUP_SIZE_COL = "_GROUP_SIZE_"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -131,7 +132,7 @@ class GroupByOperation(Operation):
                 )
             )
 
-            _computed = grouped.apply(agg_lambda, meta=meta).reset_index()
+            _computed = grouped.apply(agg_lambda).reset_index(name=new_col_name)
             result = result.merge(_computed, how="left", on=self.group_by_columns)
 
         data = result.query(f"{self.GROUP_SIZE_COL} > 0")

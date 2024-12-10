@@ -1,6 +1,7 @@
 import csv
-import dask
-import pandas as pd
+# import dask
+# import pandas as pd
+import modin.pandas as pd
 import re
 import string
 
@@ -10,7 +11,7 @@ from earthmover import util
 from typing import Dict, List, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from dask.dataframe.core import DataFrame
+    from pandas import DataFrame # from dask.dataframe.core import DataFrame
 
 
 class AddColumnsOperation(Operation):
@@ -52,7 +53,7 @@ class AddColumnsOperation(Operation):
 
                 data[col] = data.apply(
                     util.render_jinja_template, axis=1,
-                    meta=pd.Series(dtype='str', name=col),
+                    # meta=pd.Series(dtype='str', name=col),
                     template=template,
                     template_str=val,
                     error_handler=self.error_handler
@@ -113,7 +114,7 @@ class ModifyColumnsOperation(Operation):
 
         data[col] = data.apply(
             util.render_jinja_template, axis=1,
-            meta=pd.Series(dtype='str', name=col),
+            # meta=pd.Series(dtype='str', name=col),
             template=template,
             template_str=val,
             error_handler=self.error_handler
@@ -285,8 +286,7 @@ class CombineColumnsOperation(Operation):
 
         data[self.new_column] = data.apply(
             lambda x: self.separator.join(x[col] for col in self.columns_list),
-            axis=1,
-            meta=pd.Series(dtype='str', name=self.new_column)
+            axis=1
         )
 
         return data
@@ -420,7 +420,7 @@ class DateFormatOperation(Operation):
         for _column in self.columns_list:
             try:
                 data[_column] = (
-                    dask.dataframe.to_datetime(data[_column], format=self.from_format, exact=bool(self.exact_match), errors='coerce' if self.ignore_errors else 'raise')
+                    pd.to_datetime(data[_column], format=self.from_format, exact=bool(self.exact_match), errors='coerce' if self.ignore_errors else 'raise')
                         .dt.strftime(self.to_format)
                 )
 

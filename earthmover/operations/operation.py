@@ -5,7 +5,7 @@ from earthmover.nodes.node import Node
 from typing import Dict, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from dask.dataframe.core import DataFrame
+    from pandas import DataFrame # from dask.dataframe.core import DataFrame
     from earthmover.earthmover import Earthmover
     from earthmover.yaml_parser import YamlMapping
 
@@ -98,7 +98,7 @@ class Operation(Node):
         :return:
         """
 
-        data = self.opt_repartition(data)
+        # data = self.opt_repartition(data)
 
         return data
 

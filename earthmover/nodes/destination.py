@@ -1,5 +1,6 @@
 import os
-import pandas as pd
+# import pandas as pd
+import modin.pandas as pd
 import re
 import warnings
 
@@ -109,12 +110,11 @@ class FileDestination(Destination):
         # this renders each row without having to itertuples() (which is much slower)
         # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
         self.data = (
-            self.upstream_sources[self.source].data
-                .map_partitions(lambda x: x.apply(self.render_row, jinja_template=self.jinja_template, axis=1), meta=pd.Series('str'))
+            self.upstream_sources[self.source].data.apply(self.render_row, jinja_template=self.jinja_template, axis=1)
         )
 
         # Repartition before writing, if specified.
-        self.data = self.opt_repartition(self.data)
+        # self.data = self.opt_repartition(self.data)
 
         # Verify the output directory exists.
         os.makedirs(os.path.dirname(self.file), exist_ok=True)
@@ -131,7 +131,7 @@ class FileDestination(Destination):
                     with warnings.catch_warnings():
                         warnings.filterwarnings("ignore", message="Insufficient elements for `head`")
                         # (use `npartitions=-1` because the first N partitions could be empty)
-                        first_row = self.upstream_sources[self.source].data.head(1, npartitions=-1).reset_index(drop=True).iloc[0]
+                        first_row = self.upstream_sources[self.source].data.head(1).reset_index(drop=True).iloc[0]
                 
                 except IndexError:  # If no rows are present, build a representation of the row with empty values
                     first_row = {col: "" for col in self.upstream_sources[self.source].data.columns}
@@ -144,9 +144,11 @@ class FileDestination(Destination):
             elif self.header: # no jinja
                 fp.write(self.header)
 
-            for partition in self.data.partitions:
-                fp.writelines(partition.compute())
-                partition = None  # Remove partition from memory immediately after write.
+            # for partition in self.data.partitions:
+            for value in self.data:
+                # fp.writelines(partition.compute())
+                fp.writelines(value)
+                # partition = None  # Remove partition from memory immediately after write.
 
             if self.footer and util.contains_jinja(self.footer):
                 jinja_template = util.build_jinja_template(self.footer, macros=self.earthmover.macros)
@@ -163,6 +165,7 @@ class FileDestination(Destination):
         row_data = {
             field: self.cast_output_dtype(value)
             for field, value in row_data.items()
+            if isinstance(field, str)
         }
         row_data["__row_data__"] = row_data
 

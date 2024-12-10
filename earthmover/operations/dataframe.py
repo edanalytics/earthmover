@@ -1,6 +1,7 @@
-import dask.dataframe as dd
+# import dask.dataframe as dd
 import numpy as np
-import pandas as pd
+# import pandas as pd
+import modin.pandas as pd
 
 from earthmover.nodes.node import Node
 from earthmover.operations.operation import Operation
@@ -8,7 +9,7 @@ from earthmover.operations.operation import Operation
 from typing import Dict, List, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from dask.dataframe.core import DataFrame
+    from pandas import DataFrame # from dask.dataframe.core import DataFrame
 
 
 class JoinOperation(Operation):
@@ -127,7 +128,7 @@ class JoinOperation(Operation):
 
             # Complete the merge, using different logic depending on the partitions of the datasets.
             try:
-                left_data = dd.merge(
+                left_data = pd.merge(
                     left_data, right_data, how=self.join_type,
                     left_on=self.left_keys, right_on=self.right_keys
                 )
@@ -178,7 +179,7 @@ class UnionOperation(Operation):
                 raise
 
             try:
-                data = dd.concat([data, source_data], ignore_index=True)
+                data = pd.concat([data, source_data], ignore_index=True)
             
             except Exception as _:
                 self.error_handler.throw(

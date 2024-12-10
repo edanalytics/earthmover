@@ -1,9 +1,10 @@
-import dask.config as dask_config
-import dask.dataframe as dd
+# import dask.config as dask_config
+# import dask.dataframe as dd
 import ftplib
 import io
 import os
-import pandas as pd
+# import pandas as pd
+import modin.pandas as pd
 import re
 
 from earthmover.nodes.node import Node
@@ -12,7 +13,7 @@ from earthmover import util
 from typing import List, Optional, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from dask.dataframe.core import DataFrame
+    from pandas import DataFrame # from dask.dataframe.core import DataFrame
     from earthmover.earthmover import Earthmover
     from earthmover.yaml_parser import YamlMapping
 
@@ -26,7 +27,7 @@ class Source(Node):
     is_remote: bool = None
     allowed_configs: Tuple[str] = ('debug', 'expect', 'require_rows', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',)
 
-    NUM_ROWS_PER_CHUNK: int = 1000000
+    NUM_ROWS_PER_CHUNK: int = 10000
 
     def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         """
@@ -73,7 +74,7 @@ class Source(Node):
             self.logger.debug(
                 f"Casting data in {self.type} node `{self.name}` to a Dask dataframe."
             )
-            self.data = dd.from_pandas(self.data, chunksize=self.chunksize)
+            # self.data = dd.from_pandas(self.data, chunksize=self.chunksize)
 
         self.data = self.opt_repartition(self.data)  # Repartition if specified.
 
@@ -166,7 +167,7 @@ class FileSource(Source):
             if self.optional and not os.path.exists(self.file) or (os.path.isdir(self.file) and not os.listdir(self.file)):
                 self.data = pd.DataFrame(columns=self.columns_list, dtype="string")
             else:
-                dask_config.set({'dataframe.convert-string': False})
+                # dask_config.set({'dataframe.convert-string': False})
                 self.data = self.read_lambda(self.file, self.config)
                 if not self.is_remote:
                     self.size = os.path.getsize(self.file)
@@ -269,20 +270,20 @@ class FileSource(Source):
 
         # We don't want to activate the function inside this helper function.
         read_lambda_mapping = {
-            'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
+            'csv'       : lambda file, config: pd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
             'excel'     : lambda file, config: pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False),
             'feather'   : lambda file, _     : pd.read_feather(file),
-            'fixedwidth': lambda file, config: dd.read_fwf(file, colspecs=config.get('colspecs', "infer"), header=config.get('header_rows', "infer"), names=config.get('columns'), converters={c:str for c in config.get('columns')}),
+            'fixedwidth': lambda file, config: pd.read_fwf(file, colspecs=config.get('colspecs', "infer"), header=config.get('header_rows', "infer"), names=config.get('columns'), converters={c:str for c in config.get('columns')}),
             'html'      : lambda file, config: pd.read_html(file, match=config.get('match', ".+"), keep_default_na=False)[0],
-            'orc'       : lambda file, _     : dd.read_orc(file),
-            'json'      : lambda file, config: dd.read_json(file, typ=config.get('object_type', "frame"), orient=config.get('orientation', "columns")),
-            'jsonl'     : lambda file, config: dd.read_json(file, lines=True),
-            'parquet'   : lambda file, _     : dd.read_parquet(file),
+            'orc'       : lambda file, _     : pd.read_orc(file),
+            'json'      : lambda file, config: pd.read_json(file, typ=config.get('object_type', "frame"), orient=config.get('orientation', "columns")),
+            'jsonl'     : lambda file, config: pd.read_json(file, lines=True),
+            'parquet'   : lambda file, _     : pd.read_parquet(file),
             'sas'       : lambda file, config: pd.read_sas(file, encoding=config.get('encoding', "utf-8")),
             'spss'      : lambda file, _     : pd.read_spss(file),
             'stata'     : lambda file, _     : pd.read_stata(file),
             'xml'       : lambda file, config: pd.read_xml(file, xpath=config.get('xpath', "./*")),
-            'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
+            'tsv'       : lambda file, config: pd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
         }
         return read_lambda_mapping.get(file_type)
 

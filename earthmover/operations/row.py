@@ -4,7 +4,7 @@ import warnings
 from typing import Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from dask.dataframe.core import DataFrame
+    from pandas import DataFrame # from dask.dataframe.core import DataFrame
 
 
 class DistinctRowsOperation(Operation):
@@ -153,7 +153,7 @@ class LimitRowsOperation(Operation):
             
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", message="Insufficient elements for `head`")
-                return data.head(self.count + self.offset, npartitions=-1, compute=False).tail(self.count, compute=False)
+                return data.head(self.count + self.offset).tail(self.count)
 
 
 class FlattenOperation(Operation):
@@ -186,7 +186,8 @@ class FlattenOperation(Operation):
         target_dtypes.update({self.value_column: target_dtypes[self.flatten_column]})
         del target_dtypes[self.flatten_column]
 
-        return data.map_partitions(self.flatten_partition, meta=target_dtypes)
+        # return data.map_partitions(self.flatten_partition, meta=target_dtypes)
+        return self.flatten_partition(data) # , meta=target_dtypes)
 
     def flatten_partition(self, df):
 

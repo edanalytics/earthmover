@@ -1,4 +1,4 @@
-import dask
+# import dask
 import itertools
 import json
 import logging
@@ -10,7 +10,10 @@ import shutil
 import string
 import time
 import datetime
-import pandas as pd
+# import pandas as pd
+import modin.pandas as pd
+import modin.config as modin_cfg
+import ray
 import yaml
 
 from earthmover.error_handler import ErrorHandler
@@ -60,6 +63,10 @@ class Earthmover:
         results_file: str = "",
         overrides: Optional[dict] = None,
     ):
+        ray.init(_plasma_directory="/tmp", address="auto")
+        modin_cfg.RangePartitioning.put(True)
+        modin_cfg.AsyncReadMode.put(True)
+
         self.do_generate = True
         self.force = force
         self.skip_hashing = skip_hashing
@@ -101,7 +108,7 @@ class Earthmover:
         self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
 
         # Set the temporary directory in cases of disk-spillage.
-        dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
+        # dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
 
         # Set a directory for installing packages.
         self.packages_dir = os.path.join(os.getcwd(), 'packages')
@@ -395,13 +402,14 @@ class Earthmover:
             self.logger.info("saving dataflow graph image to `graph.png` and `graph.svg`")
 
             # Compute all row number values at once for performance, then update the nodes.
-            computed_node_rows = dask.compute(
-                {node_name: node.num_rows for node_name, node in active_graph.get_node_data().items()}
-            )[0]
+            # computed_node_rows = dask.compute(
+            #     {node_name: node.num_rows for node_name, node in active_graph.get_node_data().items()}
+            # )[0]
 
-            for node_name, num_rows in computed_node_rows.items():
+            # for node_name, num_rows in computed_node_rows.items():
+            for node_name, node in active_graph.get_node_data().items():
                 node = active_graph.ref(node_name)
-                node.num_rows = num_rows
+                # node.num_rows = num_rows
 
             active_graph.draw()
         

@@ -1,18 +1,19 @@
 import abc
-import dask
+# import dask
 import jinja2
 import logging
-import pandas as pd
+# import pandas as pd
+import modin.pandas as pd
 import warnings
 
-from dask.diagnostics import ProgressBar
+# from dask.diagnostics import ProgressBar
 
 from earthmover import util
 
 from typing import Dict, List, Tuple, Optional, Union
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from dask.dataframe.core import DataFrame
+    from pandas import DataFrame # from dask.dataframe.core import DataFrame
     from earthmover.earthmover import Earthmover
     from earthmover.error_handler import ErrorHandler
     from earthmover.yaml_parser import YamlMapping
@@ -56,7 +57,7 @@ class Node:
 
         # Optional variables for displaying progress and diagnostics.
         self.show_progress: bool = self.config.get('show_progress', self.earthmover.state_configs["show_progress"])
-        self.progress_bar: ProgressBar = ProgressBar(minimum=10, dt=5.0)  # Always instantiate, but only use if `show_progress is True`.
+        # self.progress_bar: ProgressBar = ProgressBar(minimum=10, dt=5.0)  # Always instantiate, but only use if `show_progress is True`.
         self.head_was_displayed: bool = False  # Workaround to prevent displaying the head twice when debugging.
 
         # Verify all configs provided by the user are specified for the node.
@@ -115,7 +116,7 @@ class Node:
         self.check_expectations(self.expectations)
 
         # Get lazy row and column counts to display in graph.png.
-        if isinstance(self.data, (pd.Series, dask.dataframe.Series)):
+        if isinstance(self.data, (pd.Series)): # , dask.dataframe.Series
             self.num_rows, self.num_cols = self.data.size, 1
         else:
             self.num_rows, self.num_cols = self.data.shape
@@ -131,7 +132,7 @@ class Node:
         pass
 
     def check_require_rows(self, num_required_rows):
-        self.num_rows = dask.compute(self.num_rows)[0]
+        # self.num_rows = dask.compute(self.num_rows)[0]
         if self.num_rows < num_required_rows:
             self.error_handler.throw(
                 f"Source `{self.full_name}` failed require_rows >= {num_required_rows}` (only {self.num_rows} rows found)"
@@ -153,7 +154,8 @@ class Node:
             warnings.filterwarnings("ignore", message="Insufficient elements for `head`")
 
             # Complete all computes at once to reduce duplicate computation.
-            self.num_rows, data_head = dask.compute([self.num_rows, self.data.head(nrows)])[0]
+            # self.num_rows, data_head = dask.compute([self.num_rows, self.data.head(nrows)])[0]
+            data_head = self.data.head(nrows)
 
             self.logger.info(f"Node {self.name}: {int(self.num_rows)} rows; {self.num_cols} columns")
             with pd.option_context('display.max_columns', None, 'display.width', None):
