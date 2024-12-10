@@ -139,13 +139,7 @@ class Earthmover:
             if isinstance(val, str):
                 # Combine `key: ${VAL}` with `VAL: default_val` to get `key: default_val`
                 template = string.Template(val)
-                try:
-                   # Especially in cases like 'deps' and 'compile,' there may be no params passed 
-                   # and no default defined. We should allow this but alert the user so that
-                   # any downstream errors during 'run' are more traceable
-                   configs[key] = template.substitute(self.params)
-                except KeyError:
-                    self.logger.warning(f"No value passed for config.{key}: {val} and no default defined")
+                configs[key] = template.safe_substitute(self.params)
 
         # 3. Prepend package macros to the project macro string. Later macro definitions in the string will overwrite earlier ones
         self.macros = configs.get("macros", "").strip() + self.macros
