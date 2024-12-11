@@ -42,6 +42,8 @@ class Operation(Node):
             'map_values': column_operations.MapValuesOperation,
             'date_format': column_operations.DateFormatOperation,
             'snake_case_columns': column_operations.SnakeCaseColumnsOperation,
+            'lowercase_columns': column_operations.LowercaseColumnsOperation,
+            'uppercase_columns': column_operations.UppercaseColumnsOperation,
 
             'distinct_rows': row_operations.DistinctRowsOperation,
             'filter_rows': row_operations.FilterRowsOperation,

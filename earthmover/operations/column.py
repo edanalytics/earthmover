@@ -433,9 +433,9 @@ class DateFormatOperation(Operation):
 
 
 
-class SnakeCaseColumnsOperation(Operation):
+class CaseColumnsOperation(Operation):
     """
-
+    Generic casing operation to be overridden by child classes.
     """
     allowed_configs: Tuple[str] = (
         'operation', 'repartition', 
@@ -449,25 +449,31 @@ class SnakeCaseColumnsOperation(Operation):
         super().execute(data, **kwargs)
 
         data_columns  = list(data.columns)
-        snake_columns = list(map(self.to_snake_case, data_columns))
+        cased_columns = list(map(self.apply_case, data_columns))
 
-        if len(set(data_columns)) != len(set(snake_columns)):
+        if len(set(data_columns)) != len(set(cased_columns)):
             self.error_handler.throw(
-                f"Snake case operation creates duplicate columns!\n"
+                f"Casing operation creates duplicate columns!\n"
                 f"Columns before: {len(set(data_columns))}\n"
-                f"Columns after : {len(set(snake_columns))}"
+                f"Columns after : {len(set(cased_columns))}"
             )
 
-        data = data.rename(columns=dict(zip(data_columns, snake_columns)))
+        data = data.rename(columns=dict(zip(data_columns, cased_columns)))
         return data
 
     @staticmethod
-    def to_snake_case(text: str):
+    def apply_case(text: str) -> str:
         """
-        Convert camelCase names to snake_case names.
-        :param text: A camelCase string value to be converted to snake_case.
-        :return: A string in snake_case.
+        :param text: A string to apply the casing to.
         """
+        raise NotImplementedError("Generic CaseColumnsOperation must be inherited by a child class.")
+
+class SnakeCaseColumnsOperation(CaseColumnsOperation):
+    """
+    Convert camelCase names to snake_case names.
+    """
+    @staticmethod
+    def apply_case(text: str) -> str:
         punctuation_regex = re.compile("[" + re.escape(string.punctuation) + " ]")  # Include space
 
         text = re.sub(r'(.)([A-Z][a-z]+)', r'\1_\2', text)
@@ -476,3 +482,13 @@ class SnakeCaseColumnsOperation(Operation):
         text = re.sub(r'_+', '_', text)  # Consolidate underscores
         text = re.sub(r'^_', '', text)  # Remove leading underscores
         return text.lower()
+
+class LowercaseColumnsOperation(CaseColumnsOperation):
+    @staticmethod
+    def apply_case(text: str) -> str:
+        return text.lower()
+
+class UppercaseColumnsOperation(CaseColumnsOperation):
+    @staticmethod
+    def apply_case(text: str) -> str:
+        return text.upper()
