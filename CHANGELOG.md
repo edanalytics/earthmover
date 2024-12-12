@@ -1,6 +1,15 @@
-### Unreleased chnages
-* bugfix: additional functionality was broken for Python versions < 3.10
-* bugfix: `earthmover deps` fails when imported package config references environment variables and those variables are not passed at the command line
+### v0.4.2
+<details>
+<summary>Released 2024-11-15</summary>
+
+* feature: interpolate params into destination templates by @tomreitz in https://github.com/edanalytics/earthmover/pull/141
+* feature: lowercase columns by @jayckaiser in https://github.com/edanalytics/earthmover/pull/143
+* fix: optional fields recursion by @rlittle08 in https://github.com/edanalytics/earthmover/pull/142
+* fix: `earthmover deps` fails when not all params are passed by @johncmerfeld in https://github.com/edanalytics/earthmover/pull/140
+* fix: make all pandas/dask config conditional on >3.10 by @johncmerfeld in https://github.com/edanalytics/earthmover/pull/146
+
+</details>
+
 
 ### v0.4.1
 <details>
