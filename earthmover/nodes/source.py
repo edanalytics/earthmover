@@ -79,10 +79,21 @@ class Source(Node):
 
         # Add missing columns if defined under `optional_fields`.
         if self.optional_fields:
-            for field in self.optional_fields:
-                if field not in self.data.columns:
-                    self.logger.debug(f"Optional column will be added to dataset: '{field}'")
-                    self.data[field] = ""  # Default to empty string.
+            # Get all existing columns
+            existing_columns = self.data.columns.tolist()
+
+            # Combine existing columns with optional fields
+            all_columns = list(set(existing_columns).union(self.optional_fields))
+
+            # Construct a schema with all columns, initializing optional fields to empty strings
+            meta = pd.DataFrame(columns=all_columns)
+            meta = meta.astype({col: "object" for col in self.optional_fields})  # Ensure optional fields have correct type
+
+            # Apply to each partition
+            self.data = self.data.map_partitions(
+                lambda df: df.reindex(columns=all_columns, fill_value=""),
+                meta=meta
+            )
 
         super().post_execute(**kwargs)
 
