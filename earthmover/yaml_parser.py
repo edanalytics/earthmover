@@ -1,6 +1,7 @@
 import dataclasses
 import os
 import yaml
+import pandas as pd
 
 from string import Template
 from typing import Dict
@@ -124,7 +125,11 @@ class JinjaEnvironmentYamlLoader(yaml.SafeLoader):
 
         # Expand Jinja and complete full parsing
         try:
-            raw_yaml = util.build_jinja_template(raw_yaml, macros=macros).render()
+            template_file = util.build_jinja_template(raw_yaml, macros=macros)
+            # empty_pd_df = pd.DataFrame()
+            # empty_dask_df = dd.from_pandas(empty_pd_df, npartitions=1)
+            # empty_row = dd.Series([], dtype=str)
+            raw_yaml = util.render_jinja_template(pd.Series(), template_file, raw_yaml, macros, error_handler=None)
             yaml_configs = yaml.load(raw_yaml, Loader=cls)
 
         except yaml.YAMLError as err:

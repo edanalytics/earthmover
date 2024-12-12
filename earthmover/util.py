@@ -2,7 +2,9 @@ import jinja2
 import hashlib
 import json
 import os
+import pandas as pd
 
+from pathlib import Path
 from functools import partial
 from sys import exc_info
 
@@ -71,7 +73,7 @@ def contains_jinja(string: str) -> bool:
         return False
 
 
-def render_jinja_template(row: 'Series', template: str, template_str: str, macros: str, *, error_handler: 'ErrorHandler') -> str:
+def render_jinja_template(row: 'Series', template_file: str, template_str: str, macros: str, *, error_handler: Optional['ErrorHandler']=None) -> str:
     """
 
     :param row:
@@ -80,14 +82,23 @@ def render_jinja_template(row: 'Series', template: str, template_str: str, macro
     :param error_handler:
     :return:
     """
-    template = build_jinja_template(template, macros)
+    # template = build_jinja_template(template, macros)
     try:
         row_data = row.to_dict()
         row_data.update({"__row_data__": row.to_dict()})
+        
+        # See the comment in `build_jinja_template()` below; here we load
+        # and render the bytecode that was built there.
+        fs_loader = jinja2.FileSystemLoader(searchpath=os.path.dirname('./'))
+        fs_bytecode_cache = jinja2.FileSystemBytecodeCache("./.jinja-templates/.cache/")
+        environment = jinja2.Environment(loader=fs_loader, bytecode_cache=fs_bytecode_cache, autoescape=True)
+        template = environment.get_template(template_file)
+        template.globals['md5'] = partial(md5_hash)
+        template.globals['fromjson'] = partial(json.loads)
         return template.render(row_data)
 
     except Exception as err:
-        error_handler.ctx.remove('line')
+        if error_handler: error_handler.ctx.remove('line')
 
         if dict(row):
             _joined_keys = "`, `".join(dict(row).keys())
@@ -95,9 +106,10 @@ def render_jinja_template(row: 'Series', template: str, template_str: str, macro
         else:
             variables = f"\n(no available variables)"
 
-        error_handler.throw(
+        if error_handler: error_handler.throw(
             f"Error rendering Jinja template: ({err}):\n===> {template_str}{variables}"
         )
+        else: raise Exception(f"Error rendering Jinja template: ({err})")
         raise
 
 
@@ -129,14 +141,30 @@ def build_jinja_template(template_string: str, macros: str = ""):
     """
 
     """
-    template = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(os.path.dirname('./'))
-    ).from_string(macros.strip() + template_string)
+    # Jinja templates are unfortunately not serializable. We don't want to have
+    # to re-parse and build them every time they're rendered, so instead, inspired
+    # by https://stackoverflow.com/questions/77187839/how-to-serialize-jinja2-template-in-pyspark
+    # we parse and build them once, write the bytecode out to a (temp) file, and
+    # then other parallel processes can render the template using the cached bytecode.
+    template_folder = "./.jinja-templates/"
+    template_cache_folder = template_folder + ".cache/"
+    fs_loader = jinja2.FileSystemLoader(searchpath=os.path.dirname('./'))
+    fs_bytecode_cache = jinja2.FileSystemBytecodeCache(template_cache_folder)
+    environment = jinja2.Environment(loader=fs_loader, bytecode_cache=fs_bytecode_cache, autoescape=True)
+    template_file = "./.jinja-templates/" + md5_hash(template_string) + ".j2"
+    os.makedirs(template_folder, exist_ok=True)
+    os.makedirs(template_cache_folder, exist_ok=True)
+    if not Path(template_file).exists():
+        with open(template_file, "w") as tpl_file:
+            tpl_file.write(macros.strip() + template_string)
+    template = environment.get_template(template_file)
+    # render the template (with an empty row) to force the bytecode to be cached:
+    # render_jinja_template(pd.Series(), template_file, "", "", error_handler=None)
+    # template = jinja2.Environment(
+    #     loader=jinja2.FileSystemLoader(os.path.dirname('./'))
+    # ).from_string(macros.strip() + template_string)
 
-    template.globals['md5'] = partial(md5_hash)
-    template.globals['fromjson'] = partial(json.loads)
-
-    return template
+    return template_file
 
 def md5_hash(x):
     return hashlib.md5(x.encode('utf-8')).hexdigest()

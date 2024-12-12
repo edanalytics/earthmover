@@ -50,6 +50,21 @@ class Package:
 
         self.package_yaml: dict = None
 
+    # def __getstate__(self):
+    #     return {
+    #         "name": self.name,
+    #         "config": self.config,
+    #         "package_path": self.package_path,
+    #         "package_yaml": self.package_yaml,
+    #     }
+
+    # def __setstate__(self, state):
+    #     self.name = state['name']
+    #     self.config = state['config']
+    #     self.package_path = state['package_path']
+    #     self.package_yaml = state['package_yaml']
+    #     self.logger = self.earthmover.logger
+    #     self.error_handler = self.earthmover.error_handler
 
     def install(self, packages_dir):
         """

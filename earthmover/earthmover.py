@@ -509,12 +509,15 @@ class Earthmover:
         package_graph = Graph(error_handler=self.error_handler)  # Tracks package hierarchy
 
         # Create a root package to be the root of the packages directed graph
+        print(configs)
         root_package = Package('root', configs, earthmover=self, package_path=os.path.dirname(self.config_file))
         root_package.config_file = self.config_file
         package_graph.add_node('root', package=root_package)
 
         package_config = self.error_handler.assert_get_key(configs, 'packages', dtype=dict, required=False, default={})
         for name, config in package_config.items():
+            print(name)
+            print(config)
             package = Package(name, config, earthmover=self)
             package_graph.add_node(name, package=package)
             package_graph.add_edge(root_package.name, name)
@@ -566,6 +569,8 @@ class Earthmover:
 
             # Add nested packages to packages_graph
             for name, config in nested_package_config.items():
+                print(name)
+                print(config)
                 nested_package = Package(name, config, earthmover=self)
                 self.package_graph.add_node(name, package=nested_package)
                 self.package_graph.add_edge(package_name, name)

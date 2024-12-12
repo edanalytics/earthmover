@@ -41,7 +41,7 @@ class AddColumnsOperation(Operation):
 
             else:
                 try:
-                    template = val # util.build_jinja_template(val, macros=self.earthmover.macros)
+                    template_file = util.build_jinja_template(val, macros=self.earthmover.macros)
 
                 except Exception as err:
                     self.error_handler.ctx.remove('line')
@@ -53,8 +53,8 @@ class AddColumnsOperation(Operation):
                 data[col] = data.apply(
                     util.render_jinja_template, axis=1,
                     meta=pd.Series(dtype='str', name=col),
-                    template=template,
-                    template_str=template,
+                    template_file=template_file,
+                    template_str=val,
                     macros=self.earthmover.macros,
                     error_handler=self.error_handler
                 )
@@ -100,7 +100,7 @@ class ModifyColumnsOperation(Operation):
             return  # End immediately if no jinja processing is required.
         
         try:
-            template = val # util.build_jinja_template(val, macros=self.earthmover.macros)
+            template_file = util.build_jinja_template(val, macros=self.earthmover.macros)
 
         except Exception as err:
             self.error_handler.ctx.remove('line')
@@ -115,8 +115,8 @@ class ModifyColumnsOperation(Operation):
         data[col] = data.apply(
             util.render_jinja_template, axis=1,
             meta=pd.Series(dtype='str', name=col),
-            template=template,
-            template_str=template,
+            template=template_file,
+            template_str=val,
             macros=self.earthmover.macros,
             error_handler=self.error_handler
         )
