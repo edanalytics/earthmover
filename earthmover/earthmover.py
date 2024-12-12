@@ -139,7 +139,7 @@ class Earthmover:
             if isinstance(val, str):
                 # Combine `key: ${VAL}` with `VAL: default_val` to get `key: default_val`
                 template = string.Template(val)
-                configs[key] = template.substitute(self.params)
+                configs[key] = template.safe_substitute(self.params)
 
         # 3. Prepend package macros to the project macro string. Later macro definitions in the string will overwrite earlier ones
         self.macros = configs.get("macros", "").strip() + self.macros

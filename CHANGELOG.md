@@ -1,3 +1,6 @@
+### Unreleased chnages
+* bugfix: `earthmover deps` fails when imported package config references environment variables and those variables are not passed at the command line
+
 ### v0.4.1
 <details>
 <summary>Released 2024-11-15</summary>
