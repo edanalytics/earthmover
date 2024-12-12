@@ -83,7 +83,7 @@ class Source(Node):
             existing_columns = self.data.columns.tolist()
 
             # Combine existing columns with optional fields
-            all_columns = existing_columns + [col for col in self.optional_fields if col not in existing_columns]
+            all_columns = list(set(existing_columns).union(self.optional_fields))
 
             # Construct a schema with all columns, initializing optional fields to empty strings
             meta = pd.DataFrame(columns=all_columns)
