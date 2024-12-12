@@ -1,4 +1,5 @@
 ### Unreleased chnages
+* bugfix: additional functionality was broken for Python versions < 3.10
 * bugfix: `earthmover deps` fails when imported package config references environment variables and those variables are not passed at the command line
 
 ### v0.4.1
