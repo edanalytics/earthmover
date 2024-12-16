@@ -259,6 +259,7 @@ class FileSource(Source):
                 "`colspec_file` must be specified when using a fixedwidth source"
             )
         try:
+            # ensure we find the colspec file relative to the config file that references it (in case of project composition)
             file_format = pd.read_csv(os.path.join(os.path.dirname(self.config.__file__), colspec_file))
         # we need to handle this separately because otherwise EM will report that the source file
         # (instead of the colspec file) could not be found
