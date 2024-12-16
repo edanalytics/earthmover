@@ -254,7 +254,7 @@ Each source must have a name (which is how it is referenced by transformations a
   - Row-based formats:
     - `.csv`: Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8).
     - `.tsv`: Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8).
-    - `.txt`: a fixed-width text file; column widths are inferred from the first 100 lines.
+    - `.txt`: a fixed-width text file. See [here](TODO:) for usage information
   - Column-based formats: `.parquet`, `.feather`, `.orc` &mdash; these require the [`pyarrow` library](https://arrow.apache.org/docs/python/index.html), which can be installed with `pip install pyarrow` or similar
   - Structured formats:
     - `.json`: Optionally specify a `object_type` (`frame` or `series`) and `orientation` (see [these docs](https://pandas.pydata.org/docs/reference/api/pandas.read_json.html)) to interpret different JSON structures.

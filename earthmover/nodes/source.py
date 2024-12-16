@@ -95,7 +95,7 @@ class FileSource(Source):
     is_remote: bool = False
     allowed_configs: Tuple[str] = (
         'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
-        'file', 'type', 'columns', 'header_rows', 'colspecs', 'colspec_file', 'rename_cols',
+        'file', 'type', 'columns', 'header_rows', 'colspec_file', 'colspec_headers', 'rename_cols',
         'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
     )
 
@@ -252,6 +252,58 @@ class FileSource(Source):
         ext = file.lower().rsplit('.', 1)[-1]
         return ext_mapping.get(ext)
 
+    def __read_fwf(self, file: str, config: 'YamlMapping'):
+        colspec_file = config.get('colspec_file')
+        if not colspec_file:
+            self.error_handler.throw(
+                "`colspec_file` must be specified when using a fixedwidth source"
+            )
+        try:
+            file_format = pd.read_csv(os.path.join(os.path.dirname(self.config.__file__), colspec_file))
+        # we need to handle this separately because otherwise EM will report that the source file
+        # (instead of the colspec file) could not be found
+        except FileNotFoundError:
+            self.error_handler.throw(
+                f"colspec file '{colspec_file}' not found"
+            )
+
+        colspec_headers = config.get("colspec_headers")
+        if not colspec_headers:
+            self.error_handler.throw(
+                "`colspec_headers` must be specified when supplying a colspec file"
+            )
+
+        try:
+            # name column is required
+            name_col = colspec_headers["name"]
+        except KeyError:
+            self.error_handler.throw(
+                "a `name` column must be provided when supplying colspec_headers"
+            )
+
+        start_col = colspec_headers.get("start")
+        end_col = colspec_headers.get("end")
+        width_col = colspec_headers.get("width")
+        # pandas does not allow specifying both start/end and widths, but we just let start/end take precedence
+        if start_col and end_col:
+            use_widths = False
+        elif width_col:
+            use_widths = True
+        else:
+            self.error_handler.throw(
+                "either `width` or (`start`, `end`) must be specified when supplying colspec_headers"
+            )
+
+        names = file_format[name_col]
+        header = config.get('header_rows', "infer")
+        converters = {c:str for c in names}
+        if use_widths:
+            widths = list(file_format[width_col])
+            return dd.read_fwf(file, widths=widths, header=header, names=names, converters=converters)
+        else:
+            colspecs = list(zip(file_format.start_index, file_format.end_index))
+            return dd.read_fwf(file, colspecs=colspecs, header=header, names=names, converters=converters)
+
     def _get_read_lambda(self, file_type: str, sep: Optional[str] = None):
         """
 
@@ -265,29 +317,12 @@ class FileSource(Source):
             _header_rows = config.get('header_rows', 1)
             return int(_header_rows) - 1  # If header_rows = 1, skip none.
 
-        def __read_fwf(file: str, config: 'YamlMapping'):
-            colspec_file = config.get('colspec_file')
-            if colspec_file:
-                try:
-                    file_format = pd.read_csv(os.path.join(os.path.dirname(self.config.__file__), colspec_file))
-                # we need to handle this separately because otherwise EM will report that the source file
-                # (instead of the colspec file) could not be found
-                except FileNotFoundError:
-                    self.error_handler.throw(
-                        f"colspec file '{colspec_file}' not found"
-                    )
-                colnames = file_format.field_name
-                colspecs = list(zip(file_format.start_index, file_format.end_index))
-                return dd.read_fwf(file, colspecs=colspecs, header=config.get('header_rows', "infer"), names=colnames, converters={c:str for c in colnames})
-            else:
-                return dd.read_fwf(file, colspecs=config.get('colspecs', "infer"), header=config.get('header_rows', "infer"), names=config.get('columns'), converters={c:str for c in config.get('columns')})
-
         # We don't want to activate the function inside this helper function.
         read_lambda_mapping = {
             'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
             'excel'     : lambda file, config: pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False),
             'feather'   : lambda file, _     : pd.read_feather(file),
-            'fixedwidth': __read_fwf,
+            'fixedwidth': self.__read_fwf,
             'html'      : lambda file, config: pd.read_html(file, match=config.get('match', ".+"), keep_default_na=False)[0],
             'orc'       : lambda file, _     : dd.read_orc(file),
             'json'      : lambda file, config: dd.read_json(file, typ=config.get('object_type', "frame"), orient=config.get('orientation', "columns")),
