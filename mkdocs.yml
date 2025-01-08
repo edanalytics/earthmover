@@ -1,0 +1,85 @@
+# This is a configuration file for Material for MkDocs, which is used to build
+# and serve the documentation for `earthmover` from the `docs/*.md` Markdown files.
+# 
+# To serve the docs locally (for testing), first (once)
+# > pip install mkdocs-material
+# and then
+# > mkdocs serve
+# For details, see https://squidfunk.github.io/mkdocs-material/getting-started/
+# 
+# The automation defined in `.github/workflows/ci.yml` will serve these docs at
+# https://edanalytics.github.io/earthmover
+
+site_name: earthmover docs
+repo_url: https://github.com/edanalytics/earthmover
+repo_name: earthmover
+nav:
+  - Home: index.md
+  - Learn: learn.md
+  - Setup: setup.md
+  - Project configuration: configuration.md
+  - Usage: usage.md
+  - Best Practices: practices.md
+  - Design: design.md
+  - Packages: packages.md
+  - Contributing: contributing.md
+  - Changelog: changelog.md
+  - License: license.md
+theme:
+  name: material
+  logo: assets/ea-earthmover-icon.png
+  palette:
+    - scheme: default
+      primary: white
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: Switch to dark mode
+    - scheme: slate
+      primary: black
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to light mode
+  features:
+    - content.code.copy
+    - content.code.select
+    - navigation.footer
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.path
+    - navigation.expand
+    - toc.integrate
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.tabbed:
+      alternate_style: true
+
+copyright: '<code>earthmover</code> is maintained by <a href="https://www.edanalytics.org/">Education Analytics</a>'
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/company/education-analytics
+    - icon: fontawesome/brands/x-twitter
+      link: https://x.com/AnalyticsEA
+    - icon: fontawesome/brands/instagram
+      link: https://www.instagram.com/educationanalytics/
+    - icon: fontawesome/brands/github
+      link: https://github.com/edanalytics

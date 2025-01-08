@@ -1,0 +1,1 @@
+`earthmover` is open source software released under the [Apache 2 license](https://github.com/edanalytics/earthmover/blob/main/LICENSE).
