@@ -266,9 +266,11 @@ class FileSource(Source):
     def __read_fwf(self, file: str, config: 'YamlMapping'):
         colspec_file = config.get('colspec_file')
         if not colspec_file:
-            self.error_handler.throw(
-                "`colspec_file` must be specified when using a fixedwidth source"
-            )
+            names = config.get('columns')
+            if not names:
+                self.error_handler.throw("No `colspec_file` specified for fixedwidth source. In this case, `columns` must be specified, and `colspecs` may be specified, or else will be inferred")
+
+            return dd.read_fwf(file, colspecs=config.get('colspecs', "infer"), header=config.get('header_rows', "infer"), names=names, converters={c:str for c in names})
         try:
             # ensure we find the colspec file relative to the config file that references it (in case of project composition)
             file_format = pd.read_csv(os.path.join(os.path.dirname(self.config.__file__), colspec_file))
