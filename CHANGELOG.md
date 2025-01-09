@@ -1,6 +1,6 @@
 ### Unreleased changes
 
-* feature: Require a `colspec_file` config with column info for `fixedwidth` inputs
+* feature: Expect a `colspec_file` config with column info for `fixedwidth` inputs
 ### v0.4.2
 <details>
 <summary>Released 2024-11-15</summary>
