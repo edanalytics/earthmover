@@ -106,7 +106,7 @@ class FileSource(Source):
     is_remote: bool = False
     allowed_configs: Tuple[str] = (
         'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
-        'file', 'type', 'columns', 'header_rows', 'colspec_file', 'colspecs', 'rename_cols',
+        'file', 'type', 'columns', 'header_rows', 'colspec_file', 'colspecs', 'colspec_headers', 'rename_cols',
         'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
     )
 
