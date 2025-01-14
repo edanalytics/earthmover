@@ -515,9 +515,8 @@ class Earthmover:
         package_graph.add_node('root', package=root_package)
 
         package_config = self.error_handler.assert_get_key(configs, 'packages', dtype=dict, required=False, default={})
+        print(package_config)
         for name, config in package_config.items():
-            print(name)
-            print(config)
             package = Package(name, config, earthmover=self)
             package_graph.add_node(name, package=package)
             package_graph.add_edge(root_package.name, name)

@@ -134,16 +134,13 @@ class FileDestination(Destination):
                     warnings.filterwarnings("ignore", message="Insufficient elements for `head`")
                     # (use `npartitions=-1` because the first N partitions could be empty)
                     # (use self.upstream_sources because self.data is a single column, the rendered Jinja template)
-                    first_row = {} # self.upstream_sources[self.source].data.head(1, npartitions=-1).reset_index(drop=True).iloc[0]
+                    first_row = pd.Series({}) # self.upstream_sources[self.source].data.head(1, npartitions=-1).reset_index(drop=True).iloc[0]
             
             except IndexError:  # If no rows are present, build a representation of the row with empty values
                 first_row = {col: "" for col in self.upstream_sources[self.source].data.columns}
                 first_row['__row_data__'] = first_row
                 first_row = pd.Series(first_row)
         
-        print(type(first_row))
-        print(first_row)
-
         # Write the optional header, each line
         if self.header:
             with open(self.file, 'a', encoding='utf-8') as fp:
