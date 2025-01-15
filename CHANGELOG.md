@@ -1,3 +1,6 @@
+### Unreleased changes
+* fix: error messages for `keep_columns` and `drop_columns` do not specify the columns
+
 ### v0.4.2
 <details>
 <summary>Released 2024-11-15</summary>
