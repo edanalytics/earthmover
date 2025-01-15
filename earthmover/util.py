@@ -135,3 +135,17 @@ def build_jinja_template(template_string: str, macros: str = ""):
     template.globals['fromjson'] = lambda x: json.loads(x)
 
     return template
+
+def get_jinja_template_params(template_string: str, macros: str = ""):
+    """
+    This function uses Jinja's meta functions to return a list of variables
+    referenced within `template_string`. This may be used in the future to
+    trace column-level lineage backward through the data dependency graph,
+    and drop unused columns early (to improve earthmover performance).
+    """
+    from jinja2 import meta
+    env = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(os.path.dirname('./'))
+    )
+    ast = env.parse(macros.strip() + template_string)
+    return list(meta.find_undeclared_variables(ast))
