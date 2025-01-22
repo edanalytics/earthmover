@@ -53,8 +53,8 @@ class AddColumnsOperation(Operation):
                 data[col] = data.apply(
                     util.render_jinja_template, axis=1,
                     meta=pd.Series(dtype='str', name=col),
-                    template_file=template_file,
-                    template_str=val,
+                    template_bytecode_file=template_file,
+                    template_string=val,
                     macros=self.earthmover.macros,
                     error_handler=self.error_handler
                 )
@@ -115,8 +115,8 @@ class ModifyColumnsOperation(Operation):
         data[col] = data.apply(
             util.render_jinja_template, axis=1,
             meta=pd.Series(dtype='str', name=col),
-            template=template_file,
-            template_str=val,
+            template_bytecode_file=template_file,
+            template_string=val,
             macros=self.earthmover.macros,
             error_handler=self.error_handler
         )

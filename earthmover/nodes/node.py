@@ -26,6 +26,9 @@ class Node:
     type: str = None
     allowed_configs: Tuple[str] = ('debug', 'expect', 'require_rows', 'show_progress', 'repartition')
 
+    def __getnewargs__(self):
+        return self.name, self.config, self.earthmover
+
     def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         self.name: str = name
         self.config: 'YamlMapping' = config
@@ -177,8 +180,8 @@ class Node:
                 result[expectation_result_col] = result.apply(
                     util.render_jinja_template, axis=1,
                     meta=pd.Series(dtype='str', name=expectation_result_col),
-                    template=template,
-                    template_str="{{" + expectation + "}}",
+                    template_bytecode_file=template,
+                    template_string="{{" + expectation + "}}",
                     error_handler = self.error_handler
                 )
 

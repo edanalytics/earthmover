@@ -73,7 +73,7 @@ def contains_jinja(string: str) -> bool:
         return False
 
 
-def render_jinja_template(row: 'Series', template_file: str, template_str: str, macros: str, *, error_handler: Optional['ErrorHandler']=None) -> str:
+def render_jinja_template(row: 'Series', template_bytecode_file: str, template_string: str, macros: str, *, error_handler: Optional['ErrorHandler']=None) -> str:
     """
 
     :param row:
@@ -84,15 +84,17 @@ def render_jinja_template(row: 'Series', template_file: str, template_str: str, 
     """
     # template = build_jinja_template(template, macros)
     try:
-        row_data = row.to_dict()
-        row_data.update({"__row_data__": row.to_dict()})
+        if row.empty: row_data = { '__row_data__': { '__row_data__': {}} }
+        else:
+            row_data = row.to_dict()
+            row_data.update({"__row_data__": row.to_dict()})
         
         # See the comment in `build_jinja_template()` below; here we load
         # and render the bytecode that was built there.
         fs_loader = jinja2.FileSystemLoader(searchpath=os.path.dirname('./'))
         fs_bytecode_cache = jinja2.FileSystemBytecodeCache("./.jinja-templates/.cache/")
         environment = jinja2.Environment(loader=fs_loader, bytecode_cache=fs_bytecode_cache, autoescape=True)
-        template = environment.get_template(template_file)
+        template = environment.get_template(template_bytecode_file)
         template.globals['md5'] = partial(md5_hash)
         template.globals['fromjson'] = partial(json.loads)
         return template.render(row_data)
@@ -107,7 +109,7 @@ def render_jinja_template(row: 'Series', template_file: str, template_str: str, 
             variables = f"\n(no available variables)"
 
         if error_handler: error_handler.throw(
-            f"Error rendering Jinja template: ({err}):\n===> {template_str}{variables}"
+            f"Error rendering Jinja template: ({err}):\n===> {template_string}{variables}"
         )
         else: raise Exception(f"Error rendering Jinja template: ({err})")
         raise

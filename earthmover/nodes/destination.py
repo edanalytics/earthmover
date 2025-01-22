@@ -94,7 +94,8 @@ class FileDestination(Destination):
             if self.linearize:
                 template_string = self.EXP.sub(" ", template_string)
 
-            self.jinja_template = util.build_jinja_template(template_string, macros=self.earthmover.macros)
+            self.jinja_template_string = template_string
+            self.jinja_template_bytecode = util.build_jinja_template(template_string, macros=self.earthmover.macros)
 
         except OSError as err:
             self.error_handler.throw(
@@ -112,7 +113,7 @@ class FileDestination(Destination):
         # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
         self.data = (
             self.upstream_sources[self.source].data
-                .map_partitions(partial(self.apply_render_row, self.jinja_template, self.render_row), meta=pd.Series('str'))
+                .map_partitions(partial(self.apply_render_row, self.jinja_template_bytecode, self.jinja_template_string, self.render_row), meta=pd.Series('str'))
         )
 
         # Repartition before writing, if specified.
@@ -138,29 +139,36 @@ class FileDestination(Destination):
             
             except IndexError:  # If no rows are present, build a representation of the row with empty values
                 first_row = {col: "" for col in self.upstream_sources[self.source].data.columns}
-                first_row['__row_data__'] = first_row
-                first_row = pd.Series(first_row)
+                # first_row['__row_data__'] = first_row
+                # first_row = pd.Series(first_row)
         
         # Write the optional header, each line
         if self.header:
             with open(self.file, 'a', encoding='utf-8') as fp:
                 if self.header and util.contains_jinja(self.header):
-                    jinja_template = util.build_jinja_template(self.header, macros=self.earthmover.macros)
-                    rendered_template = self.render_row(first_row, jinja_template=jinja_template)
+                    header_bytecode_file = util.build_jinja_template(self.header, macros=self.earthmover.macros)
+                    rendered_template = self.render_row(first_row, template_bytecode_file=header_bytecode_file, template_string=self.header)
                     fp.write(rendered_template)
                 elif self.header: # no jinja
                     fp.write(self.header)
         
         # append data rows to file
         self.data.compute()
-        self.data.to_frame().to_csv(self.file, index=False, header=False, encoding='utf-8', mode='a', quoting=csv.QUOTE_NONE, doublequote=False, na_rep=" ", sep="~", escapechar='')
+        # to_csv() unfortunately only works if `linearize: True`; otherwise, we get an error about
+        # escapechar being required (since the non-linearized data might contain newline chars)
+        # self.data.to_frame().to_csv(self.file, index=False, header=False, encoding='utf-8', mode='a', quoting=csv.QUOTE_NONE, doublequote=False, na_rep=" ", sep="~", escapechar='')
+        # so instead we need to
+        with open(self.file, 'a', encoding='utf-8') as fp:
+            for partition in self.data.partitions:
+                fp.writelines(partition.compute())
+                partition = None
         
         # Write the optional header, each line
         if self.footer:
             with open(self.file, 'a', encoding='utf-8') as fp:
                 if self.footer and util.contains_jinja(self.footer):
-                    jinja_template = util.build_jinja_template(self.footer, macros=self.earthmover.macros)
-                    rendered_template = self.render_row(first_row, jinja_template)
+                    footer_bytecode_file = util.build_jinja_template(self.footer, macros=self.earthmover.macros)
+                    rendered_template = self.render_row(first_row, template_bytecode_file=footer_bytecode_file, template_string=self.footer)
                     fp.write(rendered_template)
                 elif self.footer: # no jinja
                     fp.write(self.footer)
@@ -169,12 +177,13 @@ class FileDestination(Destination):
         self.size = os.path.getsize(self.file)
 
     @staticmethod
-    def apply_render_row(jinja_template, render_row, x):
-        return x.apply(render_row, jinja_template=jinja_template, axis=1)
+    def apply_render_row(template_bytecode_file, template_string, render_row, x):
+        return x.apply(render_row, template_bytecode_file=template_bytecode_file, template_string=template_string, axis=1)
     
-    def render_row(self, row: pd.Series, jinja_template):
-        jinja_template_file = util.build_jinja_template(jinja_template, macros=self.earthmover.macros)
-        # row_data = row if isinstance(row, dict) else row.to_dict()
+    def render_row(self, row: pd.Series, template_bytecode_file, template_string):
+        # jinja_template_file = util.build_jinja_template(jinja_template, macros=self.earthmover.macros)
+        # print(row)
+        # row_data = row if isinstance(row, dict) or isinstance(row, pd.Series) else row.to_dict()
         # row_data = {
         #     field: self.cast_output_dtype(value)
         #     for field, value in row_data.items()
@@ -182,7 +191,11 @@ class FileDestination(Destination):
         # row_data["__row_data__"] = row_data
 
         try:
-            json_string = util.render_jinja_template(row, jinja_template_file, jinja_template, self.earthmover.macros) # + "\n"
+            json_string = util.render_jinja_template(
+                row,
+                template_bytecode_file,
+                template_string,
+                self.earthmover.macros) + "\n"
 
         except Exception as err:
             print(err)

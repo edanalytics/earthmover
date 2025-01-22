@@ -25,6 +25,7 @@ from earthmover.yaml_parser import YamlMapping
 from earthmover import util
 
 from typing import List, Optional
+from dask.distributed import LocalCluster, Client
 
 COMPILED_YAML_FILE = "./earthmover_compiled.yaml"
 
@@ -163,11 +164,11 @@ class Earthmover:
         """
         ### Process the config_file and prepare for compilation.
         self.user_configs = JinjaEnvironmentYamlLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
-        self.package_graph = self.build_root_package_graph(self.user_configs)
+        # self.package_graph = self.build_root_package_graph(self.user_configs)
         self.graph = Graph(error_handler=self.error_handler)
 
         ### Optionally merge packages to update user-configs and write the composed YAML to disk.
-        self.user_configs = self.merge_packages() or self.user_configs
+        # self.user_configs = self.merge_packages() or self.user_configs
         if to_disk:
             self.user_configs.to_disk(self.compiled_yaml_file)
         self.user_configs = self.inject_cli_overrides(self.user_configs)
@@ -253,6 +254,29 @@ class Earthmover:
         Iterate subgraphs in `Earthmover.graph` and execute each Node in order.
         :return:
         """
+
+        # dask.config.set({"tokenize.ensure-deterministic": False})
+        cluster = LocalCluster(n_workers=4, # number of available cores minus 2?
+                        threads_per_worker=1,# number of threads per core
+                        memory_limit='2.0GB', # per worker; threads on a worker share this memory
+                        processes=True,
+                        silence_logs=logging.ERROR,
+                        # dashboard_address=None, # to disable dashboard
+                        local_directory='./',
+                        # executor="loky",
+                        )
+        # Find how many cores and threads-per-core your system has with `lscpu`
+        # Find how much memory is available on your system with `grep MemTotal /proc/meminfo`
+        print(f"View the dask profiling dashboard at {cluster.dashboard_link}")
+        dask_client = Client(cluster,
+                        serializers=['pickle', 'msgpack'], # ['dill', 'msgpack', 'pickle']
+                        deserializers=['pickle', 'msgpack'])
+
+        # dask_client.get_versions(check=True)
+        # dask.config.set(scheduler='processes')
+        # dask.config.set(pool=ThreadPoolExecutor(4))
+        # dask.config.set({"multiprocessing.context": "fork"})
+
         if not os.path.isdir(self.state_configs['output_dir']):
             self.logger.info(
                 f"creating output directory {self.state_configs['output_dir']}"
@@ -277,6 +301,10 @@ class Earthmover:
 
                 if self.results_file:
                     self.metadata["row_counts"].update({node_name: len(node.data)})
+        
+        # clean up Jinja template cache
+        template_folder = "./.jinja-templates/"
+        shutil.rmtree(template_folder)
 
 
     def hash_graph_to_runs_file(self, graph: Graph) -> RunsFile:
@@ -515,8 +543,9 @@ class Earthmover:
         package_graph.add_node('root', package=root_package)
 
         package_config = self.error_handler.assert_get_key(configs, 'packages', dtype=dict, required=False, default={})
-        print(package_config)
         for name, config in package_config.items():
+            print(name)
+            print(config)
             package = Package(name, config, earthmover=self)
             package_graph.add_node(name, package=package)
             package_graph.add_edge(root_package.name, name)

@@ -29,7 +29,7 @@ class Source(Node):
 
     NUM_ROWS_PER_CHUNK: int = 1000000
 
-    def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
+    def __new__(cls, name: str, config: 'YamlMapping', earthmover: 'Earthmover'):
         """
         Logic for assigning sources to their respective classes.
 
