@@ -1,6 +1,8 @@
 ### Unreleased changes
 
 * feature: Allow a `colspec_file` config with column info for `fixedwidth` inputs
+* feature: error messages for `keep_columns` and `drop_columns` now specify the columns
+
 ### v0.4.2
 <details>
 <summary>Released 2024-11-15</summary>
