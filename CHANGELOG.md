@@ -1,5 +1,7 @@
 ### Unreleased changes
-* fix: error messages for `keep_columns` and `drop_columns` do not specify the columns
+
+* feature: Allow a `colspec_file` config with column info for `fixedwidth` inputs
+* feature: error messages for `keep_columns` and `drop_columns` now specify the columns
 
 ### v0.4.2
 <details>
