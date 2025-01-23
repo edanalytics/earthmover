@@ -1,7 +1,12 @@
-### Unreleased changes
+### v0.4.3
+<details>
+<summary>Released 2025-01-23</summary>
 
-* feature: Allow a `colspec_file` config with column info for `fixedwidth` inputs
-* feature: error messages for `keep_columns` and `drop_columns` now specify the columns
+* feature: [allow a `colspec_file` config with column info for `fixedwidth` inputs](https://github.com/edanalytics/earthmover/pull/139)
+* feature: [error messages for `keep_columns` and `drop_columns` now specify the columns](https://github.com/edanalytics/earthmover/pull/150)
+
+</details>
+
 
 ### v0.4.2
 <details>
