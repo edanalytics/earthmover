@@ -164,7 +164,7 @@ class Earthmover:
         """
         ### Process the config_file and prepare for compilation.
         self.user_configs = JinjaEnvironmentYamlLoader.load_config_file(self.config_file, params=self.params, macros=self.macros)
-        # self.package_graph = self.build_root_package_graph(self.user_configs)
+        self.package_graph = self.build_root_package_graph(self.user_configs)
         self.graph = Graph(error_handler=self.error_handler)
 
         ### Optionally merge packages to update user-configs and write the composed YAML to disk.
@@ -256,10 +256,10 @@ class Earthmover:
         """
 
         # dask.config.set({"tokenize.ensure-deterministic": False})
-        cluster = LocalCluster(n_workers=4, # number of available cores minus 2?
+        cluster = LocalCluster(n_workers=6, # number of available cores minus 2?
                         threads_per_worker=1,# number of threads per core
                         memory_limit='2.0GB', # per worker; threads on a worker share this memory
-                        processes=True,
+                        processes=True, # try turning it on?
                         silence_logs=logging.ERROR,
                         # dashboard_address=None, # to disable dashboard
                         local_directory='./',
@@ -539,13 +539,13 @@ class Earthmover:
         # Create a root package to be the root of the packages directed graph
         root_package = Package('root', configs, earthmover=self, package_path=os.path.dirname(self.config_file))
         root_package.config_file = self.config_file
-        package_graph.add_node('root', package=root_package)
+        # package_graph.add_node('root', package=root_package)
 
-        package_config = self.error_handler.assert_get_key(configs, 'packages', dtype=dict, required=False, default={})
-        for name, config in package_config.items():
-            package = Package(name, config, earthmover=self)
-            package_graph.add_node(name, package=package)
-            package_graph.add_edge(root_package.name, name)
+        # package_config = self.error_handler.assert_get_key(configs, 'packages', dtype=dict, required=False, default={})
+        # for name, config in package_config.items():
+        #     package = Package(name, config, earthmover=self)
+        #     package_graph.add_node(name, package=package)
+        #     package_graph.add_edge(root_package.name, name)
 
         return package_graph
 

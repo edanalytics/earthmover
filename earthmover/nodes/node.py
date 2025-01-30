@@ -175,13 +175,15 @@ class Node:
             result = self.data.copy()
 
             for expectation in expectations:
-                template = jinja2.Template("{{" + expectation + "}}")
+                template_string = "{{" + expectation + "}}"
+                template = util.build_jinja_template(template_string=template_string, macros="")
 
                 result[expectation_result_col] = result.apply(
                     util.render_jinja_template, axis=1,
                     meta=pd.Series(dtype='str', name=expectation_result_col),
                     template_bytecode_file=template,
-                    template_string="{{" + expectation + "}}",
+                    template_string=template_string,
+                    macros="",
                     error_handler = self.error_handler
                 )
 

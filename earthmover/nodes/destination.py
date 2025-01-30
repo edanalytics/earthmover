@@ -157,11 +157,12 @@ class FileDestination(Destination):
         # to_csv() unfortunately only works if `linearize: True`; otherwise, we get an error about
         # escapechar being required (since the non-linearized data might contain newline chars)
         # self.data.to_frame().to_csv(self.file, index=False, header=False, encoding='utf-8', mode='a', quoting=csv.QUOTE_NONE, doublequote=False, na_rep=" ", sep="~", escapechar='')
+        self.data.to_csv(self.file, single_file=False, index=False, header=False, encoding='utf-8', mode='a', quoting=csv.QUOTE_NONE, doublequote=False, na_rep=" ", sep="~", escapechar='')
         # so instead we need to
-        with open(self.file, 'a', encoding='utf-8') as fp:
-            for partition in self.data.partitions:
-                fp.writelines(partition.compute())
-                partition = None
+        # with open(self.file, 'a', encoding='utf-8') as fp:
+        #     for partition in self.data.partitions:
+        #         fp.writelines(partition.compute())
+        #         partition = None
         
         # Write the optional header, each line
         if self.footer:

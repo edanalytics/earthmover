@@ -1,8 +1,10 @@
+version: 2
+
 config:
   output_dir: ./output/
-  # show_stacktrace: True
-  # show_graph: True
-  # log_level: DEBUG
+  show_stacktrace: True
+  show_graph: True
+  log_level: DEBUG
 
 sources:
   attendance:
