@@ -125,12 +125,13 @@ class JinjaEnvironmentYamlLoader(yaml.SafeLoader):
 
         # Expand Jinja and complete full parsing
         try:
-            template_bytecode_file = util.build_jinja_template(raw_yaml, macros=macros)
+            # template_bytecode_file = util.build_jinja_template(raw_yaml, macros=macros)
             # empty_pd_df = pd.DataFrame()
             # empty_dask_df = dd.from_pandas(empty_pd_df, npartitions=1)
             # empty_row = dd.Series([], dtype=str)
-            raw_yaml = util.render_jinja_template(pd.Series(), template_bytecode_file, raw_yaml, macros, error_handler=None)
-            yaml_configs = yaml.load(raw_yaml, Loader=cls)
+            template = util.build_jinja_template(macros + raw_yaml)
+            parsed_yaml = util.render_jinja_template(pd.Series(), template, raw_yaml, error_handler=None)
+            yaml_configs = yaml.load(parsed_yaml, Loader=cls)
 
         except yaml.YAMLError as err:
             linear_error_message = " ".join(

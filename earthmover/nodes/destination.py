@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import re
 import csv
+import jinja2
 import warnings
 from functools import partial
 
@@ -95,7 +96,7 @@ class FileDestination(Destination):
                 template_string = self.EXP.sub(" ", template_string)
 
             self.jinja_template_string = template_string
-            self.jinja_template_bytecode = util.build_jinja_template(template_string, macros=self.earthmover.macros)
+            # self.jinja_template_bytecode = util.build_jinja_template(template_string, macros=self.earthmover.macros)
 
         except OSError as err:
             self.error_handler.throw(
@@ -113,7 +114,7 @@ class FileDestination(Destination):
         # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
         self.data = (
             self.upstream_sources[self.source].data
-                .map_partitions(partial(self.apply_render_row, self.jinja_template_bytecode, self.jinja_template_string, self.render_row), meta=pd.Series('str'))
+                .map_partitions(partial(self.apply_render_row, template_string, self.render_row), meta=pd.Series('str'))
         )
 
         # Repartition before writing, if specified.
@@ -146,18 +147,18 @@ class FileDestination(Destination):
         if self.header:
             with open(self.file, 'a', encoding='utf-8') as fp:
                 if self.header and util.contains_jinja(self.header):
-                    header_bytecode_file = util.build_jinja_template(self.header, macros=self.earthmover.macros)
+                    header_bytecode_file = util.build_jinja_template(self.earthmover.macros + self.header)
                     rendered_template = self.render_row(first_row, template_bytecode_file=header_bytecode_file, template_string=self.header)
                     fp.write(rendered_template)
                 elif self.header: # no jinja
                     fp.write(self.header)
         
         # append data rows to file
-        self.data.compute()
+        # self.data.compute()
         # to_csv() unfortunately only works if `linearize: True`; otherwise, we get an error about
         # escapechar being required (since the non-linearized data might contain newline chars)
         # self.data.to_frame().to_csv(self.file, index=False, header=False, encoding='utf-8', mode='a', quoting=csv.QUOTE_NONE, doublequote=False, na_rep=" ", sep="~", escapechar='')
-        self.data.to_csv(self.file, single_file=False, index=False, header=False, encoding='utf-8', mode='a', quoting=csv.QUOTE_NONE, doublequote=False, na_rep=" ", sep="~", escapechar='')
+        self.data.to_csv(self.file, single_file=True, index=False, header=False, encoding='utf-8', mode='a', quoting=csv.QUOTE_NONE, doublequote=False, na_rep=" ", sep="~", escapechar='')
         # so instead we need to
         # with open(self.file, 'a', encoding='utf-8') as fp:
         #     for partition in self.data.partitions:
@@ -168,7 +169,7 @@ class FileDestination(Destination):
         if self.footer:
             with open(self.file, 'a', encoding='utf-8') as fp:
                 if self.footer and util.contains_jinja(self.footer):
-                    footer_bytecode_file = util.build_jinja_template(self.footer, macros=self.earthmover.macros)
+                    footer_bytecode_file = util.build_jinja_template(self.earthmover.macros + self.footer)
                     rendered_template = self.render_row(first_row, template_bytecode_file=footer_bytecode_file, template_string=self.footer)
                     fp.write(rendered_template)
                 elif self.footer: # no jinja
@@ -178,25 +179,25 @@ class FileDestination(Destination):
         self.size = os.path.getsize(self.file)
 
     @staticmethod
-    def apply_render_row(template_bytecode_file, template_string, render_row, x):
-        return x.apply(render_row, template_bytecode_file=template_bytecode_file, template_string=template_string, axis=1)
+    def apply_render_row(template_string, render_row, x):
+        template = util.build_jinja_template(template_string)
+        dunder_row_data = False
+        if '__row_data__' in util.get_jinja_template_params(template_string):
+            dunder_row_data = True
+        return x.apply(
+            render_row,
+            template = template,
+            template_string = template_string,
+            dunder_row_data = dunder_row_data,
+            axis=1)
     
-    def render_row(self, row: pd.Series, template_bytecode_file, template_string):
-        # jinja_template_file = util.build_jinja_template(jinja_template, macros=self.earthmover.macros)
-        # print(row)
-        # row_data = row if isinstance(row, dict) or isinstance(row, pd.Series) else row.to_dict()
-        # row_data = {
-        #     field: self.cast_output_dtype(value)
-        #     for field, value in row_data.items()
-        # }
-        # row_data["__row_data__"] = row_data
-
+    def render_row(self, row: pd.Series, template, template_string, dunder_row_data=False):
         try:
             json_string = util.render_jinja_template(
                 row,
-                template_bytecode_file,
+                template,
                 template_string,
-                self.earthmover.macros) + "\n"
+                dunder_row_data)
 
         except Exception as err:
             print(err)
@@ -204,5 +205,5 @@ class FileDestination(Destination):
                 f"error rendering Jinja template in `template` file {self.template} ({err})"
             )
             raise
-
+        
         return json_string

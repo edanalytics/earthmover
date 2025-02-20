@@ -55,6 +55,18 @@ def get_sep(file: str) -> Optional[str]:
     return ext_mapping.get(ext)
 
 
+def flatten_dict(d, parent_key='', sep='.'):
+    """Flattens a nested dictionary, using a separator for nested keys."""
+    flattened = {}
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            flattened.update(flatten_dict(v, new_key, sep))
+        else:
+            flattened[new_key] = v
+    return flattened
+
+
 def contains_jinja(string: str) -> bool:
     """
 
@@ -73,7 +85,33 @@ def contains_jinja(string: str) -> bool:
         return False
 
 
-def render_jinja_template(row: 'Series', template_bytecode_file: str, template_string: str, macros: str, *, error_handler: Optional['ErrorHandler']=None) -> str:
+def build_jinja_template(template_string: str):
+    """
+
+    """
+    template = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(os.path.dirname('./'))
+    ).from_string(template_string)
+    template.globals['md5'] = partial(md5_hash)
+    template.globals['fromjson'] = partial(json.loads)
+    return template
+
+
+def get_jinja_template_params(template_string: str):
+    """
+    This function uses Jinja's meta functions to return a list of variables
+    referenced within `template_string`. This may be used in the future to
+    trace column-level lineage backward through the data dependency graph,
+    and drop unused columns early (to improve earthmover performance).
+    """
+    from jinja2 import meta
+    env = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(os.path.dirname('./'))
+    )
+    ast = env.parse(template_string)
+    return list(meta.find_undeclared_variables(ast))
+
+def render_jinja_template(row: 'Series', template: jinja2.Template, template_string: str, dunder_row_data=False, *, error_handler: Optional['ErrorHandler']=None) -> str:
     """
 
     :param row:
@@ -82,22 +120,15 @@ def render_jinja_template(row: 'Series', template_bytecode_file: str, template_s
     :param error_handler:
     :return:
     """
-    # template = build_jinja_template(template, macros)
     try:
-        if row.empty: row_data = { '__row_data__': { '__row_data__': {}} }
+    
+        if row.empty and dunder_row_data: row_data = { '__row_data__': { '__row_data__': {}} }
         else:
             row_data = row.to_dict()
-            row_data.update({"__row_data__": row.to_dict()})
+            if dunder_row_data: row_data.update({"__row_data__": row.to_dict()})
         
-        # See the comment in `build_jinja_template()` below; here we load
-        # and render the bytecode that was built there.
-        fs_loader = jinja2.FileSystemLoader(searchpath=os.path.dirname('./'))
-        fs_bytecode_cache = jinja2.FileSystemBytecodeCache("./.jinja-templates/.cache/")
-        environment = jinja2.Environment(loader=fs_loader, bytecode_cache=fs_bytecode_cache, autoescape=True)
-        template = environment.get_template(template_bytecode_file)
-        template.globals['md5'] = partial(md5_hash)
-        template.globals['fromjson'] = partial(json.loads)
-        return template.render(row_data)
+        rendered_row = template.render(row_data)
+        return rendered_row
 
     except Exception as err:
         if error_handler: error_handler.ctx.remove('line')
@@ -138,35 +169,6 @@ def jinja2_template_error_lineno():
             return tb.tb_lineno
         tb = tb.tb_next
 
-
-def build_jinja_template(template_string: str, macros: str = ""):
-    """
-
-    """
-    # Jinja templates are unfortunately not serializable. We don't want to have
-    # to re-parse and build them every time they're rendered, so instead, inspired
-    # by https://stackoverflow.com/questions/77187839/how-to-serialize-jinja2-template-in-pyspark
-    # we parse and build them once, write the bytecode out to a (temp) file, and
-    # then other parallel processes can render the template using the cached bytecode.
-    template_folder = "./.jinja-templates/"
-    template_cache_folder = template_folder + ".cache/"
-    fs_loader = jinja2.FileSystemLoader(searchpath=os.path.dirname('./'))
-    fs_bytecode_cache = jinja2.FileSystemBytecodeCache(template_cache_folder)
-    environment = jinja2.Environment(loader=fs_loader, bytecode_cache=fs_bytecode_cache, autoescape=True)
-    template_file = "./.jinja-templates/" + md5_hash(template_string) + ".j2"
-    os.makedirs(template_folder, exist_ok=True)
-    os.makedirs(template_cache_folder, exist_ok=True)
-    if not Path(template_file).exists():
-        with open(template_file, "w") as tpl_file:
-            tpl_file.write(macros.strip() + template_string)
-    template = environment.get_template(template_file)
-    # render the template (with an empty row) to force the bytecode to be cached:
-    # render_jinja_template(pd.Series(), template_file, "", "", error_handler=None)
-    # template = jinja2.Environment(
-    #     loader=jinja2.FileSystemLoader(os.path.dirname('./'))
-    # ).from_string(macros.strip() + template_string)
-
-    return template_file
 
 def md5_hash(x):
     return hashlib.md5(x.encode('utf-8')).hexdigest()

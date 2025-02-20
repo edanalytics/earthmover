@@ -176,12 +176,12 @@ class Node:
 
             for expectation in expectations:
                 template_string = "{{" + expectation + "}}"
-                template = util.build_jinja_template(template_string=template_string, macros="")
+                # template = util.build_jinja_template(template_string=template_string, macros="")
 
                 result[expectation_result_col] = result.apply(
                     util.render_jinja_template, axis=1,
                     meta=pd.Series(dtype='str', name=expectation_result_col),
-                    template_bytecode_file=template,
+                    jinja_environment=self.earthmover.jinja_environment,
                     template_string=template_string,
                     macros="",
                     error_handler = self.error_handler

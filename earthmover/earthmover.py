@@ -12,6 +12,7 @@ import time
 import datetime
 import pandas as pd
 import yaml
+import jinja2
 
 from earthmover.error_handler import ErrorHandler
 from earthmover.graph import Graph
@@ -101,10 +102,7 @@ class Earthmover:
         # Prepare the output directory for destinations.
         self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
 
-        # Set the temporary directory in cases of disk-spillage.
-        dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
         
-
         # Set a directory for installing packages.
         self.packages_dir = os.path.join(os.getcwd(), 'packages')
 
@@ -255,27 +253,53 @@ class Earthmover:
         :return:
         """
 
-        # dask.config.set({"tokenize.ensure-deterministic": False})
-        cluster = LocalCluster(n_workers=6, # number of available cores minus 2?
-                        threads_per_worker=1,# number of threads per core
-                        memory_limit='2.0GB', # per worker; threads on a worker share this memory
-                        processes=True, # try turning it on?
-                        silence_logs=logging.ERROR,
-                        # dashboard_address=None, # to disable dashboard
-                        local_directory='./',
-                        # executor="loky",
-                        )
-        # Find how many cores and threads-per-core your system has with `lscpu`
-        # Find how much memory is available on your system with `grep MemTotal /proc/meminfo`
-        print(f"View the dask profiling dashboard at {cluster.dashboard_link}")
-        dask_client = Client(cluster,
-                        serializers=['pickle', 'msgpack'], # ['dill', 'msgpack', 'pickle']
-                        deserializers=['pickle', 'msgpack'])
+        # Here we set some default dask configs that are needed for most earthmover runs.
+        # A power user can certainly override them in earthmover.yml's `config.dask`` section.
+        # * September 2024 - for now we need to do this in order to turn off the Dask 
+        #   query optimizer - see https://blog.dask.org/2023/08/25/dask-expr-introduction
+        #   For reasons unknown, it doesn't yet work with Earthmover. A future Dask 
+        #   version may force us to use the query optimizer, but hopefully by then,
+        #   the bugs that emerge when we use it with Earthmover will have been fixed.
+        # * convert-string converts string-like data to pyarrow strings to improve performance
+        #   see https://docs.dask.org/en/latest/configuration.html#dataframe.convert-string
+        default_dask_configs = {
+            "dataframe.query-planning": False,
+            "dataframe.convert-string": True
+        }
 
-        # dask_client.get_versions(check=True)
-        # dask.config.set(scheduler='processes')
-        # dask.config.set(pool=ThreadPoolExecutor(4))
-        # dask.config.set({"multiprocessing.context": "fork"})
+        # Here we set up dask configs, and (perhaps) dask distributed configs.
+        # Dask configs are nested dicts, but must be passed to dask as a flattened dict... so
+        # ````yaml
+        # temporary_directory: /tmp
+        # dataframe:
+        #   backend: pandas
+        # ```
+        # should be passed to dask as
+        # > dask.config.set({"temporary_directory": "/tmp", "dataframe.backend": "pandas"})
+        # 
+        # The calls below to util.flatten_dict() convert between a nested dict, like what
+        # comes from the earthmover YAML config, to a flattened dict, like what Dask needs.
+        dask_configs = default_dask_configs.copy()
+        user_dask_configs = self.user_configs.get("config",{}).get("dask", {})
+        # possible configs are here: https://github.com/dask/dask/blob/main/dask/dask.yaml
+        # and (for distributed): https://github.com/dask/distributed/blob/main/distributed/distributed.yaml
+        temp_dir = self.user_configs.get("config",{}).get("temp_dir", False)
+        if temp_dir:
+            user_dask_configs["temporary-directory"] = temp_dir
+        if user_dask_configs:
+            dask_configs.update(util.flatten_dict(user_dask_configs.to_dict()))
+        print(dask_configs)
+        dask.config.set(dask_configs)
+        
+        if dask_configs.get("distributed", False):
+            dask_cluster_kwargs = self.user_configs.get("config",{}).get("dask_cluster_kwargs",False)
+            # possible configs are here: https://distributed.dask.org/en/stable/api.html?highlight=localcluster#distributed.LocalCluster
+            if not dask_cluster_kwargs:
+                self.logger.error("`config.dask_cluster_kwargs` is required in `earthmover.yml` when `config.dask_distributed` is specified; see documentation for details and example configuration")
+            cluster = LocalCluster(**(dask_cluster_kwargs.to_dict()))
+            self.logger.info(f"view the dask profiling dashboard at {cluster.dashboard_link}")
+            dask_client = Client(cluster)
+            dask_client.get_versions(check=True)
 
         if not os.path.isdir(self.state_configs['output_dir']):
             self.logger.info(
@@ -301,10 +325,6 @@ class Earthmover:
 
                 if self.results_file:
                     self.metadata["row_counts"].update({node_name: len(node.data)})
-        
-        # clean up Jinja template cache
-        template_folder = "./.jinja-templates/"
-        shutil.rmtree(template_folder)
 
 
     def hash_graph_to_runs_file(self, graph: Graph) -> RunsFile:

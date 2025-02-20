@@ -27,7 +27,7 @@ class Source(Node):
     is_remote: bool = None
     allowed_configs: Tuple[str] = ('debug', 'expect', 'require_rows', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',)
 
-    NUM_ROWS_PER_CHUNK: int = 1000000
+    NUM_ROWS_PER_CHUNK: int = 100
 
     def __new__(cls, name: str, config: 'YamlMapping', earthmover: 'Earthmover'):
         """
@@ -295,7 +295,8 @@ class FileSource(Source):
             dtype = str,
             encoding = config.get('encoding', "utf8"),
             keep_default_na = False,
-            skiprows = int(config.get('header_rows', 1)) - 1
+            skiprows = int(config.get('header_rows', 1)) - 1,
+            blocksize = '8MB'
             )
     
     def _verify_packages(self, file_type: str):
