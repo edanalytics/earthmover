@@ -147,8 +147,8 @@ class FileDestination(Destination):
         if self.header:
             with open(self.file, 'a', encoding='utf-8') as fp:
                 if self.header and util.contains_jinja(self.header):
-                    header_bytecode_file = util.build_jinja_template(self.earthmover.macros + self.header)
-                    rendered_template = self.render_row(first_row, template_bytecode_file=header_bytecode_file, template_string=self.header)
+                    header_template = util.build_jinja_template(self.earthmover.macros + self.header)
+                    rendered_template = self.render_row(first_row, template=header_template, template_string=self.header, dunder_row_data=True)
                     fp.write(rendered_template)
                 elif self.header: # no jinja
                     fp.write(self.header)
@@ -169,8 +169,8 @@ class FileDestination(Destination):
         if self.footer:
             with open(self.file, 'a', encoding='utf-8') as fp:
                 if self.footer and util.contains_jinja(self.footer):
-                    footer_bytecode_file = util.build_jinja_template(self.earthmover.macros + self.footer)
-                    rendered_template = self.render_row(first_row, template_bytecode_file=footer_bytecode_file, template_string=self.footer)
+                    footer_template = util.build_jinja_template(self.earthmover.macros + self.footer)
+                    rendered_template = self.render_row(first_row, template_bytecode_file=footer_template, template_string=self.footer, dunder_row_data=True)
                     fp.write(rendered_template)
                 elif self.footer: # no jinja
                     fp.write(self.footer)

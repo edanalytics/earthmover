@@ -28,6 +28,10 @@ class Node:
 
     def __getnewargs__(self):
         return self.name, self.config, self.earthmover
+    
+    def __dask_tokenize__(self):
+        from dask.base import normalize_token
+        return normalize_token((type(self), self.type))
 
     def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         self.name: str = name

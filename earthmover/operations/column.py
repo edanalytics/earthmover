@@ -3,6 +3,7 @@ import dask
 import pandas as pd
 import re
 import string
+from functools import partial
 
 from earthmover.operations.operation import Operation
 from earthmover import util
@@ -50,13 +51,14 @@ class AddColumnsOperation(Operation):
                     )
                     raise
 
-                data[col] = data.apply(
-                    util.render_jinja_template, axis=1,
-                    meta=pd.Series(dtype='str', name=col),
-                    template=template,
-                    template_string=val,
-                    error_handler=self.error_handler
-                )
+                # data[col] = data.apply(
+                #     util.render_jinja_template, axis=1,
+                #     meta=pd.Series(dtype='str', name=col),
+                #     template=template,
+                #     template_string=val,
+                #     error_handler=self.error_handler
+                # )
+                data[col] = data.map_partitions(partial(self.apply_render_row, val, self.render_row), meta=pd.Series('str'))
 
         return data
 

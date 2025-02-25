@@ -288,10 +288,9 @@ class Earthmover:
             user_dask_configs["temporary-directory"] = temp_dir
         if user_dask_configs:
             dask_configs.update(util.flatten_dict(user_dask_configs.to_dict()))
-        print(dask_configs)
         dask.config.set(dask_configs)
         
-        if dask_configs.get("distributed", False):
+        if user_dask_configs.get("distributed", False):
             dask_cluster_kwargs = self.user_configs.get("config",{}).get("dask_cluster_kwargs",False)
             # possible configs are here: https://distributed.dask.org/en/stable/api.html?highlight=localcluster#distributed.LocalCluster
             if not dask_cluster_kwargs:
