@@ -1,4 +1,5 @@
 import pandas as pd
+from dask import dataframe as dd
 import re
 from functools import partial
 
@@ -134,10 +135,10 @@ class GroupByOperation(Operation):
 
             _computed = grouped.apply(agg_partial, meta=meta).reset_index()
             result = result.merge(_computed, how="left", on=self.group_by_columns)
+            result = result.reset_index(drop=True)
 
         data = result.query(f"{self.GROUP_SIZE_COL} > 0")
         del data[self.GROUP_SIZE_COL]
-
         return data
 
     @staticmethod

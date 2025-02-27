@@ -138,7 +138,7 @@ class JoinOperation(Operation):
                 )
                 raise
 
-        return left_data
+        return left_data.repartition(partition_size="16MB")
 
 
 class UnionOperation(Operation):

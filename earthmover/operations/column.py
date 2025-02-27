@@ -113,14 +113,15 @@ class ModifyColumnsOperation(Operation):
         # TODO: Allow user to specify string that represents current column value.
         data['value'] = data[col]
 
-        data[col] = data.apply(
-            util.render_jinja_template, axis=1,
-            meta=pd.Series(dtype='str', name=col),
-            template=template,
-            template_string=val,
-            macros=self.earthmover.macros,
-            error_handler=self.error_handler
-        )
+        # data[col] = data.apply(
+        #     util.render_jinja_template, axis=1,
+        #     meta=pd.Series(dtype='str', name=col),
+        #     template=template,
+        #     template_string=val,
+        #     macros=self.earthmover.macros,
+        #     error_handler=self.error_handler
+        # )
+        data[col] = data.map_partitions(partial(self.apply_render_row, val, self.render_row), meta=pd.Series('str'))
         del data["value"]
 
 
