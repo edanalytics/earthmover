@@ -121,12 +121,15 @@ def render_jinja_template(row: 'Series', template: jinja2.Template, template_str
     :return:
     """
     try:
-    
-        if row.empty and dunder_row_data: row_data = { '__row_data__': { '__row_data__': {}} }
-        else:
-            row_data = row.to_dict()
-            if dunder_row_data: row_data.update({"__row_data__": row.to_dict()})
-        
+        row_data = row
+        if dunder_row_data:
+            # for backwards compatibility with a bug, we must unfortunately double-dunder (sigh)
+            row_data = add_dunder_row_data(row)
+            row_data = add_dunder_row_data(row_data)
+            # this can be fixed with a future release, but first we'll have to fix templates
+            # that rely on it, for example:
+            # > {% for key, value in __row_data__.pop('__row_data__').items() -%}
+
         rendered_row = template.render(row_data)
         return rendered_row
 
@@ -145,6 +148,12 @@ def render_jinja_template(row: 'Series', template: jinja2.Template, template_str
         else: raise Exception(f"Error rendering Jinja template: ({err})")
         raise
 
+def add_dunder_row_data(row: pd.Series):
+    row_data = row
+    if isinstance(row, pd.Series) and row.empty: row_data = { }
+    if not isinstance(row, dict): row_data = row.to_dict()
+    row_data.update({"__row_data__": row_data.copy()})
+    return row_data
 
 def jinja2_template_error_lineno():
     """

@@ -12,7 +12,6 @@ import time
 import datetime
 import pandas as pd
 import yaml
-import jinja2
 
 from earthmover.error_handler import ErrorHandler
 from earthmover.graph import Graph
@@ -192,7 +191,7 @@ class Earthmover:
         dask.config.set(dask_configs)
 
         # distributed settings:
-        self.distributed = self.state_configs.get("config",{}).get("dask",{}).get("distributed",False)
+        self.distributed = self.user_configs.get("config",{}).get("dask",{}).get("distributed",False)
         if self.distributed:
             self.dask_cluster_kwargs = self.user_configs.get("config",{}).get("dask_cluster_kwargs",False)
             # possible configs are here: https://distributed.dask.org/en/stable/api.html?highlight=localcluster#distributed.LocalCluster
@@ -308,6 +307,7 @@ class Earthmover:
         :return:
         """
         if self.distributed:
+            self.logger.info(f"running with dask distributed")
             if not self.dask_cluster_kwargs:
                 self.logger.error("`config.dask_cluster_kwargs` is required in `earthmover.yml` when `config.dask_distributed` is specified; see documentation for details and example configuration")
             cluster = LocalCluster(**(self.dask_cluster_kwargs.to_dict()))

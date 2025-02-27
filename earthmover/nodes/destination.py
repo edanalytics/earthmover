@@ -2,7 +2,6 @@ import os
 import pandas as pd
 import re
 import csv
-import jinja2
 import warnings
 from functools import partial
 
@@ -95,9 +94,6 @@ class FileDestination(Destination):
             if self.linearize:
                 template_string = self.EXP.sub(" ", template_string)
 
-            self.jinja_template_string = template_string
-            # self.jinja_template_bytecode = util.build_jinja_template(template_string, macros=self.earthmover.macros)
-
         except OSError as err:
             self.error_handler.throw(
                 f"`template` file {self.template} cannot be opened ({err})"
@@ -136,12 +132,13 @@ class FileDestination(Destination):
                     warnings.filterwarnings("ignore", message="Insufficient elements for `head`")
                     # (use `npartitions=-1` because the first N partitions could be empty)
                     # (use self.upstream_sources because self.data is a single column, the rendered Jinja template)
-                    first_row = pd.Series({}) # self.upstream_sources[self.source].data.head(1, npartitions=-1).reset_index(drop=True).iloc[0]
+                    first_row = self.upstream_sources[self.source].data.head(1, npartitions=-1).reset_index(drop=True).iloc[0]
             
             except IndexError:  # If no rows are present, build a representation of the row with empty values
                 first_row = {col: "" for col in self.upstream_sources[self.source].data.columns}
                 # first_row['__row_data__'] = first_row
                 # first_row = pd.Series(first_row)
+            # first_row_data = util.add_dunder_row_data(first_row)
         
         # Write the optional header, each line
         if self.header:

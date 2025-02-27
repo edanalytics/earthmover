@@ -2,9 +2,6 @@ import argparse
 import logging
 import os
 import sys
-import dask
-
-from concurrent.futures import ThreadPoolExecutor
 
 from earthmover.earthmover import Earthmover
 from earthmover.init import run_init
