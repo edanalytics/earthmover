@@ -138,7 +138,9 @@ class JoinOperation(Operation):
                 )
                 raise
 
-        return left_data.repartition(partition_size="16MB")
+        if self.earthmover.distributed:
+            left_data = left_data.repartition(partition_size="64MB")
+        return left_data
 
 
 class UnionOperation(Operation):

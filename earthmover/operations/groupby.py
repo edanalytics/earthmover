@@ -87,11 +87,16 @@ class GroupByOperation(Operation):
             raise
 
         #
+        # .sort_values(by=self.group_by_columns)
         grouped = data.groupby(self.group_by_columns)
 
         result = grouped.size().reset_index()
         result.columns = self.group_by_columns + [self.GROUP_SIZE_COL]
-
+        if self.earthmover.distributed:
+            result = result.repartition(partition_size="64MB")
+        # aggregate_args = []
+        # computed = {}
+        
         for new_col_name, func in self.create_columns_dict.items():
 
             _pieces = re.findall(
@@ -133,10 +138,12 @@ class GroupByOperation(Operation):
                 )
             )
 
-            _computed = grouped.apply(agg_partial, meta=meta).reset_index()
+            _computed = grouped.apply(agg_partial, meta=meta)
+            if self.earthmover.distributed:
+                _computed = _computed.repartition(partition_size="64MB")
+            _computed = _computed.reset_index()
             result = result.merge(_computed, how="left", on=self.group_by_columns)
-            result = result.reset_index(drop=True)
-
+        
         data = result.query(f"{self.GROUP_SIZE_COL} > 0")
         del data[self.GROUP_SIZE_COL]
         return data

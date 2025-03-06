@@ -93,6 +93,8 @@ class FileDestination(Destination):
             # Replace multiple spaces with a single space to flatten templates.
             if self.linearize:
                 template_string = self.EXP.sub(" ", template_string)
+            else:
+                template_string = template_string + "\n"
 
         except OSError as err:
             self.error_handler.throw(
@@ -150,17 +152,17 @@ class FileDestination(Destination):
                 elif self.header: # no jinja
                     fp.write(self.header)
         
-        # append data rows to file
-        # self.data.compute()
-        # to_csv() unfortunately only works if `linearize: True`; otherwise, we get an error about
-        # escapechar being required (since the non-linearized data might contain newline chars)
-        # self.data.to_frame().to_csv(self.file, index=False, header=False, encoding='utf-8', mode='a', quoting=csv.QUOTE_NONE, doublequote=False, na_rep=" ", sep="~", escapechar='')
-        self.data.to_csv(self.file, single_file=True, index=False, header=False, encoding='utf-8', mode='a', quoting=csv.QUOTE_NONE, doublequote=False, na_rep=" ", sep="~", escapechar='')
-        # so instead we need to
-        # with open(self.file, 'a', encoding='utf-8') as fp:
-        #     for partition in self.data.partitions:
-        #         fp.writelines(partition.compute())
-        #         partition = None
+        # Append data rows to file:
+        # to_csv() - which is most efficient - unfortunately only works if `linearize: True`;
+        # otherwise, we get an error about escapechar being required (since the non-linearized
+        # data might contain newline chars)
+        if self.linearize:
+            self.data.to_csv(self.file, single_file=True, index=False, header=False, encoding='utf-8', mode='a', quoting=csv.QUOTE_NONE, doublequote=False, na_rep=" ", sep="~", escapechar='')
+        else:
+            with open(self.file, 'a', encoding='utf-8') as fp:
+                for partition in self.data.partitions:
+                    fp.writelines(partition.compute())
+                    partition = None
         
         # Write the optional header, each line
         if self.footer:
@@ -178,9 +180,7 @@ class FileDestination(Destination):
     @staticmethod
     def apply_render_row(template_string, render_row, x):
         template = util.build_jinja_template(template_string)
-        dunder_row_data = False
-        if '__row_data__' in util.get_jinja_template_params(template_string):
-            dunder_row_data = True
+        dunder_row_data = '__row_data__' in util.get_jinja_template_params(template_string)
         return x.apply(
             render_row,
             template = template,
