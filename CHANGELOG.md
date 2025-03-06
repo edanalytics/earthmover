@@ -1,6 +1,6 @@
 ### v0.4.4
 <details>
-<summary>Released 2025-01-23</summary>
+<summary>Released 2025-03-06</summary>
 
 * bugfix: [improve exception-handling when loading a `SQLSource` using SQLAlchemy 2.x](https://github.com/edanalytics/earthmover/pull/153)
 
