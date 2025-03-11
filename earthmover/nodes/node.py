@@ -61,6 +61,11 @@ class Node:
         # Internal Dask configs
         self.partition_size: Union[str, int] = self.config.get('repartition')
 
+        # Some nodes automatically repartition, per Dask's recommendation.
+        # (see https://docs.dask.org/en/stable/dataframe-best-practices.html#repartition-to-reduce-overhead)
+        # This is set here so it would be easy to change in the future if needed.
+        self.target_partition_size = "100MB"
+
         # Optional variables for displaying progress and diagnostics.
         self.show_progress: bool = self.config.get('show_progress', self.earthmover.state_configs["show_progress"])
         self.progress_bar: ProgressBar = ProgressBar(minimum=10, dt=5.0)  # Always instantiate, but only use if `show_progress is True`.

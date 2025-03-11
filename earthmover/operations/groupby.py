@@ -87,16 +87,16 @@ class GroupByOperation(Operation):
             raise
 
         #
-        # .sort_values(by=self.group_by_columns)
+        # data = data.sort_values(by=self.group_by_columns).repartition(partition_size=self.target_partition_size)
         grouped = data.groupby(self.group_by_columns)
 
         result = grouped.size().reset_index()
         result.columns = self.group_by_columns + [self.GROUP_SIZE_COL]
+        result = result.query(f"{self.GROUP_SIZE_COL} > 0")
         if self.earthmover.distributed:
-            result = result.repartition(partition_size="64MB")
-        # aggregate_args = []
-        # computed = {}
+            result = result.repartition(partition_size=self.target_partition_size)
         
+        all_new_cols = {}
         for new_col_name, func in self.create_columns_dict.items():
 
             _pieces = re.findall(
@@ -106,6 +106,31 @@ class GroupByOperation(Operation):
 
             # User can pass in 1, 2, or 3 pieces. We want to default undefined pieces to empty strings.
             _pieces = list(_pieces) + ["", ""]  # Clever logic to simplify unpacking.
+            all_new_cols[new_col_name] = _pieces
+        
+        # Special handling for a few numeric agg types, for better performance:
+        # - count comes for free in `grouped`
+        # - avg = sum()/count - so if we already computed sum(), no need to actually compute!
+        create_new_cols = {}
+        count_new_cols = {}
+        avg_new_cols = {}
+        for new_col_name, _pieces in all_new_cols.items():
+            _agg_type, _col, _sep, *_ = _pieces  # Unpack the pieces, adding blanks as necessary.
+            
+            if _agg_type in ["count", "size"]:
+                count_new_cols[new_col_name] = _pieces
+                continue
+            elif _agg_type in ["mean", "avg"]:
+                sum_on_same_col = [
+                    x for x in all_new_cols.keys() if all_new_cols[x][0]=="sum" and all_new_cols[x][1]==_col
+                ]
+                if len(sum_on_same_col)>0:
+                    avg_new_cols[new_col_name] = _pieces
+                    continue
+            create_new_cols[new_col_name] = _pieces
+        
+        # now compute the columns needed:
+        for new_col_name, _pieces in create_new_cols.items():
             _agg_type, _col, _sep, *_ = _pieces  # Unpack the pieces, adding blanks as necessary.
 
             #
@@ -120,8 +145,9 @@ class GroupByOperation(Operation):
                     self.error_handler.throw(
                         f"aggregation function `{_agg_type}`({_col}) refers to a column {_col} which does not exist"
                     )
-
+                
             agg_partial = self._get_agg_partial(_agg_type, _col, _sep)
+            
             if not agg_partial:
                 self.error_handler.throw(
                     f"invalid aggregation function `{_agg_type}` in `group_by` operation"
@@ -139,14 +165,27 @@ class GroupByOperation(Operation):
             )
 
             _computed = grouped.apply(agg_partial, meta=meta)
-            if self.earthmover.distributed:
-                _computed = _computed.repartition(partition_size="64MB")
             _computed = _computed.reset_index()
+            if self.earthmover.distributed:
+                _computed = _computed.repartition(partition_size=self.target_partition_size)
             result = result.merge(_computed, how="left", on=self.group_by_columns)
+
+        for new_col_name, _pieces in count_new_cols.items():
+            result[new_col_name] = result[self.GROUP_SIZE_COL]
         
-        data = result.query(f"{self.GROUP_SIZE_COL} > 0")
-        del data[self.GROUP_SIZE_COL]
-        return data
+        for new_col_name, _pieces in avg_new_cols.items():
+            _agg_type, _col, _sep, *_ = _pieces  # Unpack the pieces, adding blanks as necessary.
+            sum_col = [
+                x for x in all_new_cols.keys() if all_new_cols[x][0]=="sum" and all_new_cols[x][1]==_col
+            ][0]
+            result[new_col_name] = result[sum_col] / result[self.GROUP_SIZE_COL]
+
+        # is this final repartition needed?    
+        # if self.earthmover.distributed:
+        #     result = result.repartition(partition_size=self.target_partition_size)
+
+        del result[self.GROUP_SIZE_COL]
+        return result
 
     @staticmethod
     def _get_agg_partial(agg_type: str, column: str = "", separator: str = ""):

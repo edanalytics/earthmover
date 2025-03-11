@@ -93,6 +93,9 @@ class FilterRowsOperation(Operation):
             )
             raise
 
+        if self.earthmover.distributed:
+            data = data.repartition(partition_size="128MB")
+
         return data
 
 class SortRowsOperation(Operation):

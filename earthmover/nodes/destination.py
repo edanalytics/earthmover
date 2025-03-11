@@ -94,7 +94,7 @@ class FileDestination(Destination):
             if self.linearize:
                 template_string = self.EXP.sub(" ", template_string)
             else:
-                template_string = template_string + "\n"
+                template_string = template_string.strip("\r\n") + "\n"
 
         except OSError as err:
             self.error_handler.throw(
@@ -148,9 +148,9 @@ class FileDestination(Destination):
                 if self.header and util.contains_jinja(self.header):
                     header_template = util.build_jinja_template(self.earthmover.macros + self.header)
                     rendered_template = self.render_row(first_row, template=header_template, template_string=self.header, dunder_row_data=True)
-                    fp.write(rendered_template)
+                    fp.write(rendered_template.strip("\r\n") + "\n")
                 elif self.header: # no jinja
-                    fp.write(self.header)
+                    fp.write(self.header.strip("\r\n") + "\n")
         
         # Append data rows to file:
         # to_csv() - which is most efficient - unfortunately only works if `linearize: True`;
@@ -170,9 +170,9 @@ class FileDestination(Destination):
                 if self.footer and util.contains_jinja(self.footer):
                     footer_template = util.build_jinja_template(self.earthmover.macros + self.footer)
                     rendered_template = self.render_row(first_row, template_bytecode_file=footer_template, template_string=self.footer, dunder_row_data=True)
-                    fp.write(rendered_template)
+                    fp.write(rendered_template.strip("\r\n") + "\n")
                 elif self.footer: # no jinja
-                    fp.write(self.footer)
+                    fp.write(self.footer.strip("\r\n") + "\n")
 
         self.logger.debug(f"output `{self.file}` written")
         self.size = os.path.getsize(self.file)
