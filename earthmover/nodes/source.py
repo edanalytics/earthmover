@@ -80,10 +80,21 @@ class Source(Node):
 
         # Add missing columns if defined under `optional_fields`.
         if self.optional_fields:
-            for field in self.optional_fields:
-                if field not in self.data.columns:
-                    self.logger.debug(f"Optional column will be added to dataset: '{field}'")
-                    self.data[field] = ""  # Default to empty string.
+            # Get all existing columns
+            existing_columns = self.data.columns.tolist()
+
+            # Combine existing columns with optional fields
+            all_columns = list(set(existing_columns).union(self.optional_fields))
+
+            # Construct a schema with all columns, initializing optional fields to empty strings
+            meta = pd.DataFrame(columns=all_columns)
+            meta = meta.astype({col: "object" for col in self.optional_fields})  # Ensure optional fields have correct type
+
+            # Apply to each partition
+            self.data = self.data.map_partitions(
+                lambda df: df.reindex(columns=all_columns, fill_value=""),
+                meta=meta
+            )
 
         super().post_execute(**kwargs)
 
@@ -96,7 +107,7 @@ class FileSource(Source):
     is_remote: bool = False
     allowed_configs: Tuple[str] = (
         'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
-        'file', 'type', 'columns', 'header_rows', 'colspecs', 'rename_cols',
+        'file', 'type', 'columns', 'header_rows', 'colspec_file', 'colspecs', 'colspec_headers', 'rename_cols',
         'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
     )
 
@@ -309,7 +320,7 @@ class FileSource(Source):
             colspecs = list(zip(file_format.start_index, file_format.end_index))
             return dd.read_fwf(file, colspecs=colspecs, header=header, names=names, converters=converters)
 
-    def _get_read_partial(self, file_type: str):
+    def _get_read_lambda(self, file_type: str, sep: Optional[str] = None):
         """
 
         :param file_type:
@@ -322,13 +333,12 @@ class FileSource(Source):
         #     _header_rows = config.get('header_rows', 1)
         #     return int(_header_rows) - 1  # If header_rows = 1, skip none.
 
-
         # We don't want to activate the function inside this helper function.
         read_partial_mapping = {
             'csv'       : FileSource.read_csv_tsv,
             'excel'     : lambda file, config: pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False),
             'feather'   : lambda file, _     : pd.read_feather(file),
-            'fixedwidth': lambda file, config: self.__read_fwf,
+            'fixedwidth': self.__read_fwf,
             'html'      : lambda file, config: pd.read_html(file, match=config.get('match', ".+"), keep_default_na=False)[0],
             'orc'       : lambda file, _     : dd.read_orc(file),
             'json'      : lambda file, config: dd.read_json(file, typ=config.get('object_type', "frame"), orient=config.get('orientation', "columns")),
@@ -508,7 +518,7 @@ class SqlSource(Source):
         try:
             return pd.read_sql(sql=self.query, con=self.connection)
 
-        except AttributeError:
+        except (AttributeError, ImportError):
             self.logger.debug(
                 "SQLAlchemy 1.x approach failed! Attempting SQLAlchemy 2.x approach..."
             )

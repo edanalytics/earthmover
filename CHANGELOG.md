@@ -1,3 +1,35 @@
+### v0.4.4
+<details>
+<summary>Released 2025-03-06</summary>
+
+* bugfix: [improve exception-handling when loading a `SQLSource` using SQLAlchemy 2.x](https://github.com/edanalytics/earthmover/pull/153)
+
+</details>
+
+
+### v0.4.3
+<details>
+<summary>Released 2025-01-23</summary>
+
+* feature: [allow a `colspec_file` config with column info for `fixedwidth` inputs](https://github.com/edanalytics/earthmover/pull/139)
+* feature: [error messages for `keep_columns` and `drop_columns` now specify the columns](https://github.com/edanalytics/earthmover/pull/150)
+
+</details>
+
+
+### v0.4.2
+<details>
+<summary>Released 2024-11-15</summary>
+
+* feature: interpolate params into destination templates by @tomreitz in https://github.com/edanalytics/earthmover/pull/141
+* feature: lowercase columns by @jayckaiser in https://github.com/edanalytics/earthmover/pull/143
+* fix: optional fields recursion by @rlittle08 in https://github.com/edanalytics/earthmover/pull/142
+* fix: `earthmover deps` fails when not all params are passed by @johncmerfeld in https://github.com/edanalytics/earthmover/pull/140
+* fix: make all pandas/dask config conditional on >3.10 by @johncmerfeld in https://github.com/edanalytics/earthmover/pull/146
+
+</details>
+
+
 ### v0.4.1
 <details>
 <summary>Released 2024-11-15</summary>

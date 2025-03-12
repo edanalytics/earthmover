@@ -7,6 +7,7 @@ from functools import partial
 
 from earthmover.nodes.node import Node
 from earthmover import util
+from earthmover.yaml_parser import JinjaEnvironmentYamlLoader
 
 from typing import Tuple
 
@@ -85,8 +86,7 @@ class FileDestination(Destination):
         # Prepare the Jinja template for rendering rows.
         try:
             if self.template:
-                with open(self.template, 'r', encoding='utf-8') as fp:
-                    template_string = fp.read()
+                template_string = JinjaEnvironmentYamlLoader.template_open_filepath(self.template, params=self.earthmover.params)
             else:
                 template_string = self.DEFAULT_TEMPLATE
 
