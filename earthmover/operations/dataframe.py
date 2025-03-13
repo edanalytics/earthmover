@@ -99,10 +99,16 @@ class JoinOperation(Operation):
             left_cols = list(set(left_cols).difference(self.left_drop_cols))
 
         left_data = data[left_cols]
+        if self.earthmover.distributed:
+            # sort() and persist() left_data so it doesn't have to be re-read from disk for each right frame
+            left_data = left_data.sort_values(by=self.left_keys).persist()
 
         # Iterate each right dataset
         for source in self.sources:
             right_data = data_mapping[source].data
+            if self.earthmover.distributed:
+                # sort() right_data to enable efficient partition-wise join
+                right_data = right_data.sort_values(by=self.right_keys)
             right_cols = right_data.columns
 
             if self.right_keep_cols:

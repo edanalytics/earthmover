@@ -87,7 +87,9 @@ class GroupByOperation(Operation):
             raise
 
         #
-        # data = data.sort_values(by=self.group_by_columns).repartition(partition_size=self.target_partition_size)
+        if self.earthmover.distributed:
+            # sort() and persist() data so it doesn't have to be re-read from disk for each create_col
+            data = data.sort_values(by=self.group_by_columns).repartition(partition_size=self.target_partition_size).persist()
         grouped = data.groupby(self.group_by_columns)
 
         result = grouped.size().reset_index()
