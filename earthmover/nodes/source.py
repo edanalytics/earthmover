@@ -320,7 +320,7 @@ class FileSource(Source):
             colspecs = list(zip(file_format.start_index, file_format.end_index))
             return dd.read_fwf(file, colspecs=colspecs, header=header, names=names, converters=converters)
 
-    def _get_read_lambda(self, file_type: str, sep: Optional[str] = None):
+    def _get_read_partial(self, file_type: str, sep: Optional[str] = None):
         """
 
         :param file_type:
