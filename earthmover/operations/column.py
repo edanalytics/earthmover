@@ -58,7 +58,7 @@ class AddColumnsOperation(Operation):
                 #     template_string=val,
                 #     error_handler=self.error_handler
                 # )
-                data[col] = data.map_partitions(partial(self.apply_render_row, val, self.render_row), meta=pd.Series('str'))
+                data[col] = data.map_partitions(partial(self.apply_render_row, self.earthmover.macros + val, self.render_row), meta=pd.Series('str'))
 
         return data
 
@@ -121,7 +121,7 @@ class ModifyColumnsOperation(Operation):
         #     macros=self.earthmover.macros,
         #     error_handler=self.error_handler
         # )
-        data[col] = data.map_partitions(partial(self.apply_render_row, val, self.render_row), meta=pd.Series('str'))
+        data[col] = data.map_partitions(partial(self.apply_render_row, self.earthmover.macros + val, self.render_row), meta=pd.Series('str'))
         del data["value"]
 
 

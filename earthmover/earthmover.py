@@ -217,10 +217,11 @@ class Earthmover:
         self.graph = Graph(error_handler=self.error_handler)
 
         ### Optionally merge packages to update user-configs and write the composed YAML to disk.
-        # self.user_configs = self.merge_packages() or self.user_configs
+        self.user_configs = self.merge_packages() or self.user_configs
         if to_disk:
             self.user_configs.to_disk(self.compiled_yaml_file)
         self.user_configs = self.inject_cli_overrides(self.user_configs)
+        self.package_graph = None # not needed anymore, and breaks dask.distributed (not serializable)
 
         # Configure Dask:
         self.config_dask()
@@ -573,13 +574,13 @@ class Earthmover:
         # Create a root package to be the root of the packages directed graph
         root_package = Package('root', configs, earthmover=self, package_path=os.path.dirname(self.config_file))
         root_package.config_file = self.config_file
-        # package_graph.add_node('root', package=root_package)
+        package_graph.add_node('root', package=root_package)
 
-        # package_config = self.error_handler.assert_get_key(configs, 'packages', dtype=dict, required=False, default={})
-        # for name, config in package_config.items():
-        #     package = Package(name, config, earthmover=self)
-        #     package_graph.add_node(name, package=package)
-        #     package_graph.add_edge(root_package.name, name)
+        package_config = self.error_handler.assert_get_key(configs, 'packages', dtype=dict, required=False, default={})
+        for name, config in package_config.items():
+            package = Package(name, config, earthmover=self)
+            package_graph.add_node(name, package=package)
+            package_graph.add_edge(root_package.name, name)
 
         return package_graph
 

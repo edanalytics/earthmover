@@ -133,8 +133,9 @@ class Operation(Node):
 
         except Exception as err:
             print(err)
+            template_snippet = template_string[0:80] + ("..." if len(template_string)>80 else "")
             self.error_handler.throw(
-                f"error rendering Jinja template in `template` file {self.template} ({err})"
+                f"error rendering Jinja template in `template` {template_snippet} ({err})"
             )
             raise
         
