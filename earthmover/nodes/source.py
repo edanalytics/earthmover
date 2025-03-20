@@ -504,7 +504,7 @@ class SqlSource(Source):
         try:
             return pd.read_sql(sql=self.query, con=self.connection)
 
-        except AttributeError:
+        except (AttributeError, ImportError):
             self.logger.debug(
                 "SQLAlchemy 1.x approach failed! Attempting SQLAlchemy 2.x approach..."
             )
