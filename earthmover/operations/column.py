@@ -3,6 +3,7 @@ import dask
 import pandas as pd
 import re
 import string
+import fnmatch
 
 from earthmover.operations.operation import Operation
 from earthmover import util
@@ -82,13 +83,10 @@ class ModifyColumnsOperation(Operation):
         super().execute(data, **kwargs)
 
         for col, val in self.columns_dict.items():
-            # Apply value to all columns
-            if col == "*":
-                for col in data.columns:
-                    self.apply_jinja(data, col, self.columns_dict["*"])
-            # Apply value to specified column
-            else:
-                self.apply_jinja(data, col, val)
+            # Use the fnmatch column functionality to find each valid value
+            for data_column in data.columns:
+                if fnmatch.fnmatch(data_column, col):
+                    self.apply_jinja(data, col, val)
 
         return data
     
