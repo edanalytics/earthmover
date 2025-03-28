@@ -445,7 +445,7 @@ The above example shows a transformation of the courses source, which consists o
 
 <details><summary>union</summary>
 
-Concatenates or "stacks" the transformation source with one or more sources sources of the same shape.
+Concatenates or "stacks" the transformation source with one or more sources of the same shape.
 
 ```yaml
     - operation: union
