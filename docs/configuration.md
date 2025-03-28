@@ -517,351 +517,334 @@ Besides the join column(s), if a column `my_column` with the same name exists in
 
 
 
-<details><summary>add_columns</summary>
+??? example "add_columns"
 
-Adds columns with specified values.
+    Adds columns with specified values.
 
-```yaml
-    - operation: add_columns
-        columns:
-        new_column_1: value_1
-        new_column_2: "{%raw%}{% if True %}Jinja works here{% endif %}{%endraw%}"
-        new_column_3: "{%raw%}Reference values from {{AnotherColumn}} in this new column{%endraw%}"
-        new_column_4: "{%raw%}{% if col1>col2 %}{{col1|float + col2|float}}{% else %}{{col1|float - col2|float}}{% endif %}{%endraw%}"
-```
+    ```yaml
+        - operation: add_columns
+            columns:
+            new_column_1: value_1
+            new_column_2: "{%raw%}{% if True %}Jinja works here{% endif %}{%endraw%}"
+            new_column_3: "{%raw%}Reference values from {{AnotherColumn}} in this new column{%endraw%}"
+            new_column_4: "{%raw%}{% if col1>col2 %}{{col1|float + col2|float}}{% else %}{{col1|float - col2|float}}{% endif %}{%endraw%}"
+    ```
 
-</details>
 
-<details><summary>rename_columns</summary>
+??? example "rename_columns"
 
-Renames columns.
+    Renames columns.
 
-```yaml
-    - operation: rename_columns
-        columns:
-        old_column_1: new_column_1
-        old_column_2: new_column_2
-        old_column_3: new_column_3
-```
+    ```yaml
+        - operation: rename_columns
+            columns:
+            old_column_1: new_column_1
+            old_column_2: new_column_2
+            old_column_3: new_column_3
+    ```
 
-</details>
 
-<details><summary>duplicate_columns</summary>
+??? example "duplicate_columns"
 
-Duplicates columns (and all their values).
+    Duplicates columns (and all their values).
 
-```yaml
-    - operation: duplicate_columns
-        columns:
-        existing_column1: new_copy_of_column1
-        existing_column2: new_copy_of_column2
-```
+    ```yaml
+        - operation: duplicate_columns
+            columns:
+            existing_column1: new_copy_of_column1
+            existing_column2: new_copy_of_column2
+    ```
 
-</details>
 
-<details><summary>drop_columns</summary>
+??? example "drop_columns"
 
-Removes the specified columns.
+    Removes the specified columns.
 
-```yaml
-    - operation: drop_columns
-        columns:
-        - column_to_drop_1
-        - column_to_drop_2
-```
+    ```yaml
+        - operation: drop_columns
+            columns:
+            - column_to_drop_1
+            - column_to_drop_2
+    ```
 
-</details>
 
-<details><summary>keep_columns</summary>
+??? example "keep_columns"
 
-Keeps only the specified columns, discards the rest.
+    Keeps only the specified columns, discards the rest.
 
-```yaml
-    - operation: keep_columns
-        columns:
-        - column_to_keep_1
-        - column_to_keep_2
-```
+    ```yaml
+        - operation: keep_columns
+            columns:
+            - column_to_keep_1
+            - column_to_keep_2
+    ```
 
-</details>
 
-<details><summary>combine_columns</summary>
+??? example "combine_columns"
 
-Combines the values of the specified columns, delimited by a separator, into a new column.
+    Combines the values of the specified columns, delimited by a separator, into a new column.
 
-```yaml
-    - operation: combine_columns
-        columns:
-        - column_1
-        - column_2
-        new_column: new_column_name
-        separator: "_"
-```
+    ```yaml
+        - operation: combine_columns
+            columns:
+            - column_1
+            - column_2
+            new_column: new_column_name
+            separator: "_"
+    ```
 
-</details>
 
-<details><summary>modify_columns</summary>
+??? example "modify_columns"
 
-Modify the values in the specified columns.
+    Modify the values in the specified columns.
 
-```yaml
-    - operation: modify_columns
-        columns:
-        state_abbr: "{%raw%}XXX{{value|reverse}}XXX{%endraw%}"
-        school_year: "{%raw%}20{{value[-2:]}}{%endraw%}"
-        zipcode: "{%raw%}{{ value|int ** 2 }}{%endraw%}"
-        "*": "{%raw%}{{value|trim}}{%endraw%}" # Edit all values in dataframe
-```
+    ```yaml
+        - operation: modify_columns
+            columns:
+            state_abbr: "{%raw%}XXX{{value|reverse}}XXX{%endraw%}"
+            school_year: "{%raw%}20{{value[-2:]}}{%endraw%}"
+            zipcode: "{%raw%}{{ value|int ** 2 }}{%endraw%}"
+            "*": "{%raw%}{{value|trim}}{%endraw%}" # Edit all values in dataframe
+    ```
 
-</details>
 
-<details><summary>map_values</summary>
+??? example "map_values"
 
-Map the values of a column.
+    Map the values of a column.
 
-```yaml
-    - operation: map_values
-        column: column_name
-        # or, to map multiple columns simultaneously
-        columns:
-        - col_1
-        - col_2
-        mapping:
-        old_value_1: new_value_1
-        old_value_2: new_value_2
-        # or a CSV/TSV with two columns (from, to) and header row
-        # paths may be absolute or relative paths to the location of the `earthmover` YAML configuration   file
-        map_file: path/to/mapping.csv
-```
+    ```yaml
+        - operation: map_values
+            column: column_name
+            # or, to map multiple columns simultaneously
+            columns:
+            - col_1
+            - col_2
+            mapping:
+            old_value_1: new_value_1
+            old_value_2: new_value_2
+            # or a CSV/TSV with two columns (from, to) and header row
+            # paths may be absolute or relative paths to the location of the `earthmover` YAML configuration   file
+            map_file: path/to/mapping.csv
+    ```
 
-</details>
 
-<details><summary>date_format</summary>
 
-Change the format of a date column.
+??? example "date_format"
 
-```yaml
-    - operation: date_format
-        column: date_of_birth
-        # or
-        columns:
-        - date_column_1
-        - date_column_2
-        - date_column_3
-        from_format: "%b %d %Y %H:%M%p"
-        to_format: "%Y-%m-%d"
-        ignore_errors: False  # Default False
-        exact_match: False    # Default False
-```
+    Change the format of a date column.
 
-The `from_format` and `to_format` must follow [Python's strftime() and strptime() formats](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).
+    ```yaml
+        - operation: date_format
+            column: date_of_birth
+            # or
+            columns:
+            - date_column_1
+            - date_column_2
+            - date_column_3
+            from_format: "%b %d %Y %H:%M%p"
+            to_format: "%Y-%m-%d"
+            ignore_errors: False  # Default False
+            exact_match: False    # Default False
+    ```
 
-When `ignore_errors` is `True`, empty strings will be replaced with Pandas NaT (not-a-time) datatypes. This ensures column-consistency and prevents a mix of empty strings and timestamps.
+    The `from_format` and `to_format` must follow [Python's strftime() and strptime() formats](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).
 
-When `exact_match` is `True`, the operation will only run successfully if the `from_format` input exactly matches the format of the date column. When `False`, the operation allows the format to partially-match the target string.
+    When `ignore_errors` is `True`, empty strings will be replaced with Pandas NaT (not-a-time) datatypes. This ensures column-consistency and prevents a mix of empty strings and timestamps.
 
-</details>
+    When `exact_match` is `True`, the operation will only run successfully if the `from_format` input exactly matches the format of the date column. When `False`, the operation allows the format to partially-match the target string.
 
-<details><summary>snake_case_columns</summary>
 
-Force the names of all columns to [snake_case](https://en.wikipedia.org/wiki/Snake_case).
+??? example "snake_case_columns"
 
-```yaml
-    - operation: snake_case_columns
-```
+    Force the names of all columns to [snake_case](https://en.wikipedia.org/wiki/Snake_case).
 
-</details>
+    ```yaml
+        - operation: snake_case_columns
+    ```
 
 <hr />
 
 #### Row operations
 
-<details><summary>distinct_rows</summary>
+??? example "distinct_rows"
 
-Removes duplicate rows.
+    Removes duplicate rows.
 
-```yaml
-    - operation: distinct_rows
-        columns:
-        - distinctness_column_1
-        - distinctness_column_2
-```
+    ```yaml
+        - operation: distinct_rows
+            columns:
+            - distinctness_column_1
+            - distinctness_column_2
+    ```
 
-Optionally specify the `columns` to use for uniqueness, otherwise all columns are used. If duplicate rows are found, only the first is kept.
+    Optionally specify the `columns` to use for uniqueness, otherwise all columns are used. If duplicate rows are found, only the first is kept.
 
-</details>
 
-<details><summary>filter_rows</summary>
+??? example "filter_rows"
 
-Filter (include or exclude) rows matching a query.
+    Filter (include or exclude) rows matching a query.
 
-```yaml
-    - operation: filter_rows
-        query: school_year < 2020
-        behavior: exclude # or `include`
-```
+    ```yaml
+        - operation: filter_rows
+            query: school_year < 2020
+            behavior: exclude # or `include`
+    ```
 
-The query format is anything supported by [Pandas.DataFrame.query](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.query.html). Specifying behavior as `exclude` wraps the Pandas `query()` with `not()`.
+    The query format is anything supported by [Pandas.DataFrame.query](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.query.html). Specifying behavior as `exclude` wraps the Pandas `query()` with `not()`.
 
-</details>
 
-<details><summary>sort_rows</summary>
+??? example "sort_rows"
 
-Sort rows by one or more columns.
+    Sort rows by one or more columns.
 
-```yaml
-    - operation: sort_rows
-        columns:
-        - sort_column_1
-        descending: False
-```
+    ```yaml
+        - operation: sort_rows
+            columns:
+            - sort_column_1
+            descending: False
+    ```
 
-By default, rows are sorted ascendingly. Set `descending: True` to reverse this order.
+    By default, rows are sorted ascendingly. Set `descending: True` to reverse this order.
 
-</details>
 
-<details><summary>limit_rows</summary>
+??? example "limit_rows"
 
-Limit the number of rows in the dataframe.
+    Limit the number of rows in the dataframe.
 
-```yaml
-    - operation: limit_rows
-        count: 5 # required, no default
-        offset: 10 # optional, default 0
-```
+    ```yaml
+        - operation: limit_rows
+            count: 5 # required, no default
+            offset: 10 # optional, default 0
+    ```
 
-(If fewer than count rows in the dataframe, they will all be returned.)
+    (If fewer than count rows in the dataframe, they will all be returned.)
 
-</details>
 
-<details><summary>flatten</summary>
+??? example "flatten"
 
-Split values in a column and create a copy of the row for each value.
+    Split values in a column and create a copy of the row for each value.
 
-```yaml
-    - operation: flatten
-        flatten_column: my_column
-        left_wrapper: '["' # characters to trim from the left of values in `flatten_column`
-        right_wrapper: '"]' # characters to trim from the right of values in `flatten_column`
-        separator: ","  # the string by which to split values in `flatten_column`
-        value_column: my_value # name of the new column to create with flattened values
-        trim_whitespace: " \t\r\n\"" # characters to trim from `value_column` _after_ flattening
-```
+    ```yaml
+        - operation: flatten
+            flatten_column: my_column
+            left_wrapper: '["' # characters to trim from the left of values in `flatten_column`
+            right_wrapper: '"]' # characters to trim from the right of values in `flatten_column`
+            separator: ","  # the string by which to split values in `flatten_column`
+            value_column: my_value # name of the new column to create with flattened values
+            trim_whitespace: " \t\r\n\"" # characters to trim from `value_column` _after_ flattening
+    ```
 
-The defaults above are designed to allow flattening JSON arrays (in a string) with simply
+    The defaults above are designed to allow flattening JSON arrays (in a string) with simply
 
-```yaml
-    - operation: flatten
-        flatten_column: my_column
-        value_column: my_value
-```
+    ```yaml
+        - operation: flatten
+            flatten_column: my_column
+            value_column: my_value
+    ```
 
-Note that for empty string values or empty arrays, a row will still be preserved. These can be removed in a second step with a `filter_rows` operation. Example:
+    Note that for empty string values or empty arrays, a row will still be preserved. These can be removed in a second step with a `filter_rows` operation. Example:
 
-```yaml
-# Given a dataframe like this:
-#   foo     bar    to_flatten
-#   ---     ---    ----------
-#   foo1    bar1   "[\"test1\",\"test2\",\"test3\"]"
-#   foo2    bar2   ""
-#   foo3    bar3   "[]"
-#   foo4    bar4   "[\"test4\",\"test5\",\"test6\"]"
-# 
-# a flatten operation like this:
-    - operation: flatten
-        flatten_column: to_flatten
-        value_column: my_value
-# will produce a dataframe like this:
-#   foo     bar    my_value
-#   ---     ---    --------
-#   foo1    bar1   test1
-#   foo1    bar1   test2
-#   foo1    bar1   test3
-#   foo2    bar2   ""
-#   foo3    bar3   ""
-#   foo4    bar4   test4
-#   foo4    bar4   test5
-#   foo4    bar4   test6
-#
-# and you can remove the blank rows if needed with a further operation:
-    - operation: filter_rows
-        query: my_value == ''
-        behavior: exclude
-```
-
-</details>
+    ```yaml
+    # Given a dataframe like this:
+    #   foo     bar    to_flatten
+    #   ---     ---    ----------
+    #   foo1    bar1   "[\"test1\",\"test2\",\"test3\"]"
+    #   foo2    bar2   ""
+    #   foo3    bar3   "[]"
+    #   foo4    bar4   "[\"test4\",\"test5\",\"test6\"]"
+    # 
+    # a flatten operation like this:
+        - operation: flatten
+            flatten_column: to_flatten
+            value_column: my_value
+    # will produce a dataframe like this:
+    #   foo     bar    my_value
+    #   ---     ---    --------
+    #   foo1    bar1   test1
+    #   foo1    bar1   test2
+    #   foo1    bar1   test3
+    #   foo2    bar2   ""
+    #   foo3    bar3   ""
+    #   foo4    bar4   test4
+    #   foo4    bar4   test5
+    #   foo4    bar4   test6
+    #
+    # and you can remove the blank rows if needed with a further operation:
+        - operation: filter_rows
+            query: my_value == ''
+            behavior: exclude
+    ```
 
 <hr />
 
 #### Group operations
 
-<details><summary>group_by</summary>
+??? example "group_by"
 
-Reduce the number of rows by grouping, and add columns with values calculated over each group.
+    Reduce the number of rows by grouping, and add columns with values calculated over each group.
 
-```yaml
-    - operation: group_by
-        group_by_columns:
-        - student_id
-        create_columns:
-        num_scores: count()
-        min_score: min(item_score)
-        max_score: max(item_score)
-        avg_score: mean(item_score)
-        item_scores: agg(item_score,;)
-```
+    ```yaml
+        - operation: group_by
+            group_by_columns:
+            - student_id
+            create_columns:
+            num_scores: count()
+            min_score: min(item_score)
+            max_score: max(item_score)
+            avg_score: mean(item_score)
+            item_scores: agg(item_score,;)
+    ```
 
-Valid aggregation functions are
+    Valid aggregation functions are
 
-* `count()` or `size()` - the number of rows in each group
-* `min(column)` - the minimum (numeric) value in `column` for each group
-* `str_min(column)` - the minimum (string) value in `column` for each group
-* `max(column)` - the maximum (numeric) value in `column` for each group
-* `str_max(column)` - the maximum (string) value in `column` for each group
-* `sum(column)` - the sum of (numeric) values in `column` for each group
-* `mean(column)` or `avg(column)` - the mean of (numeric) values in `column` for each group
-* `std(column)` - the standard deviation of (numeric) values in `column` for each group
-* `var(column)` - the variance of (numeric) values in `column` for each group
-* `agg(column,separator)` - the values of `column` in each group are concatenated, delimited by `separator` (default `separator` is none)
-* `json_array_agg(column,[str])` - the values of `column` in each group are concatenated into a JSON array (`[1,2,3]`). If the optional `str` argument is provided, the values in the array are quoted (`["1", "2", "3"]`)
+    * `count()` or `size()` - the number of rows in each group
+    * `min(column)` - the minimum (numeric) value in `column` for each group
+    * `str_min(column)` - the minimum (string) value in `column` for each group
+    * `max(column)` - the maximum (numeric) value in `column` for each group
+    * `str_max(column)` - the maximum (string) value in `column` for each group
+    * `sum(column)` - the sum of (numeric) values in `column` for each group
+    * `mean(column)` or `avg(column)` - the mean of (numeric) values in `column` for each group
+    * `std(column)` - the standard deviation of (numeric) values in `column` for each group
+    * `var(column)` - the variance of (numeric) values in `column` for each group
+    * `agg(column,separator)` - the values of `column` in each group are concatenated, delimited by `separator` (default `separator` is none)
+    * `json_array_agg(column,[str])` - the values of `column` in each group are concatenated into a JSON array (`[1,2,3]`). If the optional `str` argument is provided, the values in the array are quoted (`["1", "2", "3"]`)
 
-Numeric aggregation functions will fail with errors if used on non-numeric column values.
+    Numeric aggregation functions will fail with errors if used on non-numeric column values.
 
-Note the difference between `min()`/`max()` and `str_min()`/`str_max()`: given a list like `10, 11, 98, 99, 100, 101`, return values are
+    Note the difference between `min()`/`max()` and `str_min()`/`str_max()`: given a list like `10, 11, 98, 99, 100, 101`, return values are
 
-|    function | return |
-| ----------- | ------ |
-|     `min()` |     10 |
-| `str_min()` |     10 |
-|     `max()` |    101 |
-| `str_max()` |     99 |
+    | function | return |
+    | --- | --- |
+    | `min()` | 10 |
+    | `str_min()` | 10 |
+    | `max()` | 101 |
+    | `str_max()` | 99 |
 
-</details>
 
 <hr />
 
 #### Debug operation
 
-<details><summary>debug</summary>
+??? example "debug"
 
-Prints out information about the data at the current transformation operation.
+    Prints out information about the data at the current transformation operation.
 
-```yaml
-    - operation: debug
-        function: head # or `tail`, `describe`, `columns`; default=`head`
-        rows: 10 # (optional, default=5; ignored if function=describe|columns)
-        transpose: True # (default=False; ignored when function=columns)
-        skip_columns: [a, b, c] # to avoid logging PII
-        keep_columns: [x, y, z] # to look only at specific columns
-```
+    ```yaml
+        - operation: debug
+            function: head # or `tail`, `describe`, `columns`; default=`head`
+            rows: 10 # (optional, default=5; ignored if function=describe|columns)
+            transpose: True # (default=False; ignored when function=columns)
+            skip_columns: [a, b, c] # to avoid logging PII
+            keep_columns: [x, y, z] # to look only at specific columns
+    ```
 
-* `function=head|tail` displays the `rows` first or last rows of the dataframe, respectively. (Note that on large dataframes, these may not truly be the first/last rows, due to Dask's memory optimizations.)
-* `function=describe` shows statistics about the values in the dataframe.
-* `function=columns` shows the column names in the dataframe.
-* `transpose` can be helpful with very wide dataframes.
-* `keep_columns` defaults to all columns, `skip_columns` defaults to no columns.
 
-</details>
+    * `function=head|tail` displays the `rows` first or last rows of the dataframe, respectively. (Note that on large dataframes, these may not truly be the first/last rows, due to Dask's memory optimizations.)
+    * `function=describe` shows statistics about the values in the dataframe.
+    * `function=columns` shows the column names in the dataframe.
+    * `transpose` can be helpful with very wide dataframes.
+    * `keep_columns` defaults to all columns, `skip_columns` defaults to no columns.
+
 
 
 ### `destinations`

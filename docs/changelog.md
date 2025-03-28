@@ -1,5 +1,20 @@
 This page tracks releases of `earthmover`, with a summary of what was changed, fixed, added in each new version.
 
+## 2025 releases
+
+### [v0.4.4](https://github.com/edanalytics/earthmover/releases/tag/v0.4.4)
+(Released 2025-03-06)
+
+* bugfix: [improve exception-handling when loading a `SQLSource` using SQLAlchemy 2.x](https://github.com/edanalytics/earthmover/pull/153)
+
+
+### [v0.4.3](https://github.com/edanalytics/earthmover/releases/tag/v0.4.3)
+(Released 2025-01-23)
+
+* feature: [allow a `colspec_file` config with column info for `fixedwidth` inputs](https://github.com/edanalytics/earthmover/pull/139)
+* feature: [error messages for `keep_columns` and `drop_columns` now specify the columns](https://github.com/edanalytics/earthmover/pull/150)
+
+
 ## 2024 releases
 
 ### [v0.4.2](https://github.com/edanalytics/earthmover/releases/tag/v0.4.2)
