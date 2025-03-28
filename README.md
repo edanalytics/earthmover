@@ -1,5 +1,5 @@
 <center>
-![earthmover](https://edanalytics.github.io/earthmover/assets/ea-earthmover.png)
+<img src="https://edanalytics.github.io/earthmover/assets/ea-earthmover.png" alt="earthmover" />
 </center>
 
 `earthmover` transforms collections of tabular source data (flat files, FTP files, database tables/queries) into text-based (JSONL, XML) data via YAML configuration.
