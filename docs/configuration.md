@@ -184,7 +184,7 @@ Each source must have a name (which is how it is referenced by transformations a
 |---|---|---|---|
 | file {: rowspan=13} | row-based {: rowspan=3} | `.csv` | Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8). |
 | `.tsv` | Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8). |
-| `.txt` | A fixed-width text file; see the [documentation below](#fixed-width-source-file-configuration) for configuration details. |
+| `.txt` | A fixed-width text file; see the [documentation below](#fixed-width-config) for configuration details. |
 | column-based | `.parquet`, `.feather`, `.orc` | These require the [`pyarrow` library](https://arrow.apache.org/docs/python/index.html), which can be installed with `pip install pyarrow` or similar |
 | structured {: rowspan=4} | `.json` | Optionally specify a `object_type` (`frame` or `series`) and `orientation` (see [these docs](https://pandas.pydata.org/docs/reference/api/pandas.read_json.html)) to interpret different JSON structures. |
 | `.jsonl` or `.ndjson` | Files with a flat JSON structure per line. |
@@ -303,6 +303,7 @@ Using a fixed-width file (FWF) as a source requires additional metadata, configu
     - (required) `columns`: list of column names corresponding to the indices in `colspecs`
 
 
+<hr />
 
 #### `source` examples
 
