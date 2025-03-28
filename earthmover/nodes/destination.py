@@ -111,7 +111,7 @@ class FileDestination(Destination):
         # this renders each row without having to itertuples() (which is much slower)
         # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
         self.data = (
-            self.upstream_sources[self.source].data
+            self.upstream_sources[self.source].data.repartition(partition_size="1MB")
                 .map_partitions(partial(self.apply_render_row, template_string, self.render_row), meta=pd.Series('str'))
         )
 

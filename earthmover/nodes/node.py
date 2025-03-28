@@ -208,6 +208,7 @@ class Node:
 
     def opt_repartition(self, data: 'DataFrame'):
         if self.partition_size:
+            print(f"(repartitioning to {self.partition_size})")
             data = data.repartition(partition_size=self.partition_size)
         return data
 

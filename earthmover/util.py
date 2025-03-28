@@ -125,7 +125,7 @@ def render_jinja_template(row: 'Series', template: jinja2.Template, template_str
         if dunder_row_data:
             # for backwards compatibility with a bug, we must unfortunately double-dunder (sigh)
             row_data = add_dunder_row_data(row)
-            row_data = add_dunder_row_data(row_data)
+            #row_data = add_dunder_row_data(row_data)
             # this can be fixed with a future release, but first we'll have to fix templates
             # that rely on it, for example:
             # > {% for key, value in __row_data__.pop('__row_data__').items() -%}
