@@ -443,61 +443,59 @@ The above example shows a transformation of the courses source, which consists o
 
 #### Frame operations
 
-<details><summary>union</summary>
+??? example "union"
 
-Concatenates or "stacks" the transformation source with one or more sources of the same shape.
+    Concatenates or "stacks" the transformation source with one or more sources of the same shape.
 
-```yaml
-    - operation: union
-        sources:
-        - $sources.courses_list_1
-        - $sources.courses_list_2
-        - $sources.courses_list_3
-        fill_missing_columns: False
-```
+    ```yaml
+        - operation: union
+            sources:
+            - $sources.courses_list_1
+            - $sources.courses_list_2
+            - $sources.courses_list_3
+            fill_missing_columns: False
+    ```
 
-</details>
 
-<details><summary>join</summary>
+??? example "join"
 
-Joins the transformation source with one or more sources.
+    Joins the transformation source with one or more sources.
 
-```yaml
-    - operation: join
-        sources:
-        - $sources.schools
-        join_type: inner | left | right
-        left_key: school_id
-        right_key: school_id
-        # or:
-        left_keys:
-        - school_id
-        - school_year
-        right_keys:
-        - school_id
-        - school_year
-        # optionally specify columns to (only) keep from the left and/or right sources:
-        left_keep_columns:
-        - left_col_1
-        - left_col_2
-        right_keep_columns:
-        - right_col_1
-        - right_col_2
-        # or columns to discard from the left and/or right sources:
-        left_drop_columns:
-        - left_col_1
-        - left_col_2
-        right_drop_columns:
-        - right_col_1
-        - right_col_2
-        # (if neither ..._keep nor ..._drop are specified, all columns are retained)
-```
+    ```yaml
+        - operation: join
+            sources:
+            - $sources.schools
+            join_type: inner | left | right
+            left_key: school_id
+            right_key: school_id
+            # or:
+            left_keys:
+            - school_id
+            - school_year
+            right_keys:
+            - school_id
+            - school_year
+            # optionally specify columns to (only) keep from the left and/or right sources:
+            left_keep_columns:
+            - left_col_1
+            - left_col_2
+            right_keep_columns:
+            - right_col_1
+            - right_col_2
+            # or columns to discard from the left and/or right sources:
+            left_drop_columns:
+            - left_col_1
+            - left_col_2
+            right_drop_columns:
+            - right_col_1
+            - right_col_2
+            # (if neither ..._keep nor ..._drop are specified, all columns are retained)
+    ```
 
-Joining can lead to a wide result; the `..._keep_columns` and `..._drop_columns` options enable narrowing it.
+    Joining can lead to a wide result; the `..._keep_columns` and `..._drop_columns` options enable narrowing it.
 
-Besides the join column(s), if a column `my_column` with the same name exists in both tables and is not dropped, it will be renamed `my_column_x` and `my_column_y`, from the left and right respectively, in the result.
+    Besides the join column(s), if a column `my_column` with the same name exists in both tables and is not dropped, it will be renamed `my_column_x` and `my_column_y`, from the left and right respectively, in the result.
 
-</details>
 
 <hr />
 
