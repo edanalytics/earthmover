@@ -184,7 +184,7 @@ Each source must have a name (which is how it is referenced by transformations a
 |---|---|---|---|
 | file {: rowspan=13} | row-based {: rowspan=3} | `.csv` | Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8). |
 | `.tsv` | Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8). |
-| `.txt` | A fixed-width text file; column widths are inferred from the first 100 lines. |
+| `.txt` | A fixed-width text file; see the [documentation below](#fixed-width-source-file-configuration) for configuration details. |
 | column-based | `.parquet`, `.feather`, `.orc` | These require the [`pyarrow` library](https://arrow.apache.org/docs/python/index.html), which can be installed with `pip install pyarrow` or similar |
 | structured {: rowspan=4} | `.json` | Optionally specify a `object_type` (`frame` or `series`) and `orientation` (see [these docs](https://pandas.pydata.org/docs/reference/api/pandas.read_json.html)) to interpret different JSON structures. |
 | `.jsonl` or `.ndjson` | Files with a flat JSON structure per line. |
@@ -199,6 +199,109 @@ Each source must have a name (which is how it is referenced by transformations a
 | FTP | various | - | FTP file sources are supported via [ftplib](https://docs.python.org/3/library/ftplib.html). They must specify an FTP `connection` string with the path to the file. |
 
 File `type` is inferred from the file extension, however you may manually specify `type:` (`csv`, `tsv`, `fixedwidth`, `parquet`, `feather`, `orc`, `json`, `jsonl`, `xml`, `html`, `excel`, `pickle`, `sas`, `spss`, or `stata`) to force `earthmover` to treat a file with an arbitrary extension as a certain type. Remote file paths (`https://somesite.com/path/to/file.csv`) generally work.
+
+
+#### Fixed-width config
+Using a fixed-width file (FWF) as a source requires additional metadata, configuring how `earthmover` should slice each row into its constituent columns. Two ways to provide this metadata are supported:
+
+??? info "Provide a `colspec_file`"
+
+    Example configuration for a `fixedwidth` source with a `colspec_file`:
+
+    ```yaml
+    sources:
+      input:
+        file: ./data/input.txt
+        colspec_file: ./seed/colspecs.csv # required
+        colspec_headers:
+          name: field_name                # required
+          start: start_index              # required if `width` is not provided
+          end: end_index                  # required if `width` is not provided
+          width: field_length             # required if `start` or `end` is not provided
+        type: fixedwidth                  # required if `file` does not end with '.txt'
+        header_rows: 0
+    ```
+
+    Notes:
+
+    - (required) `colspec_file`: path to the CSV containing `colspec` details
+    - (required) `colspec_headers`: mapping between the `colspec_file`'s column names and fields required by `earthmover`. (Columns may have any name and position.)
+        - Only `name` is always required: `colspec_file` must contain a column that assigns a name to each field in the FWF
+        - Either `width` or both `start` and `end` are required
+            - If `width` is provided, `colspec_file` should include a column of integer values indicating the number of characters in each field in the FWF
+            - If `start` and `end` are provided, `colspec_file` should include two columns of integer values [giving extents of the FWF's fields as half-open intervals (i.e., \[from, to\[ )](https://pandas.pydata.org/docs/reference/api/pandas.read_fwf.html) 
+    - (optional) `type`: optional if source file has `.txt` extension; otherwise, specify `type: fixedwidth` (there is no standard file extension for FWFs)
+    - (optional) `header_rows`: usually 0 for FWFs; `earthmover` attempts to infer if not specified
+
+    **Formatting a `colspec_file`**
+
+    A `colspec_file` must include a column with field names, and
+    
+    1. either a column with field widths
+    1. or two columns with start and end positions
+
+    Example of (1):
+
+    ```csv
+    name,width
+    date,8
+    id,16
+    score_1,2
+    score_2,2
+    ```
+    with `earthmover.yaml` like:
+
+    ```yaml
+    colspec_headers:
+      name: name
+      width: width
+    ```
+
+    Example of (2):
+
+    ```csv
+    start_idx, end_idx, other_data, full_field_name, other_data_2
+    0, 8, abc, date, def
+    8, 24, abc, id, def
+    24, 26, abc, score_1, def
+    26, 28, abc, score_2, def
+    ```
+    with `earthmover.yaml` like:
+
+    ```yaml
+    colspec_headers:
+      name: full_field_name
+      start: start_idx
+      end: end_idx
+    ```
+
+??? info "Provide `colspecs` and `columns`"
+
+    Example configuration for a `fixedwidth` source with a `colspecs` and `columns`:
+
+    ```yaml
+    sources:
+      input:
+        file: ./data/input.txt
+        type: fixedwidth        # required if `file` does not end with '.txt'
+        header_rows: 0
+        colspecs:               # required
+          - [0, 8]
+          - [8, 24]
+          - [24, 26]
+          - [26, 28]
+        columns:                # required
+          - date
+          - id
+          - score_1
+          - score_2
+    ```
+
+    Notes:
+
+    - (required) `colspecs`: list of start and end indices [giving extents of the FWF's fields as half-open intervals (i.e., \[from, to\[ )](https://pandas.pydata.org/docs/reference/api/pandas.read_fwf.html) 
+    - (required) `columns`: list of column names corresponding to the indices in `colspecs`
+
 
 
 #### `source` examples
@@ -251,10 +354,10 @@ File `type` is inferred from the file extension, however you may manually specif
           - [10, 20] # code
           - ...
         columns:
-        - id
-        - year
-        - code
-        - ...
+          - id
+          - year
+          - code
+          - ...
         # or
         colspec_file: ./mydata_colspec.csv
         # where `mydata_colspec.csv` is a file with columns `col_name`, `start_pos`, and `end_pos`
