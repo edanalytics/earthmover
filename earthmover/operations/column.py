@@ -215,7 +215,7 @@ class DropColumnsOperation(Operation):
 
         if not set(self.columns_to_drop).issubset(data.columns):
             self.error_handler.throw(
-                "one or more columns specified to drop are not present in the dataset"
+                f"one or more columns specified to drop are not present in the dataset: {set(self.columns_to_drop).difference(data.columns)}"
             )
             raise
 
@@ -246,7 +246,7 @@ class KeepColumnsOperation(Operation):
 
         if not set(self.header).issubset(data.columns):
             self.error_handler.throw(
-                "one or more columns specified to keep are not present in the dataset"
+                f"one or more columns specified to keep are not present in the dataset: {set(self.header).difference(data.columns)}"
             )
             raise
 
