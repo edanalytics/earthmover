@@ -5,6 +5,7 @@ import io
 import os
 import pandas as pd
 import re
+import yaml
 
 from earthmover.nodes.node import Node
 from earthmover import util
@@ -44,10 +45,13 @@ class Source(Node):
 
         elif 'file' in config:
             return object.__new__(FileSource)
+        
+        elif 'data' in config:
+            return object.__new__(inLineSource)
 
         else:
             earthmover.error_handler.throw(
-                "sources must specify either a `file` and/or `connection` string and `query`"
+                "sources must specify either a `file` and/or `connection` string and `query` or `data`"
             )
             raise
 
@@ -534,3 +538,51 @@ class SqlSource(Source):
                     "connecting to a database requires additional libraries... please install using `pip install earthmover[sql]`"
                 )
                 raise
+
+class inLineSource(Source):
+    mode: str = 'inLineSource'
+    is_remote: bool = False
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
+                                    'data', 'orientation')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.df = self.error_handler.assert_get_key(self.config, 'data')
+        self.orientation = self.error_handler.assert_get_key(self.config, 'orientation', dtype= str)
+
+
+    def execute(self):
+        super().execute()
+
+        try:
+            self.data = self.read_inLineSource()
+            self.logger.debug(f"source `{self.name}` loaded )"
+            )
+
+        except Exception as err:
+            self.error_handler.throw(
+                f"source {self.name} error ({err}); check `data`"
+            )
+            raise
+
+    def read_inLineSource(self):
+        try:
+            if self.orientation == 'columns':
+                df = pd.DataFrame(self.df.to_dict())
+            
+            elif self.orientation == 'rows':
+                YamlMappingList = []
+                for YamlMappingObject in self.df:
+                    YamlMappingList.append(YamlMappingObject.to_dict())
+                df = pd.DataFrame(YamlMappingList) 
+            else:
+                self.error_handler.throw(
+                    f"Invalid {self.orientation}. Must be `rows` or `columns`"
+                )
+            return df
+        
+        except Exception as err:
+            self.error_handler.throw(
+                f"source {self.orientation} error ({err}); check `orientation`"
+            )
+            raise
