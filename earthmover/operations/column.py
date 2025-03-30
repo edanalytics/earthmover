@@ -42,6 +42,10 @@ class AddColumnsOperation(Operation):
             else:
                 try:
                     template = util.build_jinja_template(val, macros=self.earthmover.macros)
+                    params = util.get_jinja_template_params(val, self.earthmover.macros)
+                    self.logger.debug(
+                        f"($transformations.{self.name} uses params: {params})"
+                    )
 
                 except Exception as err:
                     self.error_handler.ctx.remove('line')
@@ -100,6 +104,11 @@ class ModifyColumnsOperation(Operation):
         
         try:
             template = util.build_jinja_template(val, macros=self.earthmover.macros)
+            
+            params = util.get_jinja_template_params(val, self.earthmover.macros)
+            self.logger.debug(
+                f"($transformations.{self.name} uses params: {params})"
+            )
 
         except Exception as err:
             self.error_handler.ctx.remove('line')
