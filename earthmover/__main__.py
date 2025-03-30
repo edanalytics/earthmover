@@ -264,6 +264,5 @@ def main(argv=None):
         logger.exception(f"unknown command '{args.command}', use -h flag for help")
         raise
 
-
 if __name__ == "__main__":
     sys.exit(main())

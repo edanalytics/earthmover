@@ -2,7 +2,10 @@ import jinja2
 import hashlib
 import json
 import os
+import pandas as pd
 
+from pathlib import Path
+from functools import partial
 from sys import exc_info
 
 from typing import Optional
@@ -52,6 +55,18 @@ def get_sep(file: str) -> Optional[str]:
     return ext_mapping.get(ext)
 
 
+def flatten_dict(d, parent_key='', sep='.'):
+    """Flattens a nested dictionary, using a separator for nested keys."""
+    flattened = {}
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            flattened.update(flatten_dict(v, new_key, sep))
+        else:
+            flattened[new_key] = v
+    return flattened
+
+
 def contains_jinja(string: str) -> bool:
     """
 
@@ -70,7 +85,33 @@ def contains_jinja(string: str) -> bool:
         return False
 
 
-def render_jinja_template(row: 'Series', template: jinja2.Template, template_str: str, *, error_handler: 'ErrorHandler') -> str:
+def build_jinja_template(template_string: str):
+    """
+
+    """
+    template = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(os.path.dirname('./'))
+    ).from_string(template_string)
+    template.globals['md5'] = partial(md5_hash)
+    template.globals['fromjson'] = partial(json.loads)
+    return template
+
+
+def get_jinja_template_params(template_string: str):
+    """
+    This function uses Jinja's meta functions to return a list of variables
+    referenced within `template_string`. This may be used in the future to
+    trace column-level lineage backward through the data dependency graph,
+    and drop unused columns early (to improve earthmover performance).
+    """
+    from jinja2 import meta
+    env = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(os.path.dirname('./'))
+    )
+    ast = env.parse(template_string)
+    return list(meta.find_undeclared_variables(ast))
+
+def render_jinja_template(row: 'Series', template: jinja2.Template, template_string: str, dunder_row_data=False, *, error_handler: Optional['ErrorHandler']=None) -> str:
     """
 
     :param row:
@@ -80,12 +121,20 @@ def render_jinja_template(row: 'Series', template: jinja2.Template, template_str
     :return:
     """
     try:
-        row_data = row.to_dict()
-        row_data.update({"__row_data__": row.to_dict()})
-        return template.render(row_data)
+        row_data = row
+        if dunder_row_data:
+            # for backwards compatibility with a bug, we must unfortunately double-dunder (sigh)
+            row_data = add_dunder_row_data(row)
+            #row_data = add_dunder_row_data(row_data)
+            # this can be fixed with a future release, but first we'll have to fix templates
+            # that rely on it, for example:
+            # > {% for key, value in __row_data__.pop('__row_data__').items() -%}
+
+        rendered_row = template.render(row_data)
+        return rendered_row
 
     except Exception as err:
-        error_handler.ctx.remove('line')
+        if error_handler: error_handler.ctx.remove('line')
 
         if dict(row):
             _joined_keys = "`, `".join(dict(row).keys())
@@ -93,11 +142,18 @@ def render_jinja_template(row: 'Series', template: jinja2.Template, template_str
         else:
             variables = f"\n(no available variables)"
 
-        error_handler.throw(
-            f"Error rendering Jinja template: ({err}):\n===> {template_str}{variables}"
+        if error_handler: error_handler.throw(
+            f"Error rendering Jinja template: ({err}):\n===> {template_string}{variables}"
         )
+        else: raise Exception(f"Error rendering Jinja template: ({err})")
         raise
 
+def add_dunder_row_data(row: pd.Series):
+    row_data = row
+    if isinstance(row, pd.Series) and row.empty: row_data = { }
+    if not isinstance(row, dict): row_data = row.to_dict()
+    row_data.update({"__row_data__": row_data.copy()})
+    return row_data
 
 def jinja2_template_error_lineno():
     """
@@ -123,15 +179,5 @@ def jinja2_template_error_lineno():
         tb = tb.tb_next
 
 
-def build_jinja_template(template_string: str, macros: str = ""):
-    """
-
-    """
-    template = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(os.path.dirname('./'))
-    ).from_string(macros.strip() + template_string)
-
-    template.globals['md5'] = lambda x: hashlib.md5(x.encode('utf-8')).hexdigest()
-    template.globals['fromjson'] = lambda x: json.loads(x)
-
-    return template
+def md5_hash(x):
+    return hashlib.md5(x.encode('utf-8')).hexdigest()
