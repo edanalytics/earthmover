@@ -182,10 +182,6 @@ class GroupByOperation(Operation):
             ][0]
             result[new_col_name] = result[sum_col] / result[self.GROUP_SIZE_COL]
 
-        # is this final repartition needed?    
-        # if self.earthmover.distributed:
-        #     result = result.repartition(partition_size=self.target_partition_size)
-
         del result[self.GROUP_SIZE_COL]
         return result
 

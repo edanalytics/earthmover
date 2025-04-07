@@ -455,7 +455,8 @@ class Earthmover:
 
 
         ### Draw the graph again, this time add metadata about rows/cols/size at each node
-        if self.state_configs['show_graph']:
+        if self.state_configs['show_graph'] and not self.distributed:
+            # (don't do this if we're running distributed, as that would cause an expensive recompute)
             self.logger.info("saving dataflow graph image to `graph.png` and `graph.svg`")
 
             # Compute all row number values at once for performance, then update the nodes.
