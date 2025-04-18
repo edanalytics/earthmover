@@ -632,7 +632,7 @@ The above example shows a transformation of the courses source, which consists o
         - number_[0123456789]  # matches `number_1`, `number_2`, etc.
     ```
 
-    *Note that* this feature means that if your data frame's columns legitimately contain the special characters `*`, `?`, `[`, or `]`, you must first use `rename_columns` to remove those characters before using an operation that supports wildcard matching to avoid unexpected results.
+    **Note that** this feature means that if your data frame's columns legitimately contain the special characters `*`, `?`, `[`, or `]`, you must first use `rename_columns` to remove those characters before using an operation that supports wildcard matching to avoid unexpected results.
 
 
 ??? example "add_columns"
