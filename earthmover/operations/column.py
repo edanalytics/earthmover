@@ -86,7 +86,7 @@ class ModifyColumnsOperation(Operation):
             # Use the fnmatch column functionality to find each valid value
             for data_column in data.columns:
                 if fnmatch.fnmatch(data_column, col):
-                    self.apply_jinja(data, col, val)
+                    self.apply_jinja(data, data_column, val)
 
         return data
     
@@ -217,7 +217,15 @@ class DropColumnsOperation(Operation):
             )
             raise
 
-        data = data.drop(columns=self.columns_to_drop)
+        # Use the fnmatch column functionality to find each valid value
+        cols_to_discard = []
+        for data_column in data.columns:
+            discard_col = False
+            for col in self.columns_to_drop:
+                if fnmatch.fnmatch(data_column, col):
+                    discard_col = True
+            if discard_col: cols_to_discard.append(data_column)
+        data = data.drop(columns=cols_to_discard)
 
         return data
 
@@ -248,7 +256,15 @@ class KeepColumnsOperation(Operation):
             )
             raise
 
-        data = data[self.header]
+        # Use the fnmatch column functionality to find each valid value
+        cols_to_discard = []
+        for data_column in data.columns:
+            discard_col = True
+            for col in self.header:
+                if fnmatch.fnmatch(data_column, col):
+                    discard_col = False
+            if discard_col: cols_to_discard.append(data_column)
+        data = data.drop(columns=cols_to_discard)
 
         return data
 
@@ -280,9 +296,18 @@ class CombineColumnsOperation(Operation):
                 f"one or more defined columns is not present in the dataset"
             )
             raise
+            
+        # Use the fnmatch column functionality to find each valid value
+        cols_to_combine = []
+        for data_column in data.columns:
+            include_col = False
+            for col in self.columns_list:
+                if fnmatch.fnmatch(data_column, col):
+                    include_col = True
+            if include_col: cols_to_combine.append(data_column)
 
         data[self.new_column] = data.apply(
-            lambda x: self.separator.join(x[col] for col in self.columns_list),
+            lambda x: self.separator.join(x[col] for col in cols_to_combine),
             axis=1,
             meta=pd.Series(dtype='str', name=self.new_column)
         )
@@ -342,8 +367,11 @@ class MapValuesOperation(Operation):
             )
 
         try:
-            for _column in self.columns_list:
-                data[_column] = data[_column].replace(self.mapping)
+            # Use the fnmatch column functionality to find each valid value
+            for col in self.columns_list:
+                for data_column in data.columns:
+                    if fnmatch.fnmatch(data_column, col):
+                        data[data_column] = data[data_column].replace(self.mapping)
 
         except Exception as _:
             self.error_handler.throw(
@@ -415,17 +443,20 @@ class DateFormatOperation(Operation):
             )
             raise
 
-        for _column in self.columns_list:
-            try:
-                data[_column] = (
-                    dask.dataframe.to_datetime(data[_column], format=self.from_format, exact=bool(self.exact_match), errors='coerce' if self.ignore_errors else 'raise')
-                        .dt.strftime(self.to_format)
-                )
+        for col in self.columns_list:
+            # Use the fnmatch column functionality to find each valid value
+            for data_column in data.columns:
+                if fnmatch.fnmatch(data_column, col):
+                    try:
+                        data[data_column] = (
+                            dask.dataframe.to_datetime(data[data_column], format=self.from_format, exact=bool(self.exact_match), errors='coerce' if self.ignore_errors else 'raise')
+                                .dt.strftime(self.to_format)
+                        )
 
-            except Exception as err:
-                self.error_handler.throw(
-                    f"error during `date_format` operation, `{_column}` column... check format strings? ({err})"
-                )
+                    except Exception as err:
+                        self.error_handler.throw(
+                            f"error during `date_format` operation, `{data_column}` column... check format strings? ({err})"
+                        )
 
         return data
 
