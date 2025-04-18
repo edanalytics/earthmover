@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import dask
 import re
 import csv
 import warnings
@@ -112,6 +113,7 @@ class FileDestination(Destination):
         # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
         self.data = (
             self.upstream_sources[self.source].data
+                .fillna("") # needed to prevent "None" from entering final values
                 .map_partitions(partial(self.apply_render_row, template_string, self.render_row), meta=pd.Series('str'))
         )
 
@@ -157,11 +159,22 @@ class FileDestination(Destination):
         # otherwise, we get an error about escapechar being required (since the non-linearized
         # data might contain newline chars)
         if self.linearize:
-            self.data.to_csv(self.file, single_file=True, index=False, header=False, encoding='utf-8', mode='a', quoting=csv.QUOTE_NONE, doublequote=False, na_rep=" ", sep="~", escapechar='')
+            self.data.to_csv(
+                self.file,
+                single_file=True,
+                index=False,
+                header=False,
+                encoding='utf-8',
+                mode='a',
+                quoting=csv.QUOTE_NONE,
+                doublequote=False,
+                na_rep="",
+                sep="~",
+                escapechar='')
         else:
             with open(self.file, 'a', encoding='utf-8') as fp:
                 for partition in self.data.partitions:
-                    fp.writelines(partition.compute())
+                    fp.writelines([r[0] for r in dask.compute(partition)])
                     partition = None
         
         # Write the optional header, each line
