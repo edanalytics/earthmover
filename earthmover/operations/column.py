@@ -4,6 +4,7 @@ import pandas as pd
 import re
 import string
 import fnmatch
+import itertools
 
 from earthmover.operations.operation import Operation
 from earthmover import util
@@ -218,13 +219,11 @@ class DropColumnsOperation(Operation):
             raise
 
         # Use the fnmatch column functionality to find each valid value
-        cols_to_discard = []
-        for data_column in data.columns:
-            discard_col = False
-            for col in self.columns_to_drop:
-                if fnmatch.fnmatch(data_column, col):
-                    discard_col = True
-            if discard_col: cols_to_discard.append(data_column)
+        cols_to_discard = set()
+        for data_column, col in itertools.product(data.columns, self.columns_to_drop):
+            if fnmatch.fnmatch(data_column, col):
+                cols_to_discard.add(data_column)
+                
         data = data.drop(columns=cols_to_discard)
 
         return data
@@ -250,20 +249,19 @@ class KeepColumnsOperation(Operation):
         """
         super().execute(data, **kwargs)
 
-        if not set(self.header).issubset(data.columns):
+        # Use the fnmatch column functionality to find each valid value
+        cols_to_keep = set()
+        for data_column, col in itertools.product(data.columns, self.header):
+            if fnmatch.fnmatch(data_column, col):
+                cols_to_keep.add(data_column)
+        cols_to_discard = set(data.columns) - cols_to_keep
+        
+        if not cols_to_keep.issubset(data.columns):
             self.error_handler.throw(
                 f"one or more columns specified to keep are not present in the dataset: {set(self.header).difference(data.columns)}"
             )
             raise
 
-        # Use the fnmatch column functionality to find each valid value
-        cols_to_discard = []
-        for data_column in data.columns:
-            discard_col = True
-            for col in self.header:
-                if fnmatch.fnmatch(data_column, col):
-                    discard_col = False
-            if discard_col: cols_to_discard.append(data_column)
         data = data.drop(columns=cols_to_discard)
 
         return data
@@ -291,14 +289,8 @@ class CombineColumnsOperation(Operation):
         """
         super().execute(data, **kwargs)
 
-        if not set(self.columns_list).issubset(data.columns):
-            self.error_handler.throw(
-                f"one or more defined columns is not present in the dataset"
-            )
-            raise
-            
         # Use the fnmatch column functionality to find each valid value
-        cols_to_combine = []
+        cols_to_combine = [] # don't use set() here, since order of cols matters!
         for data_column in data.columns:
             include_col = False
             for col in self.columns_list:
@@ -306,6 +298,12 @@ class CombineColumnsOperation(Operation):
                     include_col = True
             if include_col: cols_to_combine.append(data_column)
 
+        if not set(cols_to_combine).issubset(data.columns):
+            self.error_handler.throw(
+                f"one or more defined columns is not present in the dataset"
+            )
+            raise
+            
         data[self.new_column] = data.apply(
             lambda x: self.separator.join(x[col] for col in cols_to_combine),
             axis=1,
