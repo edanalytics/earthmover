@@ -3,8 +3,6 @@ import dask
 import pandas as pd
 import re
 import string
-import fnmatch
-import itertools
 
 from earthmover.operations.operation import Operation
 from earthmover import util
@@ -83,11 +81,10 @@ class ModifyColumnsOperation(Operation):
         """
         super().execute(data, **kwargs)
 
+        # Map each config column separately to expand wildcards one-by-one.
         for col, val in self.columns_dict.items():
-            # Use the fnmatch column functionality to find each valid value
-            for data_column in data.columns:
-                if fnmatch.fnmatch(data_column, col):
-                    self.apply_jinja(data, data_column, val)
+            for data_column in self.match_wildcard_columns(data.columns, [col]):
+                self.apply_jinja(data, data_column, val)
 
         return data
     
@@ -218,12 +215,8 @@ class DropColumnsOperation(Operation):
             )
             raise
 
-        # Use the fnmatch column functionality to find each valid value
-        cols_to_discard = set()
-        for data_column, col in itertools.product(data.columns, self.columns_to_drop):
-            if fnmatch.fnmatch(data_column, col):
-                cols_to_discard.add(data_column)
-                
+        # New functionality: do not raise an error if a column was not found in the dataset.
+        cols_to_discard = self.match_wildcard_columns(data.columns, self.columns_to_drop)
         data = data.drop(columns=cols_to_discard)
 
         return data
@@ -249,20 +242,9 @@ class KeepColumnsOperation(Operation):
         """
         super().execute(data, **kwargs)
 
-        # Use the fnmatch column functionality to find each valid value
-        cols_to_keep = set()
-        for data_column, col in itertools.product(data.columns, self.header):
-            if fnmatch.fnmatch(data_column, col):
-                cols_to_keep.add(data_column)
-        cols_to_discard = set(data.columns) - cols_to_keep
-        
-        if not cols_to_keep.issubset(data.columns):
-            self.error_handler.throw(
-                f"one or more columns specified to keep are not present in the dataset: {set(self.header).difference(data.columns)}"
-            )
-            raise
-
-        data = data.drop(columns=cols_to_discard)
+        # Raise an error if a column specified to keep is absent from the dataset.
+        cols_to_keep = self.match_wildcard_columns(data.columns, self.header, raise_on_unmatched=True)
+        data = data[cols_to_keep]
 
         return data
 
@@ -289,21 +271,10 @@ class CombineColumnsOperation(Operation):
         """
         super().execute(data, **kwargs)
 
-        # Use the fnmatch column functionality to find each valid value
-        cols_to_combine = [] # don't use set() here, since order of cols matters!
-        for data_column in data.columns:
-            include_col = False
-            for col in self.columns_list:
-                if fnmatch.fnmatch(data_column, col):
-                    include_col = True
-            if include_col: cols_to_combine.append(data_column)
-
-        if not set(cols_to_combine).issubset(data.columns):
-            self.error_handler.throw(
-                f"one or more defined columns is not present in the dataset"
-            )
-            raise
-            
+        # Columns are returned in order they were matched.
+        # If more than one wildcard matches the same column, only the first is kept.
+        # Raise an error if a column specified to combine is absent from the dataset.
+        cols_to_combine = self.match_wildcard_columns(data.columns, self.columns_list, raise_on_unmatched=True)
         data[self.new_column] = data.apply(
             lambda x: self.separator.join(x[col] for col in cols_to_combine),
             axis=1,
@@ -359,17 +330,10 @@ class MapValuesOperation(Operation):
         """
         super().execute(data, **kwargs)
 
-        if not set(self.columns_list).issubset(data.columns):
-            self.error_handler.throw(
-                "one or more columns to map are undefined in the dataset"
-            )
-
         try:
-            # Use the fnmatch column functionality to find each valid value
-            for col in self.columns_list:
-                for data_column in data.columns:
-                    if fnmatch.fnmatch(data_column, col):
-                        data[data_column] = data[data_column].replace(self.mapping)
+            # Raise an error if a column specified to combine is absent from the dataset.
+            for data_column in self.match_wildcard_columns(data.columns, self.columns_list, raise_on_unmatched=True):
+                data[data_column] = data[data_column].replace(self.mapping)
 
         except Exception as _:
             self.error_handler.throw(
@@ -435,26 +399,19 @@ class DateFormatOperation(Operation):
         """
         super().execute(data, **kwargs)
 
-        if not set(self.columns_list).issubset(data.columns):
-            self.error_handler.throw(
-                "one or more columns to map are undefined in the dataset"
-            )
-            raise
 
-        for col in self.columns_list:
-            # Use the fnmatch column functionality to find each valid value
-            for data_column in data.columns:
-                if fnmatch.fnmatch(data_column, col):
-                    try:
-                        data[data_column] = (
-                            dask.dataframe.to_datetime(data[data_column], format=self.from_format, exact=bool(self.exact_match), errors='coerce' if self.ignore_errors else 'raise')
-                                .dt.strftime(self.to_format)
-                        )
+        # Raise an error if a column specified to combine is absent from the dataset.
+        for data_column in self.match_wildcard_columns(data.columns, self.columns_list, raise_on_unmatched=True):
+            try:
+                data[data_column] = (
+                    dask.dataframe.to_datetime(data[data_column], format=self.from_format, exact=bool(self.exact_match), errors='coerce' if self.ignore_errors else 'raise')
+                        .dt.strftime(self.to_format)
+                )
 
-                    except Exception as err:
-                        self.error_handler.throw(
-                            f"error during `date_format` operation, `{data_column}` column... check format strings? ({err})"
-                        )
+            except Exception as err:
+                self.error_handler.throw(
+                    f"error during `date_format` operation, `{data_column}` column... check format strings? ({err})"
+                )
 
         return data
 

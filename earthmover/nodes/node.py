@@ -1,5 +1,6 @@
 import abc
 import dask
+import fnmatch
 import jinja2
 import logging
 import pandas as pd
@@ -202,3 +203,39 @@ class Node:
         if source_name not in self.upstream_sources:
             self.error_handler.throw(f"Source {source_name} not found in Node sources list.")
         self.upstream_sources[source_name] = node
+
+    def match_wildcard_columns(self,
+        columns_list: List[str],
+        wildcard_list: List[str],
+        raise_on_unmatched: bool = False
+    ) -> List[str]:
+        """
+        Determine which column names match against unix filename wildcard patterns.
+        If no column matches a wildcard, raise an error if `raise_on_unmatched` is flagged.
+
+        See the fnmatch library for more info: https://docs.python.org/3/library/fnmatch.html
+        """
+        matched_cols: List[str] = []
+        unmatched_wildcards: List[str] = []
+
+        # Iterate the wildcards and attempt to match against all columns in the dataframe. 
+        for wildcard in wildcard_list:
+
+            # Track whether the wildcard matched any columns.
+            match_found = False
+
+            for column in columns_list:
+                if fnmatch.fnmatch(column, wildcard):
+                    matched_cols.append(column)
+                    match_found = True
+
+            if not match_found:
+                unmatched_wildcards.append(wildcard)
+        
+        # Raise an error if one or more columns specified could not be mapped to the columns list.
+        if raise_on_unmatched and unmatched_wildcards:
+            self.error_handler.throw(
+                f"One or more columns specified are not present in the dataset: {unmatched_wildcards}"
+            )
+
+        return list(dict.fromkeys(matched_cols))  # Return as an ordered set
