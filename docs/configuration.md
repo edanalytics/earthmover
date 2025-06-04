@@ -511,6 +511,46 @@ earthmover run
 earthmover run -p '{"DB_USERNAME":"myuser", "DB_PASSWORD":"mypa$$w0rd"}'
 ```
 
+#### Optional Fields
+Optional fields can be defined to be added as null columns if not present in the DataFrame. You can specify optional fields in two ways:
+
+1. Directly in the configuration:
+```yaml
+sources:
+  mydata:
+    file: ./data/mydata.csv
+    optional_fields:
+      - optional_field1
+      - optional_field2
+```
+
+2. Through an external YAML file:
+```yaml
+sources:
+  mydata:
+    file: ./data/mydata.csv
+    optional_fields: ./optional_fields.yml
+```
+
+The external YAML file must follow this structure:
+```yaml
+version: 2
+
+optional_fields:
+  source1:
+    - optional_field1
+    - optional_field2
+  source2:
+    - optional_field3
+    - optional_field4
+```
+
+The YAML file must:
+- Define optional fields under the `optional_fields` key
+- Group fields by source name
+- List fields under each source
+
+The path to the external file can be absolute or relative to the location of the earthmover configuration file.
 
 ### `transformations`
 
