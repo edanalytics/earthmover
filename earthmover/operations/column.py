@@ -378,22 +378,34 @@ class MapValuesOperation(Operation):
 
 class DateFormatOperation(Operation):
     """
-
+    Operation to convert date strings from one or more input formats to a single output format.
     """
     allowed_configs: Tuple[str] = (
         'operation', 'repartition', 
-        'column', 'columns', 'from_format', 'to_format', 'ignore_errors', 'exact_match',
+        'column', 'columns', 'from_format', 'from_formats', 'to_format', 'ignore_errors', 'exact_match',
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.from_format = self.error_handler.assert_get_key(self.config, 'from_format', dtype=str)
-        self.to_format   = self.error_handler.assert_get_key(self.config, 'to_format', dtype=str)
-        self.ignore_errors   = self.error_handler.assert_get_key(self.config, 'ignore_errors', dtype=bool, required=False)
-        self.exact_match   = self.error_handler.assert_get_key(self.config, 'exact_match', dtype=bool, required=False)
+        self.ignore_errors = self.error_handler.assert_get_key(self.config, 'ignore_errors', dtype=bool, required=False)
+        self.exact_match = self.error_handler.assert_get_key(self.config, 'exact_match', dtype=bool, required=False)
 
+        
+        # Support both single format and multiple formats, but only one can be populated.
+        _from_format = self.error_handler.assert_get_key(self.config, 'from_format', dtype=str, required=False)
+        _from_formats = self.error_handler.assert_get_key(self.config, 'from_formats', dtype=list, required=False)
+        
+        if bool(_from_format) == bool(_from_formats):  # Fail if both or neither are populated
+            self.error_handler.throw(
+                "a `date_format` operation must specify either a single `from_format` or multiple `from_formats`"
+            )
+            raise
+        
+        self.from_formats = [_from_format] if _from_format else _from_formats
+        self.to_format = self.error_handler.assert_get_key(self.config, 'to_format', dtype=str)
+        
         # Only 'column' or 'columns' can be populated
-        _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
+        _column = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
         _columns = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
 
         if bool(_column) == bool(_columns):  # Fail if both or neither are populated.
@@ -417,17 +429,65 @@ class DateFormatOperation(Operation):
             )
             raise
 
+        # Loop through each column specified for date conversion.
         for _column in self.columns_list:
-            try:
-                data[_column] = (
-                    dask.dataframe.to_datetime(data[_column], format=self.from_format, exact=bool(self.exact_match), errors='coerce' if self.ignore_errors else 'raise')
-                        .dt.strftime(self.to_format)
-                )
-
-            except Exception as err:
-                self.error_handler.throw(
-                    f"error during `date_format` operation, `{_column}` column... check format strings? ({err})"
-                )
+            # Are there a better ways to do this?
+            converted_dates = None # This var will store the progressively built result of successfully converted dates.
+            any_converted = False # Flag to track if any conversion was successful for this column. 
+            
+            # Try each format provided in the from_formats list in order.
+            for formatting in self.from_formats:
+                try:
+                    # Attempt to convert the column using the first format.
+                    try_conversion = dask.dataframe.to_datetime(
+                        data[_column], format=formatting, exact=bool(self.exact_match), errors='coerce'
+                    )
+                    
+                    if converted_dates is None:
+                        # If this is the first successful conversion attempt, store it.
+                        converted_dates = try_conversion
+                    else:
+                        # If previous conversion attempts were successful, fill in any missing values (NaT)
+                        # using values from the current conversion attempt.
+                        converted_dates = converted_dates.mask(converted_dates.isna(), try_conversion)
+                    
+                    # If any values were successfully parsed during this attempt, mark as converted.
+                    if try_conversion.notnull().any().compute():
+                        any_converted = True
+                        
+                except Exception as err:
+                    # If ignore_errors is False, throw an error if the conversion fails.
+                    if not self.ignore_errors:
+                        self.error_handler.throw(
+                            f"error during `date_format` operation, `{_column}` column with format {formatting}... check format strings? ({err})"
+                        )
+                        raise
+            
+            # Handle cases where no valid dates were parsed at all from any format provided.
+            if not any_converted:
+                # If all conversions failed and we're ignoring errors, keep original values? Or turn them into NaT?
+                if self.ignore_errors:
+                    data[_column] = data[_column]
+                # Otherwise, raise an error indicating failure to convert the column.
+                else:
+                    self.error_handler.throw(
+                        f"error during `date_format` operation: no valid date formats found for column `{_column}`. Tried formats: {self.from_formats}"
+                    )
+                    raise ValueError("No valid date formats found")
+            # If any valid dates were parsed, format them to the target format.
+            else:
+                # If we're ignoring errors, keep original values for any entries still NaT.
+                try:
+                    # For any remaining NaT values, use the original string if ignore_errors is True? Or turn them into NaT?
+                    if self.ignore_errors:
+                        converted_dates = converted_dates.mask(converted_dates.isna(), data[_column])
+                    data[_column] = converted_dates.dt.strftime(self.to_format)
+                # Otherwise, raise an error indicating failure to convert the column entirely.
+                except Exception as err:
+                    self.error_handler.throw(
+                        f"error during `date_format` operation while converting to target format... check format strings? ({err})"
+                    )
+                    raise
 
         return data
 
