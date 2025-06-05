@@ -733,8 +733,9 @@ The above example shows a transformation of the courses source, which consists o
 
 ??? example "date_format"
 
-    Change the format of a date column.
+    Change the format of a date column. You can specify either a single input format or multiple input formats to try.
 
+    **Single format:**
     ```yaml
         - operation: date_format
             column: date_of_birth
@@ -749,7 +750,26 @@ The above example shows a transformation of the courses source, which consists o
             exact_match: False    # Default False
     ```
 
-    The `from_format` and `to_format` must follow [Python's strftime() and strptime() formats](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).
+    **Multiple formats:**
+    ```yaml
+        - operation: date_format
+            column: date_of_birth
+            # or
+            columns:
+            - date_column_1
+            - date_column_2
+            - date_column_3
+            from_formats:
+            - "%b %d %Y %H:%M%p"
+            - "%m/%d/%Y %H:%M:%S %p"
+            to_format: "%Y-%m-%d"
+            ignore_errors: False  # Default False
+            exact_match: False    # Default False
+    ```
+
+    The `from_format` or `from_formats` and `to_format` must follow [Python's strftime() and strptime() formats](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).
+
+    When using `from_formats`, the operation will try each format in sequence for each row until one succeeds. This is useful when your data contains dates in multiple formats.
 
     When `ignore_errors` is `True`, empty strings will be replaced with Pandas NaT (not-a-time) datatypes. This ensures column-consistency and prevents a mix of empty strings and timestamps.
 
