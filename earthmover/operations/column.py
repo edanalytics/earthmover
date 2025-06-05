@@ -405,7 +405,7 @@ class DateFormatOperation(Operation):
         self.to_format = self.error_handler.assert_get_key(self.config, 'to_format', dtype=str)
         
         # Only 'column' or 'columns' can be populated
-        _column = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
+        _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
         _columns = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
 
         if bool(_column) == bool(_columns):  # Fail if both or neither are populated.
@@ -443,20 +443,20 @@ class DateFormatOperation(Operation):
                         data[_column], format=formatting, exact=bool(self.exact_match), errors='coerce'
                     )
                     
+                    # If this is the first conversion attempt, store it.
                     if converted_dates is None:
-                        # If this is the first successful conversion attempt, store it.
                         converted_dates = try_conversion
+                    # If this is not the first conversion attempt,
+                    # Fill in any remaining unconverted values using results from the current format, if successful.
                     else:
-                        # If previous conversion attempts were successful, fill in any missing values (NaT)
-                        # using values from the current conversion attempt.
                         converted_dates = converted_dates.mask(converted_dates.isna(), try_conversion)
                     
-                    # If any values were successfully parsed during this attempt, mark as converted.
+                    # If any values were successfully parsed using the current format, mark as converted.
                     if try_conversion.notnull().any().compute():
                         any_converted = True
                         
+                # If ignore_errors is False, throw an error if not all values were converted.
                 except Exception as err:
-                    # If ignore_errors is False, throw an error if the conversion fails.
                     if not self.ignore_errors:
                         self.error_handler.throw(
                             f"error during `date_format` operation, `{_column}` column with format {formatting}... check format strings? ({err})"
@@ -465,7 +465,7 @@ class DateFormatOperation(Operation):
             
             # Handle cases where no valid dates were parsed at all from any format provided.
             if not any_converted:
-                # If all conversions failed and we're ignoring errors, keep original values? Or turn them into NaT?
+                # If all conversions failed and we're ignoring errors, keep original values? Or turn them into nulls?
                 if self.ignore_errors:
                     data[_column] = data[_column]
                 # Otherwise, raise an error indicating failure to convert the column.
@@ -476,11 +476,19 @@ class DateFormatOperation(Operation):
                     raise ValueError("No valid date formats found")
             # If any valid dates were parsed, format them to the target format.
             else:
-                # If we're ignoring errors, keep original values for any entries still NaT.
+                # Check if there are any remaining unconverted dates
+                remaining_unconverted = converted_dates.isnull().any().compute()
+                # If there are remaining unconverted dates and we're not ignoring errors, throw an error.
+                if remaining_unconverted and not self.ignore_errors:
+                    self.error_handler.throw(
+                        f"error during `date_format` operation: some dates in column `{_column}` could not be converted with any of the provided formats: {self.from_formats}"
+                    )
+                    raise ValueError("Some dates could not be converted")
+                
                 try:
-                    # For any remaining NaT values, use the original string if ignore_errors is True? Or turn them into NaT?
+                    # For any remaining unconverted values, use the original string if ignore_errors is True? Or turn them into nulls?
                     if self.ignore_errors:
-                        converted_dates = converted_dates.mask(converted_dates.isna(), data[_column])
+                        converted_dates = converted_dates.mask(converted_dates.isnull(), data[_column])
                     data[_column] = converted_dates.dt.strftime(self.to_format)
                 # Otherwise, raise an error indicating failure to convert the column entirely.
                 except Exception as err:
