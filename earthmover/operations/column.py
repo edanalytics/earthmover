@@ -485,12 +485,14 @@ class DateFormatOperation(Operation):
                     )
                     raise ValueError("Some dates could not be converted")
                 
+                # Format successfully converted dates to the target format.
                 try:
-                    # For any remaining unconverted values, use the original string if ignore_errors is True? Or turn them into nulls?
                     if self.ignore_errors:
-                        converted_dates = converted_dates.mask(converted_dates.isnull(), data[_column])
-                    data[_column] = converted_dates.dt.strftime(self.to_format)
-                # Otherwise, raise an error indicating failure to convert the column entirely.
+                        # Format all values (Unconverted values will become null strings...do we want them to remain as the original strings?)
+                        data[_column] = converted_dates.dt.strftime(self.to_format)
+                    else:
+                        # All dates should be converted, safe to format the entire Series.
+                        data[_column] = converted_dates.dt.strftime(self.to_format)
                 except Exception as err:
                     self.error_handler.throw(
                         f"error during `date_format` operation while converting to target format... check format strings? ({err})"
