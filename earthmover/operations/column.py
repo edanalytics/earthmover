@@ -342,6 +342,7 @@ class MapValuesOperation(Operation):
             self.error_handler.throw(
                 "one or more columns to map are undefined in the dataset"
             )
+            raise
 
         try:
             for _column in self.columns_list:
@@ -389,6 +390,7 @@ class DateFormatOperation(Operation):
         super().__init__(*args, **kwargs)
         self.ignore_errors = self.error_handler.assert_get_key(self.config, 'ignore_errors', dtype=bool, required=False)
         self.exact_match = self.error_handler.assert_get_key(self.config, 'exact_match', dtype=bool, required=False)
+        self.ignore_nulls = self.error_handler.assert_get_key(self.config, 'ignore_nulls', dtype=bool, required=False)
 
         
         # Support both single format and multiple formats, but only one can be populated.
@@ -435,6 +437,10 @@ class DateFormatOperation(Operation):
             converted_dates = None # This var will store the progressively built result of successfully converted dates.
             any_converted = False # Flag to track if any conversion was successful for this column. 
             
+            # Track original nulls if ignore_nulls is enabled
+            if self.ignore_nulls:
+                original_null_mask = data[_column].isnull()
+            
             # Try each format provided in the from_formats list in order.
             for formatting in self.from_formats:
                 try:
@@ -442,6 +448,10 @@ class DateFormatOperation(Operation):
                     try_conversion = dask.dataframe.to_datetime(
                         data[_column], format=formatting, exact=bool(self.exact_match), errors='coerce'
                     )
+                    
+                    # Preserve original nulls if ignore_nulls is enabled
+                    if self.ignore_nulls:
+                        try_conversion = try_conversion.mask(original_null_mask, data[_column])
                     
                     # If this is the first conversion attempt, store it.
                     if converted_dates is None:
@@ -477,7 +487,12 @@ class DateFormatOperation(Operation):
             # If any valid dates were parsed, format them to the target format.
             else:
                 # Check if there are any remaining unconverted dates
-                remaining_unconverted = converted_dates.isnull().any().compute()
+                if self.ignore_nulls:
+                    # Don't count original nulls as unconverted when checking for errors
+                    remaining_unconverted = (converted_dates.isnull() & ~original_null_mask).any().compute()
+                else:
+                    remaining_unconverted = converted_dates.isnull().any().compute()
+                    
                 # If there are remaining unconverted dates and we're not ignoring errors, throw an error.
                 if remaining_unconverted and not self.ignore_errors:
                     self.error_handler.throw(
