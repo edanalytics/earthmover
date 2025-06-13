@@ -103,6 +103,8 @@ transformations:
           - $transformations.bird_species
           - $transformations.fish_species
           - $transformations.reptile_species
+      - operation: sort_rows
+        columns: [ family, -genus ]
     debug: True
 
   joined_inventories:
