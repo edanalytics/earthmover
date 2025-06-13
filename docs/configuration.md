@@ -799,7 +799,7 @@ The above example shows a transformation of the courses source, which consists o
 
     Sort rows by one or more columns.
 
-    Simple sorting
+    **Simple sorting**
     ```yaml
         - operation: sort_rows
             columns:
@@ -809,7 +809,7 @@ The above example shows a transformation of the courses source, which consists o
 
     By default, rows are sorted ascendingly. Set `descending: True` to reverse this order.
 
-    Multidirectional sorting (new syntax)
+    **Multidirectional sorting (new syntax)**
     Specify the sort direction for each column using + (ascending) or - (descending)
     
     ```yaml
