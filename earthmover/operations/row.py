@@ -129,7 +129,7 @@ class SortRowsOperation(Operation):
 
             for col in self.columns_list:
                 if col[0] == "-":
-                    clean_columns_list.append(col[1:])
+                    clean_columns_list.append(col.lstrip("-"))
                     sort_direc_list.append(False)
                 else:
                     clean_columns_list.append(col.lstrip("+"))
