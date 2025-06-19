@@ -115,6 +115,7 @@ class FileDestination(Destination):
             self.upstream_sources[self.source].data
                 .fillna("") # needed to prevent "None" from entering final values
                 .map_partitions(partial(self.apply_render_row, template_string, self.render_row), meta=pd.Series('str'))
+                .reset_index(drop=True)
         )
 
         # Repartition before writing, if specified.

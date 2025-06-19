@@ -25,7 +25,6 @@ from earthmover.yaml_parser import YamlMapping
 from earthmover import util
 
 from typing import List, Optional
-from dask.distributed import LocalCluster, Client
 
 COMPILED_YAML_FILE = "./earthmover_compiled.yaml"
 
@@ -308,6 +307,7 @@ class Earthmover:
         :return:
         """
         if self.distributed:
+            from dask.distributed import LocalCluster, Client
             self.logger.info(f"running with dask distributed")
             if not self.dask_cluster_kwargs:
                 self.logger.error("`config.dask_cluster_kwargs` is required in `earthmover.yml` when `config.dask_distributed` is specified; see documentation for details and example configuration")
