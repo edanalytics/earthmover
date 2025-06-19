@@ -625,14 +625,16 @@ The above example shows a transformation of the courses source, which consists o
     ```yaml
     - operation: drop_columns
       columns:
-        - *_suffix             # matches `my_suffix` and `your_suffix`
+        - "*_suffix"             # matches `my_suffix` and `your_suffix`
         - prefix_*             # matches `prefix_1` and `prefix_2`
-        - *_sandwich_*         # matches `my_sandwich_1` and `your_sandwich_2`
+        - "*_sandwich_*"         # matches `my_sandwich_1` and `your_sandwich_2`
         - single_character_?   # matches `single_character_A`, `single_character_B`, etc.
         - number_[0123456789]  # matches `number_1`, `number_2`, etc.
     ```
 
     **Note that** this feature means that if your data frame's columns legitimately contain the special characters `*`, `?`, `[`, or `]`, you must first use `rename_columns` to remove those characters before using an operation that supports wildcard matching to avoid unexpected results.
+
+    ** Note also that** column specifications cannot begin with `*` or the YAML parser would interpret them as an anchor reference. Hence the examples above are quoted (`"*_..."`), which is the proper way to use wildcard prefixes while avoiding YAML parse errors.
 
 
 ??? example "add_columns"
