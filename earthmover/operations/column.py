@@ -209,14 +209,14 @@ class DropColumnsOperation(Operation):
         """
         super().execute(data, **kwargs)
 
-        if not set(self.columns_to_drop).issubset(data.columns):
+        cols_to_discard = self.match_wildcard_columns(data.columns, self.columns_to_drop)
+        if not set(cols_to_discard).issubset(data.columns):
             self.error_handler.throw(
                 f"one or more columns specified to drop are not present in the dataset: {set(self.columns_to_drop).difference(data.columns)}"
             )
             raise
 
         # New functionality: do not raise an error if a column was not found in the dataset.
-        cols_to_discard = self.match_wildcard_columns(data.columns, self.columns_to_drop)
         data = data.drop(columns=cols_to_discard)
 
         return data

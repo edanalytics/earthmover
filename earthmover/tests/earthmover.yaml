@@ -43,6 +43,10 @@ sources:
   zoo_inventories:
     file: ${BASE_DIR}/sources/inventories.csv
     header_rows: 1
+
+  wildcards:
+    file: ${BASE_DIR}/sources/wildcards.csv
+    header_rows: 1
   
   cities:
     file: ${BASE_DIR}/sources/cities.jsonl
@@ -358,6 +362,49 @@ transformations:
           - all_lifespans
           - all_lifespans_quoted
 
+  # Test wildcard matching on column names:
+  wildcards:
+    source: $sources.wildcards
+    operations:
+      # this should remove just `d_4`
+      - operation: keep_columns
+        columns:
+          - a_*
+          - b_*
+          - c_*
+          - e_*
+          - "*_1"
+          - "*_2"
+          - "*_3"
+      # this should remove `d_1`, `d_2`, and `d_3`
+      - operation: drop_columns
+        columns:
+          - d_*
+      - operation: combine_columns
+        columns:
+          - a_*
+        new_column: a1234
+        separator: "-"
+      - operation: map_values
+        columns:
+          - a_*
+          - "*_2"
+        mapping:
+          "1": 101
+          "2": 102
+          "3": 103
+          "5": 105
+          "8": 108
+      - operation: modify_columns
+        columns:
+          a_*: '{%raw%}{{value|int + 1000}}{%endraw%}'
+          "*_2": '{%raw%}{{value|int + 1000}}{%endraw%}'
+      - operation: date_format
+        columns:
+          - e_*
+        from_format: "%m/%d/%Y"
+        to_format: "%Y-%m-%d"
+
 
 destinations:
 
@@ -402,5 +449,11 @@ destinations:
   families:
     source: $transformations.families
     template: ${BASE_DIR}/templates/families.jsont
+    extension: jsonl
+    linearize: True
+
+  wildcards:
+    source: $transformations.wildcards
+    template: ${BASE_DIR}/templates/verbatim.jsont
     extension: jsonl
     linearize: True
