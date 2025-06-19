@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 import time
+import pandas as pd
 
 from typing import Dict, List, Optional
 from typing import TYPE_CHECKING
@@ -157,9 +158,14 @@ class RunsFile:
 
             if f"$sources.{source.name}" not in node_data.keys():
                 continue
+                
+            source_classname = source.__class__.__name__
 
-            if not source.is_remote and source.file and not os.path.isdir(source.file):
+            if source.is_hashable and source_classname=="FileSource" and source.file and not os.path.isdir(source.file):
                 sources_hash += self._get_file_hash(source.file)
+
+            if source.is_hashable and source_classname=="SqlSource" and source.connection and source.query:
+                sources_hash += self._get_sql_hash(source)
 
         if sources_hash:
             sources_hash = self._get_string_hash(sources_hash)
@@ -250,6 +256,20 @@ class RunsFile:
                 hashed.update(data)
 
         return hashed.hexdigest()
+
+    def _get_sql_hash(self, source) -> str:
+        # We have to read the data in order to be able to hash it.
+        source.execute()
+        # SqlSources produce a pandas dataframe, not a dask dataframe... so this works. In the
+        # future, we should probably both refactor SqlSource to return a dask dataframe, and
+        # this method to iterate over the partitions and hash them each separately. Though ordering
+        # of partitions is not guaranteed to be deterministic, so that could be a problem.
+        row_hashes = pd.util.hash_pandas_object(source.data, index=False)
+        df_hash = hashlib.sha1(row_hashes.values).hexdigest()
+        # delete the data so that the real `earthmover run` wouldn't fail:
+        source.data = None
+        return df_hash
+
 
 
     def _get_string_hash(self, string: str) -> str:

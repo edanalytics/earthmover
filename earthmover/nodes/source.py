@@ -23,7 +23,7 @@ class Source(Node):
     """
     type: str = 'source'
     mode: str = None  # Documents which class was chosen.
-    is_remote: bool = None
+    is_hashable: bool = None
     allowed_configs: Tuple[str] = ('debug', 'expect', 'require_rows', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',)
 
     NUM_ROWS_PER_CHUNK: int = 1000000
@@ -103,7 +103,7 @@ class FileSource(Source):
 
     """
     mode: str = 'file'
-    is_remote: bool = False
+    is_hashable: bool = True
     allowed_configs: Tuple[str] = (
         'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
         'file', 'type', 'columns', 'header_rows', 'colspec_file', 'colspecs', 'colspec_headers', 'rename_cols',
@@ -160,7 +160,7 @@ class FileSource(Source):
 
         # Remote files cannot be size-checked in execute.
         if "://" in self.file:
-            self.is_remote = True
+            self.is_hashable = False
 
     def execute(self):
         """
@@ -179,7 +179,7 @@ class FileSource(Source):
             else:
                 dask_config.set({'dataframe.convert-string': False})
                 self.data = self.read_lambda(self.file, self.config)
-                if not self.is_remote:
+                if self.is_hashable:
                     self.size = os.path.getsize(self.file)
 
             # Rename columns if specified. Note that optional columns are ignored in this case.
@@ -386,7 +386,7 @@ class FtpSource(Source):
 
     """
     mode: str = 'ftp'
-    is_remote: bool = True
+    is_hashable: bool = False
     allowed_configs: Tuple[str] = (
         'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
         'connection', 'query',
@@ -450,7 +450,7 @@ class SqlSource(Source):
 
     """
     mode: str = 'sql'
-    is_remote: bool = True
+    is_hashable: bool = True
     allowed_configs: Tuple[str] = (
         'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
         'connection', 'query',
