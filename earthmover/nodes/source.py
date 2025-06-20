@@ -5,6 +5,7 @@ import io
 import os
 import pandas as pd
 import re
+import hashlib
 
 from earthmover.nodes.node import Node
 from earthmover import util
@@ -379,6 +380,9 @@ class FileSource(Source):
                     "loading an XML source requires additional libraries... please install using `pip install earthmover[xml]`"
                 )
                 raise
+    
+    def get_hash(self) -> str:
+        return util.get_file_hash(self.file, self.earthmover.HASH_ALGORITHM)
 
 
 class FtpSource(Source):
@@ -534,3 +538,16 @@ class SqlSource(Source):
                     "connecting to a database requires additional libraries... please install using `pip install earthmover[sql]`"
                 )
                 raise
+    
+    def get_hash(self) -> str:
+        # We have to read the data in order to be able to hash it.
+        self.execute()
+        # SqlSources produce a pandas dataframe, not a dask dataframe... so this works. In the
+        # future, we should probably both refactor SqlSource to return a dask dataframe, and
+        # this method to iterate over the partitions and hash them each separately. Though ordering
+        # of partitions is not guaranteed to be deterministic, so that could be a problem.
+        row_hashes = pd.util.hash_pandas_object(self.data, index=False)
+        df_hash = hashlib.sha1(row_hashes.values).hexdigest()
+        # delete the data so that the real `earthmover run` wouldn't fail:
+        self.data = None
+        return df_hash
