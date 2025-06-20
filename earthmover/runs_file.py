@@ -3,7 +3,6 @@ import hashlib
 import json
 import os
 import time
-import pandas as pd
 
 from earthmover import util
 
