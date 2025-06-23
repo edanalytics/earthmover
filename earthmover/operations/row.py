@@ -128,11 +128,12 @@ class SortRowsOperation(Operation):
                 # when the user inputs the columns in the second format
 
             for col in self.columns_list:
+
                 if col[0] == "-":
-                    clean_columns_list.append(col.lstrip("-"))
+                    clean_columns_list.append(col.removeprefix("-"))
                     sort_direc_list.append(False)
                 else:
-                    clean_columns_list.append(col.lstrip("+"))
+                    clean_columns_list.append(col.removeprefix("+"))
                     sort_direc_list.append(True)
 
             
