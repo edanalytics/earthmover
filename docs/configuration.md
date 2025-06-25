@@ -618,6 +618,24 @@ The above example shows a transformation of the courses source, which consists o
     Jinja expressions must be wrapped in `{%raw%}...{%endraw%}` to avoid them being parsed by [the initial parsing step](design.md#yaml-compilation).
 
 
+???+ tip "Tip: wildcard matching for column names"
+
+    The `modify_columns`, `drop_columns`, `keep_columns`, `combine_columns`, `map_values`, and `date_format` operations (documented below) support the use of wildcard matching (via [fnmatch](https://docs.python.org/3/library/fnmatch.html)) so apply a transformation to multiple columns. Example:
+
+    ```yaml
+    - operation: drop_columns
+      columns:
+        - "*_suffix"             # matches `my_suffix` and `your_suffix`
+        - prefix_*             # matches `prefix_1` and `prefix_2`
+        - "*_sandwich_*"         # matches `my_sandwich_1` and `your_sandwich_2`
+        - single_character_?   # matches `single_character_A`, `single_character_B`, etc.
+        - number_[0123456789]  # matches `number_1`, `number_2`, etc.
+    ```
+
+    **Note that** this feature means that if your data frame's columns legitimately contain the special characters `*`, `?`, `[`, or `]`, you must first use `rename_columns` to remove those characters before using an operation that supports wildcard matching to avoid unexpected results.
+
+    ** Note also that** column specifications cannot begin with `*` or the YAML parser would interpret them as an anchor reference. Hence the examples above are quoted (`"*_..."`), which is the proper way to use wildcard prefixes while avoiding YAML parse errors.
+
 
 ??? example "add_columns"
 
