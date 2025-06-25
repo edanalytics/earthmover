@@ -9,7 +9,7 @@ class Transformation(Node):
 
     """
     type: str = 'transformation'
-    allowed_configs: Tuple[str] = ('debug', 'expect', 'require_rows', 'show_progress', 'repartition', 'operations', 'source',)
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'require_rows', 'require_rows_exit_code', 'show_progress', 'repartition', 'operations', 'source',)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

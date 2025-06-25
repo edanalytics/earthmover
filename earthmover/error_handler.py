@@ -113,7 +113,11 @@ class ErrorHandler:
 
         return value
 
-    def throw(self, message: str):
-        raise Exception(
-            f"{self.ctx} {message})"
-        )
+    def throw(self, message: str, exit_code: Optional[int] = None):
+        if not exit_code:
+            raise Exception(
+                f"{self.ctx} {message})"
+            )
+        else:
+            print(f"{self.ctx} {message})")
+            raise SystemExit(exit_code)

@@ -25,7 +25,7 @@ class Node:
 
     """
     type: str = None
-    allowed_configs: Tuple[str] = ('debug', 'expect', 'require_rows', 'show_progress', 'repartition')
+    allowed_configs: Tuple[str] = ('debug', 'expect', 'require_rows', 'require_rows_exit_code', 'show_progress', 'repartition')
 
     def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         self.name: str = name
@@ -76,6 +76,9 @@ class Node:
             self.error_handler.throw(
                 f"Source `{self.full_name}` require_rows cannot be negative"
             )
+        self.require_rows_exit_code = self.config.get('require_rows_exit_code', None)
+        if self.require_rows_exit_code:
+            self.require_rows_exit_code = int(self.require_rows_exit_code)
 
 
     @abc.abstractmethod
@@ -123,7 +126,7 @@ class Node:
 
         # Only actually compute() and count the rows if `require_rows` was defined for this node.
         if self.require_rows > 0:
-            self.check_require_rows(self.require_rows)
+            self.check_require_rows(self.require_rows, self.require_rows_exit_code)
 
         # Display row-count and dataframe shape if debug is enabled.
         if self.debug:
@@ -131,11 +134,12 @@ class Node:
 
         pass
 
-    def check_require_rows(self, num_required_rows):
+    def check_require_rows(self, num_required_rows, exit_code=None):
         self.num_rows = dask.compute(self.num_rows)[0]
         if self.num_rows < num_required_rows:
             self.error_handler.throw(
-                f"Source `{self.full_name}` failed require_rows >= {num_required_rows}` (only {self.num_rows} rows found)"
+                f"Source `{self.full_name}` failed require_rows >= {num_required_rows}` (only {self.num_rows} rows found)",
+                exit_code
             )
         else:
             self.logger.info(
