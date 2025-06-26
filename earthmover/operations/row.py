@@ -130,10 +130,10 @@ class SortRowsOperation(Operation):
             for col in self.columns_list:
 
                 if col[0] == "-":
-                    clean_columns_list.append(col.removeprefix("-"))
+                    clean_columns_list.append(col[1:])
                     sort_direc_list.append(False)
                 else:
-                    clean_columns_list.append(col.removeprefix("+"))
+                    clean_columns_list.append(col[1:] if col.startswith("+") else col)
                     sort_direc_list.append(True)
 
             
