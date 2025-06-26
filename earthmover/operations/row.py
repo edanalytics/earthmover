@@ -99,6 +99,7 @@ class SortRowsOperation(Operation):
         """
 
         """
+
         allowed_configs: Tuple[str] = (
             'operation', 'repartition',
             'columns', 'descending',
@@ -107,6 +108,9 @@ class SortRowsOperation(Operation):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.columns_list = self.error_handler.assert_get_key(self.config, 'columns', dtype=list)
+                # supports both ["col1", "col2"] and ["+col1", "-col2"] kinds of arguments
+                    # the previous version of the code only accepted the first format
+                    # and sorted in one direction
             self.descending = self.error_handler.assert_get_key(self.config, 'descending', required=False, default=False)
 
         def execute(self, data: 'DataFrame', **kwargs):
@@ -116,13 +120,38 @@ class SortRowsOperation(Operation):
             """
             super().execute(data, **kwargs)
 
-            if not set(self.columns_list).issubset(data.columns):
+            sort_direc_list = [] # True for ascending
+                          # False for descending
+
+            clean_columns_list = [] 
+                # getting rid of "+" and"-" in front of the column name
+                # when the user inputs the columns in the second format
+
+            for col in self.columns_list:
+
+                if col[0] == "-":
+                    clean_columns_list.append(col[1:])
+                    sort_direc_list.append(False)
+                else:
+                    clean_columns_list.append(col[1:] if col.startswith("+") else col)
+                    sort_direc_list.append(True)
+
+            
+            # overwrites any of the "+" that could have been provided
+            # and sets all the directions to descending
+            if self.descending is True:
+                sort_direc_list = [False] * len(sort_direc_list)
+
+
+            if not set(clean_columns_list).issubset(data.columns):
                 self.error_handler.throw(
                     "one or more columns for sorting are undefined in the dataset"
                 )
-                raise
+                raise 
 
-            return data.sort_values(by=self.columns_list, ascending=(not self.descending))
+            return data.sort_values(by=clean_columns_list, ascending=sort_direc_list)
+                # where clean_columns_list is a list of strings 
+                # and sort_direc_list is a list of booleans
 
 class LimitRowsOperation(Operation):
         """
