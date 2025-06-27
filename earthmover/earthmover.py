@@ -292,9 +292,9 @@ class Earthmover:
             runs_file = RunsFile(_runs_path, earthmover=self)
 
             # Remote sources cannot be hashed; no hashed runs contain remote sources.
-            if any(source.is_remote for source in self.sources):
+            if any(not source.is_hashable for source in self.sources):
                 self.logger.info(
-                    "forcing regenerate, since some sources are remote (and we cannot know if they changed)"
+                    "forcing regenerate, since some sources are unhashable (so we cannot know if they changed)"
                 )
 
             elif any(hasattr(source, 'file') and os.path.isdir(source.file) for source in self.sources):

@@ -4,6 +4,8 @@ import json
 import os
 import time
 
+from earthmover import util
+
 from typing import Dict, List, Optional
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -16,9 +18,7 @@ class RunsFile:
     """
 
     """
-    BUF_SIZE = 65536  # 64kb chunks
     ROW_COUNT_TO_WARN = 10000
-    HASH_ALGORITHM = 'md5'
 
     HEADER = [
         'run_timestamp',
@@ -136,13 +136,13 @@ class RunsFile:
         row = {}
 
         # Hash the configs
-        config_hash = self._get_string_hash(json.dumps(self.earthmover.state_configs))
+        config_hash = util.get_string_hash(json.dumps(self.earthmover.state_configs))
         row['config_hash'] = config_hash
 
 
         # Hash the params
         if self.earthmover.params:
-            params_hash = self._get_string_hash(self.earthmover.params)
+            params_hash = util.get_string_hash(self.earthmover.params)
         else:
             params_hash = ""
 
@@ -158,11 +158,11 @@ class RunsFile:
             if f"$sources.{source.name}" not in node_data.keys():
                 continue
 
-            if not source.is_remote and source.file and not os.path.isdir(source.file):
-                sources_hash += self._get_file_hash(source.file)
+            if source.is_hashable:
+                sources_hash += source.get_hash()
 
         if sources_hash:
-            sources_hash = self._get_string_hash(sources_hash)
+            sources_hash = util.get_string_hash(sources_hash)
 
         row['sources_hash'] = sources_hash
 
@@ -174,10 +174,10 @@ class RunsFile:
             if f"$destinations.{destination.name}" not in node_data.keys():
                 continue
 
-            templates_hash += self._get_file_hash(destination.template)
+            templates_hash += util.get_file_hash(destination.template)
 
         if templates_hash != "":
-            templates_hash = self._get_string_hash(templates_hash)
+            templates_hash = util.get_string_hash(templates_hash)
 
         row['templates_hash'] = templates_hash
 
@@ -188,10 +188,10 @@ class RunsFile:
 
             for op in transformation.operations:
                 if op.type == "map_values" and op.map_file:
-                    mappings_hash += self._get_file_hash(op.map_file)
+                    mappings_hash += util.get_file_hash(op.map_file)
 
         if mappings_hash != "":
-            mappings_hash = self._get_string_hash(mappings_hash)
+            mappings_hash = util.get_string_hash(mappings_hash)
 
         row['mappings_hash'] = mappings_hash
 
@@ -226,44 +226,3 @@ class RunsFile:
             )
 
         return runs
-
-
-    def _get_file_hash(self, file: str) -> str:
-        """
-        Compute the hash of a (potentially large) file by streaming it in from disk
-
-        :param file:
-        :return:
-        """
-        if self.HASH_ALGORITHM == "md5":
-            hashed = hashlib.md5()
-        elif self.HASH_ALGORITHM == "sha1":
-            hashed = hashlib.sha1()
-        else:
-            raise Exception("invalid hash algorithm, must be md5 or sha1")
-
-        with open(file, 'rb') as fp:
-            while True:
-                data = fp.read(self.BUF_SIZE)
-                if not data:
-                    break
-                hashed.update(data)
-
-        return hashed.hexdigest()
-
-
-    def _get_string_hash(self, string: str) -> str:
-        """
-        :param string:
-        :return:
-        """
-
-        if self.HASH_ALGORITHM == "md5":
-            hashed = hashlib.md5()
-        elif self.HASH_ALGORITHM == "sha1":
-            hashed = hashlib.sha1()
-        else:
-            raise Exception("invalid hash algorithm, must be md5 or sha1")
-
-        hashed.update(str(string).encode('utf-8'))
-        return hashed.hexdigest()
