@@ -94,6 +94,12 @@ class FileDestination(Destination):
 
             self.jinja_template = util.build_jinja_template(template_string, macros=self.earthmover.macros)
 
+            
+            params = util.get_jinja_template_params(template_string, self.earthmover.macros)
+            self.logger.debug(
+                f"($destinations.{self.name} uses params: {params})"
+            )
+
         except OSError as err:
             self.error_handler.throw(
                 f"`template` file {self.template} cannot be opened ({err})"
