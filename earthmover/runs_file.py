@@ -136,13 +136,13 @@ class RunsFile:
         row = {}
 
         # Hash the configs
-        config_hash = self._get_string_hash(json.dumps(self.earthmover.state_configs))
+        config_hash = util.get_string_hash(json.dumps(self.earthmover.state_configs))
         row['config_hash'] = config_hash
 
 
         # Hash the params
         if self.earthmover.params:
-            params_hash = self._get_string_hash(self.earthmover.params)
+            params_hash = util.get_string_hash(self.earthmover.params)
         else:
             params_hash = ""
 
@@ -158,14 +158,11 @@ class RunsFile:
             if f"$sources.{source.name}" not in node_data.keys():
                 continue
 
-            if source.is_hashable and hasattr(source, 'file') and not os.path.isdir(source.file):
-                sources_hash += source.get_hash()
-
-            if source.is_hashable and hasattr(source, 'connection') and hasattr(source, 'query'):
+            if source.is_hashable:
                 sources_hash += source.get_hash()
 
         if sources_hash:
-            sources_hash = self._get_string_hash(sources_hash)
+            sources_hash = util.get_string_hash(sources_hash)
 
         row['sources_hash'] = sources_hash
 
@@ -180,7 +177,7 @@ class RunsFile:
             templates_hash += util.get_file_hash(destination.template)
 
         if templates_hash != "":
-            templates_hash = self._get_string_hash(templates_hash)
+            templates_hash = util.get_string_hash(templates_hash)
 
         row['templates_hash'] = templates_hash
 
@@ -194,7 +191,7 @@ class RunsFile:
                     mappings_hash += util.get_file_hash(op.map_file)
 
         if mappings_hash != "":
-            mappings_hash = self._get_string_hash(mappings_hash)
+            mappings_hash = util.get_string_hash(mappings_hash)
 
         row['mappings_hash'] = mappings_hash
 
@@ -229,20 +226,3 @@ class RunsFile:
             )
 
         return runs
-
-
-    def _get_string_hash(self, string: str) -> str:
-        """
-        :param string:
-        :return:
-        """
-
-        if self.earthmover.HASH_ALGORITHM == "md5":
-            hashed = hashlib.md5()
-        elif self.earthmover.HASH_ALGORITHM == "sha1":
-            hashed = hashlib.sha1()
-        else:
-            raise Exception("invalid hash algorithm, must be md5 or sha1")
-
-        hashed.update(str(string).encode('utf-8'))
-        return hashed.hexdigest()

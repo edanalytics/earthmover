@@ -163,3 +163,20 @@ def get_file_hash(file, hash_algorithm="md5") -> str:
             hashed.update(data)
 
     return hashed.hexdigest()
+
+
+def get_string_hash(string: str, hash_algorithm="md5") -> str:
+    """
+    :param string:
+    :return:
+    """
+
+    if hash_algorithm == "md5":
+        hashed = hashlib.md5()
+    elif hash_algorithm == "sha1":
+        hashed = hashlib.sha1()
+    else:
+        raise Exception("invalid hash algorithm, must be md5 or sha1")
+
+    hashed.update(str(string).encode('utf-8'))
+    return hashed.hexdigest()

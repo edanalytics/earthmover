@@ -115,6 +115,8 @@ class FileSource(Source):
         super().__init__(*args, **kwargs)
         self.file = self.error_handler.assert_get_key(self.config, 'file', dtype=str, required=False)
 
+        if not self.file or os.path.isdir(self.file): self.is_hashable = False
+
         #
         if not self.file:
             self.file = ''
@@ -131,7 +133,7 @@ class FileSource(Source):
                     f"file `{self.file}` is of unrecognized file format - specify the `type` manually or see documentation for supported file types"
                 )
                 raise
-
+        
         # Columns are required if a source is optional.
         self.columns_list = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
 
@@ -382,7 +384,7 @@ class FileSource(Source):
                 raise
     
     def get_hash(self) -> str:
-        return util.get_file_hash(self.file, self.earthmover.HASH_ALGORITHM)
+        return util.get_file_hash(self.file, 'md5')
 
 
 class FtpSource(Source):

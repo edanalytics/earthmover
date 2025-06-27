@@ -32,7 +32,6 @@ class Earthmover:
     """
 
     """
-    HASH_ALGORITHM = 'md5'
     start_timestamp: datetime.datetime  = datetime.datetime.now()
     end_timestamp: Optional[datetime.datetime] = None
 
