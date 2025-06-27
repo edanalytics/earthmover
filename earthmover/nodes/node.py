@@ -27,6 +27,13 @@ class Node:
     type: str = None
     allowed_configs: Tuple[str] = ('debug', 'expect', 'require_rows', 'show_progress', 'repartition')
 
+    def __getnewargs__(self):
+        return self.name, self.config, self.earthmover
+    
+    def __dask_tokenize__(self):
+        from dask.base import normalize_token
+        return normalize_token((type(self), self.type))
+
     def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         self.name: str = name
         self.config: 'YamlMapping' = config
@@ -54,6 +61,11 @@ class Node:
 
         # Internal Dask configs
         self.partition_size: Union[str, int] = self.config.get('repartition')
+
+        # Some nodes automatically repartition, per Dask's recommendation.
+        # (see https://docs.dask.org/en/stable/dataframe-best-practices.html#repartition-to-reduce-overhead)
+        # This is set here so it would be easy to change in the future if needed.
+        self.target_partition_size = "100MB"
 
         # Optional variables for displaying progress and diagnostics.
         self.show_progress: bool = self.config.get('show_progress', self.earthmover.state_configs["show_progress"])
@@ -154,7 +166,10 @@ class Node:
             warnings.filterwarnings("ignore", message="Insufficient elements for `head`")
 
             # Complete all computes at once to reduce duplicate computation.
-            self.num_rows, data_head = dask.compute([self.num_rows, self.data.head(nrows)])[0]
+            # dask.compute(self.data)
+            # self.num_rows, data_head = dask.compute([self.num_rows, self.data.head(nrows)])[0]
+            self.num_rows = self.num_rows.compute()
+            data_head = dask.compute(self.data.head(nrows))[0]
 
             self.logger.info(f"Node {self.name}: {int(self.num_rows)} rows; {self.num_cols} columns")
             with pd.option_context('display.max_columns', None, 'display.width', None):
@@ -173,13 +188,15 @@ class Node:
             result = self.data.copy()
 
             for expectation in expectations:
-                template = jinja2.Template("{{" + expectation + "}}")
+                template_string = "{{" + expectation + "}}"
+                # template = util.build_jinja_template(template_string=template_string, macros="")
 
                 result[expectation_result_col] = result.apply(
                     util.render_jinja_template, axis=1,
                     meta=pd.Series(dtype='str', name=expectation_result_col),
-                    template=template,
-                    template_str="{{" + expectation + "}}",
+                    jinja_environment=self.earthmover.jinja_environment,
+                    template_string=template_string,
+                    macros="",
                     error_handler = self.error_handler
                 )
 

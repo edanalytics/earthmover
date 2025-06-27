@@ -1,8 +1,43 @@
+version: 2
+
 config:
   output_dir: ./output/
-  # show_stacktrace: True
+  show_stacktrace: True
   # show_graph: True
   # log_level: DEBUG
+  temp_dir: ./ # <- precedence over dask.temporary-directory
+  dask:
+    temporary-directory: /tmp
+    dataframe:
+      backend: pandas
+      convert-string: False
+      query-planning: False
+    multiprocessing:
+      context: fork
+    distributed:
+      scheduler:
+        active-memory-manager:
+          measure: managed
+        processes: True
+        worker-saturation: 1.0
+      worker:
+        memory:
+          recent-to-old-time: 5s # 600s
+          monitor-interval: 15s
+          rebalance:
+            measure: managed
+          spill: 0.5
+          pause: 0.95
+          terminate: 0.99
+          max-spill: false
+      nanny:
+        pre-spawn-environ:
+          MALLOC_TRIM_THRESHOLD_: 0
+  dask_cluster_kwargs:
+    n_workers: 4
+    threads_per_worker: 1
+    memory_limit: 1.2GB
+    processes: True
 
 sources:
   attendance:

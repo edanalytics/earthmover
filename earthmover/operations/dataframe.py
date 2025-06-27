@@ -1,6 +1,7 @@
 import dask.dataframe as dd
 import numpy as np
 import pandas as pd
+import dask
 
 from earthmover.nodes.node import Node
 from earthmover.operations.operation import Operation
@@ -99,10 +100,16 @@ class JoinOperation(Operation):
             left_cols = list(set(left_cols).difference(self.left_drop_cols))
 
         left_data = data[left_cols]
+        if self.earthmover.distributed:
+            # sort() and persist() left_data so it doesn't have to be re-read from disk for each right frame
+            left_data = left_data.sort_values(by=self.left_keys).persist()
 
         # Iterate each right dataset
         for source in self.sources:
             right_data = data_mapping[source].data
+            if self.earthmover.distributed:
+                # sort() right_data to enable efficient partition-wise join
+                right_data = right_data.sort_values(by=self.right_keys)
             right_cols = right_data.columns
 
             if self.right_keep_cols:
@@ -138,6 +145,8 @@ class JoinOperation(Operation):
                 )
                 raise
 
+        if self.earthmover.distributed:
+            left_data = left_data.repartition(partition_size=self.target_partition_size)
         return left_data
 
 
@@ -233,16 +242,20 @@ class DebugOperation(Operation):
         selected_columns = [col for col in list(data.columns) if col in self.keep_columns and col not in self.skip_columns]
         debug_data = data[selected_columns]
 
+        # dask.config.set({"optimization.fuse.active": False})
         # call function, and display debug info
         if self.func == 'head':
-            debug_data = debug_data.head(self.rows)
+            debug_data = debug_data.head(self.rows, npartitions=-1)
         elif self.func == 'tail':
-            debug_data = debug_data.tail(self.rows)
+            debug_data = debug_data.tail(self.rows, compute=True)
         elif self.func == 'describe':
             debug_data = debug_data.compute().describe()
+        
+        # if self.earthmover.distributed:
+        #     dask.compute(debug_data.drop_index())
 
         if self.transpose:
             debug_data = debug_data.transpose().reset_index(names="column")
         
-        print(debug_data.to_string(index=False))
+        print(dask.compute(debug_data.to_string(index=False))[0])
         return data  # do not actually transform the data

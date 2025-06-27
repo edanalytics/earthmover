@@ -1,6 +1,8 @@
 import abc
+import pandas as pd
 
 from earthmover.nodes.node import Node
+from earthmover import util
 
 from typing import Dict, Tuple
 from typing import TYPE_CHECKING
@@ -17,7 +19,7 @@ class Operation(Node):
     type: str = "transformation"
     allowed_configs: Tuple[str] = ('operation', 'repartition',)
 
-    def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
+    def __new__(cls, name: str, config: 'YamlMapping', earthmover: 'Earthmover'):
         """
         :param config:
         :param earthmover:
@@ -107,3 +109,34 @@ class Operation(Node):
         # raise NotImplementedError(
         #     "Operation.post_execute() is not permitted! Data is not persisted within Operations."
         # )
+    
+    @staticmethod
+    def apply_render_row(template_string, render_row, x):
+        template = util.build_jinja_template(template_string)
+        dunder_row_data = False
+        if '__row_data__' in util.get_jinja_template_params(template_string):
+            dunder_row_data = True
+        return x.apply(
+            render_row,
+            template = template,
+            template_string = template_string,
+            dunder_row_data = dunder_row_data,
+            axis=1)
+    
+    def render_row(self, row: pd.Series, template, template_string, dunder_row_data=False):
+        try:
+            json_string = util.render_jinja_template(
+                row,
+                template,
+                template_string,
+                dunder_row_data)
+
+        except Exception as err:
+            print(err)
+            template_snippet = template_string[0:80] + ("..." if len(template_string)>80 else "")
+            self.error_handler.throw(
+                f"error rendering Jinja template in `template` {template_snippet} ({err})"
+            )
+            raise
+        
+        return json_string

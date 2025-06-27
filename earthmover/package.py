@@ -15,7 +15,10 @@ class Package:
     """
     mode: str = None
 
-    def __new__(cls, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover', package_path: Optional[str] = None):
+    # def __getnewargs__(self):
+    #     return self.name, self.config
+
+    def __new__(cls, name: str, config: 'YamlMapping', earthmover: 'Earthmover', package_path: Optional[str] = None):
         """
         Logic for assigning packages to their respective classes.
 
@@ -39,7 +42,7 @@ class Package:
             )
             raise
     
-    def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover', package_path: Optional[str] = None):
+    def __init__(self, name: str, config: 'YamlMapping', earthmover: 'Earthmover', package_path: Optional[str] = None):
         self.name: str = name
         self.config: 'YamlMapping' = config
         self.earthmover: 'Earthmover' = earthmover
@@ -50,6 +53,23 @@ class Package:
 
         self.package_yaml: dict = None
 
+    # def __getstate__(self):
+    #     # print("I'm being pickled")
+    #     return {
+    #         "name": self.name,
+    #         "config": self.config,
+    #         "package_path": self.package_path,
+    #         "package_yaml": self.package_yaml,
+    #     }
+
+    # def __setstate__(self, state):
+    #     # print("I'm being unpickled with these values: " + repr(state))
+    #     self.name = state['name']
+    #     self.config = state['config']
+    #     self.package_path = state['package_path']
+    #     self.package_yaml = state['package_yaml']
+    #     self.logger = self.earthmover.logger
+    #     self.error_handler = self.earthmover.error_handler
 
     def install(self, packages_dir):
         """

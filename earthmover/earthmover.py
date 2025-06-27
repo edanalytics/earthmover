@@ -99,10 +99,7 @@ class Earthmover:
         
         # Prepare the output directory for destinations.
         self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
-
-        # Set the temporary directory in cases of disk-spillage.
-        dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
-
+        
         # Set a directory for installing packages.
         self.packages_dir = os.path.join(os.getcwd(), 'packages')
 
@@ -154,6 +151,59 @@ class Earthmover:
                     configs.set_path(key.lstrip(prefix), value)
         return configs
 
+    def config_dask(self):
+        # Here we set some default dask configs that are needed for most earthmover runs.
+        # A power user can certainly override them in earthmover.yml's `config.dask`` section.
+        # * September 2024 - for now we need to do this in order to turn off the Dask 
+        #   query optimizer - see https://blog.dask.org/2023/08/25/dask-expr-introduction
+        #   For reasons unknown, it doesn't yet work with Earthmover. A future Dask 
+        #   version may force us to use the query optimizer, but hopefully by then,
+        #   the bugs that emerge when we use it with Earthmover will have been fixed.
+        # * convert-string converts string-like data to pyarrow strings to improve performance
+        #   see https://docs.dask.org/en/latest/configuration.html#dataframe.convert-string
+        default_dask_configs = {
+            "dataframe.query-planning": False,
+            "dataframe.convert-string": True
+        }
+
+        # Here we set up dask configs, and (perhaps) dask distributed configs.
+        # Dask configs are nested dicts, but must be passed to dask as a flattened dict... so
+        # ````yaml
+        # temporary_directory: /tmp
+        # dataframe:
+        #   backend: pandas
+        # ```
+        # should be passed to dask as
+        # > dask.config.set({"temporary_directory": "/tmp", "dataframe.backend": "pandas"})
+        # 
+        # The calls below to `util.flatten_dict()`` convert between a nested dict, like what
+        # comes from the earthmover YAML config, to a flattened dict, like what Dask needs.
+        dask_configs = default_dask_configs.copy()
+        user_dask_configs = self.user_configs.get("config",{}).get("dask", {})
+        # possible configs are here: https://github.com/dask/dask/blob/main/dask/dask.yaml
+        # and (for distributed): https://github.com/dask/distributed/blob/main/distributed/distributed.yaml
+        temp_dir = self.user_configs.get("config",{}).get("temp_dir", False)
+        if temp_dir:
+            user_dask_configs["temporary-directory"] = temp_dir
+        if user_dask_configs:
+            dask_configs.update(util.flatten_dict(user_dask_configs.to_dict()))
+        dask.config.set(dask_configs)
+
+        # distributed settings:
+        self.distributed = self.user_configs.get("config",{}).get("dask",{}).get("distributed",False)
+        if self.distributed:
+            self.dask_cluster_kwargs = self.user_configs.get("config",{}).get("dask_cluster_kwargs",False)
+            # possible configs are here: https://distributed.dask.org/en/stable/api.html?highlight=localcluster#distributed.LocalCluster
+            # should perhaps default to...
+            # {
+            #   "processes": True,  
+            #   "n_workers": os.cpu_count() - 1,
+            #   "threads_per_worker": 1,
+            #   "memory_limit": str((psutil.virtual_memory().total / (1024**2)) / (os.cpu_count() - 1)) + "MB"
+            # }
+            # (but unfortunately this would introduce a dependency on psutil...)
+
+
     def compile(self, to_disk: bool = False):
         """
         Parse optional packages, iterate the node configs, compile each Node, and build the graph.
@@ -170,6 +220,10 @@ class Earthmover:
         if to_disk:
             self.user_configs.to_disk(self.compiled_yaml_file)
         self.user_configs = self.inject_cli_overrides(self.user_configs)
+        self.package_graph = None # not needed anymore, and breaks dask.distributed (not serializable)
+
+        # Configure Dask:
+        self.config_dask()
 
         ### Compile the nodes and add to the graph type-by-type.
         self.sources = self.compile_node_configs(
@@ -252,6 +306,16 @@ class Earthmover:
         Iterate subgraphs in `Earthmover.graph` and execute each Node in order.
         :return:
         """
+        if self.distributed:
+            from dask.distributed import LocalCluster, Client
+            self.logger.info(f"running with dask distributed")
+            if not self.dask_cluster_kwargs:
+                self.logger.error("`config.dask_cluster_kwargs` is required in `earthmover.yml` when `config.dask_distributed` is specified; see documentation for details and example configuration")
+            cluster = LocalCluster(**(self.dask_cluster_kwargs.to_dict()))
+            self.logger.info(f"view the dask profiling dashboard at {cluster.dashboard_link}")
+            dask_client = Client(cluster)
+            dask_client.get_versions(check=True)
+
         if not os.path.isdir(self.state_configs['output_dir']):
             self.logger.info(
                 f"creating output directory {self.state_configs['output_dir']}"
@@ -391,7 +455,8 @@ class Earthmover:
 
 
         ### Draw the graph again, this time add metadata about rows/cols/size at each node
-        if self.state_configs['show_graph']:
+        if self.state_configs['show_graph'] and not self.distributed:
+            # (don't do this if we're running distributed, as that would cause an expensive recompute)
             self.logger.info("saving dataflow graph image to `graph.png` and `graph.svg`")
 
             # Compute all row number values at once for performance, then update the nodes.
