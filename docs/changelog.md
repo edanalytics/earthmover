@@ -1,6 +1,8 @@
 This page tracks releases of `earthmover`, with a summary of what was changed, fixed, added in each new version.
 
 ## 2025 releases
+### Unreleased changes
+* feature: allow multi-directional sorting in sort_rows
 
 ### [v0.4.4](https://github.com/edanalytics/earthmover/releases/tag/v0.4.4)
 (Released 2025-03-06)
