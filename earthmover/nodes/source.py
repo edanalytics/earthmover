@@ -5,6 +5,7 @@ import io
 import os
 import pandas as pd
 import re
+import hashlib
 
 from earthmover.nodes.node import Node
 from earthmover import util
@@ -23,7 +24,7 @@ class Source(Node):
     """
     type: str = 'source'
     mode: str = None  # Documents which class was chosen.
-    is_remote: bool = None
+    is_hashable: bool = None
     allowed_configs: Tuple[str] = ('debug', 'expect', 'require_rows', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',)
 
     NUM_ROWS_PER_CHUNK: int = 1000000
@@ -103,7 +104,7 @@ class FileSource(Source):
 
     """
     mode: str = 'file'
-    is_remote: bool = False
+    is_hashable: bool = True
     allowed_configs: Tuple[str] = (
         'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
         'file', 'type', 'columns', 'header_rows', 'colspec_file', 'colspecs', 'colspec_headers', 'rename_cols',
@@ -113,6 +114,8 @@ class FileSource(Source):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.file = self.error_handler.assert_get_key(self.config, 'file', dtype=str, required=False)
+
+        if not self.file or os.path.isdir(self.file): self.is_hashable = False
 
         #
         if not self.file:
@@ -130,7 +133,7 @@ class FileSource(Source):
                     f"file `{self.file}` is of unrecognized file format - specify the `type` manually or see documentation for supported file types"
                 )
                 raise
-
+        
         # Columns are required if a source is optional.
         self.columns_list = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
 
@@ -160,7 +163,7 @@ class FileSource(Source):
 
         # Remote files cannot be size-checked in execute.
         if "://" in self.file:
-            self.is_remote = True
+            self.is_hashable = False
 
     def execute(self):
         """
@@ -179,7 +182,7 @@ class FileSource(Source):
             else:
                 dask_config.set({'dataframe.convert-string': False})
                 self.data = self.read_lambda(self.file, self.config)
-                if not self.is_remote:
+                if self.is_hashable:
                     self.size = os.path.getsize(self.file)
 
             # Rename columns if specified. Note that optional columns are ignored in this case.
@@ -379,6 +382,9 @@ class FileSource(Source):
                     "loading an XML source requires additional libraries... please install using `pip install earthmover[xml]`"
                 )
                 raise
+    
+    def get_hash(self) -> str:
+        return util.get_file_hash(self.file, 'md5')
 
 
 class FtpSource(Source):
@@ -386,7 +392,7 @@ class FtpSource(Source):
 
     """
     mode: str = 'ftp'
-    is_remote: bool = True
+    is_hashable: bool = False
     allowed_configs: Tuple[str] = (
         'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
         'connection', 'query',
@@ -450,7 +456,7 @@ class SqlSource(Source):
 
     """
     mode: str = 'sql'
-    is_remote: bool = True
+    is_hashable: bool = True
     allowed_configs: Tuple[str] = (
         'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
         'connection', 'query',
@@ -534,3 +540,16 @@ class SqlSource(Source):
                     "connecting to a database requires additional libraries... please install using `pip install earthmover[sql]`"
                 )
                 raise
+    
+    def get_hash(self) -> str:
+        # We have to read the data in order to be able to hash it.
+        self.execute()
+        # SqlSources produce a pandas dataframe, not a dask dataframe... so this works. In the
+        # future, we should probably both refactor SqlSource to return a dask dataframe, and
+        # this method to iterate over the partitions and hash them each separately. Though ordering
+        # of partitions is not guaranteed to be deterministic, so that could be a problem.
+        row_hashes = pd.util.hash_pandas_object(self.data, index=False)
+        df_hash = hashlib.sha1(row_hashes.values).hexdigest()
+        # delete the data so that the real `earthmover run` wouldn't fail:
+        self.data = None
+        return df_hash

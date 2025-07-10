@@ -135,3 +135,48 @@ def build_jinja_template(template_string: str, macros: str = ""):
     template.globals['fromjson'] = lambda x: json.loads(x)
 
     return template
+
+
+    
+def get_file_hash(file, hash_algorithm="md5") -> str:
+    """
+    Compute the hash of a (potentially large) file by streaming it in from disk
+
+    :param file:
+    :param hash_algorithm:
+    :return:
+    """
+    BUF_SIZE = 65536  # 64kb chunks
+    
+    if hash_algorithm == "md5":
+        hashed = hashlib.md5()
+    elif hash_algorithm == "sha1":
+        hashed = hashlib.sha1()
+    else:
+        raise Exception("invalid hash algorithm, must be md5 or sha1")
+
+    with open(file, 'rb') as fp:
+        while True:
+            data = fp.read(BUF_SIZE)
+            if not data:
+                break
+            hashed.update(data)
+
+    return hashed.hexdigest()
+
+
+def get_string_hash(string: str, hash_algorithm="md5") -> str:
+    """
+    :param string:
+    :return:
+    """
+
+    if hash_algorithm == "md5":
+        hashed = hashlib.md5()
+    elif hash_algorithm == "sha1":
+        hashed = hashlib.sha1()
+    else:
+        raise Exception("invalid hash algorithm, must be md5 or sha1")
+
+    hashed.update(str(string).encode('utf-8'))
+    return hashed.hexdigest()
