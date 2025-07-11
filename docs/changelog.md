@@ -1,8 +1,16 @@
 This page tracks releases of `earthmover`, with a summary of what was changed, fixed, added in each new version.
 
 ## 2025 releases
-### Unreleased changes
-* feature: allow multi-directional sorting in sort_rows
+
+### [v0.4.5](https://github.com/edanalytics/earthmover/releases/tag/v0.4.5)
+(Released 2025-07-11)
+
+* bugfix: [update MANIFEST.in to fix `earthmover init`](https://github.com/edanalytics/earthmover/pull/161)
+* feature: [New year, new docs!](https://github.com/edanalytics/earthmover/pull/148)
+* feature: [wildcard matching for columns](https://github.com/edanalytics/earthmover/pull/156)
+* feature: [multi-directional sorting](https://github.com/edanalytics/earthmover/pull/159)
+* feature: [make `SqlSource`s hashable (work with state-tracking)](https://github.com/edanalytics/earthmover/pull/162)
+
 
 ### [v0.4.4](https://github.com/edanalytics/earthmover/releases/tag/v0.4.4)
 (Released 2025-03-06)
