@@ -634,7 +634,7 @@ The above example shows a transformation of the courses source, which consists o
 
     **Note that** this feature means that if your data frame's columns legitimately contain the special characters `*`, `?`, `[`, or `]`, you must first use `rename_columns` to remove those characters before using an operation that supports wildcard matching to avoid unexpected results.
 
-    ** Note also that** column specifications cannot begin with `*` or the YAML parser would interpret them as an anchor reference. Hence the examples above are quoted (`"*_..."`), which is the proper way to use wildcard prefixes while avoiding YAML parse errors.
+    **Note also that** column specifications cannot begin with `*` or the YAML parser would interpret them as an anchor reference. Hence the examples above are quoted (`"*_..."`), which is the proper way to use wildcard prefixes while avoiding YAML parse errors.
 
 
 ??? example "add_columns"
