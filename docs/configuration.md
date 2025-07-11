@@ -844,7 +844,7 @@ The above example shows a transformation of the courses source, which consists o
     ```
     
     !!! tip
-      `earthmover` cannot distinguish between a leading `+` that is part of the column name vs. a leading `+` that denotes "sort ascendingly;" the first leading `+` will always be removed. Consider prefixing the column explicitly with the sorting direction (e.g. `++sort_column_1`) or renaming the column using `rename_columns`.
+          `earthmover` cannot distinguish between a leading `+` that is part of the column name vs. a leading `+` that denotes "sort ascendingly;" the first leading `+` will always be removed. Consider prefixing the column explicitly with the sorting direction (e.g. `++sort_column_1`) or renaming the column using `rename_columns`.
 
 
 
