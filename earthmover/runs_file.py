@@ -6,6 +6,7 @@ import time
 
 from earthmover import util
 from datetime import date
+from ruamel.yaml.comments import CommentedMap
 
 from typing import Dict, List, Optional
 from typing import TYPE_CHECKING
@@ -118,6 +119,8 @@ class RunsFile:
         return differences
 
 
+
+    
     def _build_hashes(self) -> Dict[str, str]:
         """
         This tool maintains state about prior runs. If no inputs have changed, there's no need to re-run,
@@ -133,8 +136,20 @@ class RunsFile:
 
         :return:
         """
+        
+        def convert_to_dict(obj):
+            if isinstance(obj, CommentedMap):
+                return {k: convert_to_dict(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_to_dict(i) for i in obj]
+            else:
+                return obj
+        
         ### Store all hashes into a dictionary to merge with the rest of the row.
         row = {}
+        # Convert YAML mapping to plain dict first
+        clean_config = convert_to_dict(self.earthmover.state_configs)
+        print(f"state_configs (dict): {json.dumps(clean_config, indent=2)}")
 
         # Hash the configs
         config_hash = util.get_string_hash(json.dumps(self.earthmover.state_configs))
@@ -145,15 +160,24 @@ class RunsFile:
         
         # Hash the params
         if self.earthmover.params:
+            
+            # If input_file is provided as a parmeter, then remove the ds_nodash/ts_nodash from the path before hashing.
             if self.earthmover.params.get('INPUT_FILE'):
+                # Find the input_file directory.
                 input_file = self.earthmover.params['INPUT_FILE']
+                # Split the input_file path into parts based on the / delimiter.
+                # Though if someone is using a different delimiter, this will break.
                 path_parts = input_file.split("/")
                 
+                # Try to find the ds_nodash/ts_nodash in the path and remove it.
+                # If it's not found, use the original path.
                 try:
+                    # Find the index of the ds_nodash/ts_nodash in the path.
                     idx = path_parts.index(ds_nodash)
+                    # Remove the ds_nodash/ts_nodash and the directory after it.
                     filtered_parts = path_parts[:idx] + path_parts[idx+2:]
+                    # Join the parts back together with the / delimiter.
                     cleaned_path = "/".join(filtered_parts)
-                    print(f"cleaned_path: {cleaned_path}")
                 except ValueError:
                     cleaned_path = input_file
 
