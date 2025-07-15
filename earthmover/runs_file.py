@@ -5,6 +5,7 @@ import os
 import time
 
 from earthmover import util
+from datetime import date
 
 from typing import Dict, List, Optional
 from typing import TYPE_CHECKING
@@ -140,10 +141,28 @@ class RunsFile:
         row['config_hash'] = config_hash
 
 
+        ds_nodash = date.today().strftime("%Y%m%d")
+        
         # Hash the params
         if self.earthmover.params:
-            params_hash = util.get_string_hash(self.earthmover.params)
-            print(f"params: {self.earthmover.params}")
+            if self.earthmover.params.get('INPUT_FILE'):
+                input_file = self.earthmover.params['INPUT_FILE']
+                path_parts = input_file.split("/")
+                
+                try:
+                    idx = path_parts.index(ds_nodash)
+                    filtered_parts = path_parts[:idx] + path_parts[idx+2:]
+                    cleaned_path = "/".join(filtered_parts)
+                    print(f"cleaned_path: {cleaned_path}")
+                except ValueError:
+                    cleaned_path = input_file
+
+                non_timestamp_params = cleaned_path
+                params_hash = util.get_string_hash(non_timestamp_params)
+            
+            else:
+                params_hash = util.get_string_hash(self.earthmover.params)
+            
         else:
             params_hash = ""
 
