@@ -165,7 +165,6 @@ class RunsFile:
                 filtered_parts = path_parts[:idx] + path_parts[idx+2:]
                 # Join the parts back together with the / delimiter.
                 cleaned_output_dir = "/".join(filtered_parts)
-                print(f"cleaned_path: {cleaned_path}")
             except ValueError:
                 cleaned_output_dir = output_dir
                 
