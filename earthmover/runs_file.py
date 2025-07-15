@@ -136,17 +136,23 @@ class RunsFile:
 
         :return:
         """
-
+        
+        ds_nodash = date.today().strftime("%Y%m%d")
         
         ### Store all hashes into a dictionary to merge with the rest of the row.
         row = {}
-        ds_nodash = date.today().strftime("%Y%m%d")
-
-        # If input_file is provided as a parmeter, then remove the ds_nodash/ts_nodash from the path before hashing.
-        if self.earthmover.state_configs.get('output_dir'):
-            # Find the input_file directory.
-            output_dir =  self.earthmover.state_configs['output_dir']
-            # Split the input_file path into parts based on the / delimiter.
+        
+        # Convert YAML mapping to plain dict first
+        if isinstance(self.earthmover.state_configs, CommentedMap):
+            clean_config = dict(self.earthmover.state_configs)
+        else:
+            clean_config = self.earthmover.state_configs     
+        
+        output_dir = clean_config.get('output_dir')
+        
+        # If output_dir is provided as a parmeter, then remove the ds_nodash/ts_nodash from the path before hashing.
+        if output_dir:
+            # Split the output_dir path into parts based on the / delimiter.
             # Though if someone is using a different delimiter, this will break.
             path_parts = output_dir.split("/")
             
@@ -161,23 +167,25 @@ class RunsFile:
                 cleaned_path = "/".join(filtered_parts)
                 print(f"cleaned_path: {cleaned_path}")
             except ValueError:
-                cleaned_path = output_dir
+                cleaned_output_dir = output_dir
                 
-            non_timestamp_config = cleaned_path
-            config_hash = util.get_string_hash(non_timestamp_config)
+            clean_config['output_dir'] = cleaned_output_dir
+            print(f"clean_config: {clean_config}")
+            print(f"cleaned_output_dir: {type(cleaned_output_dir)}")
+            config_hash = util.get_string_hash(clean_config)
             row['config_hash'] = config_hash
-        
+                    
         else:
             config_hash = util.get_string_hash(self.earthmover.state_configs)
             row['config_hash'] = config_hash
-        
+            
         # Hash the params
         if self.earthmover.params:
             
+            # Find the input_file directory.
+            input_file = self.earthmover.params['INPUT_FILE']
             # If input_file is provided as a parmeter, then remove the ds_nodash/ts_nodash from the path before hashing.
-            if self.earthmover.params.get('INPUT_FILE'):
-                # Find the input_file directory.
-                input_file = self.earthmover.params['INPUT_FILE']
+            if input_file:                
                 # Split the input_file path into parts based on the / delimiter.
                 # Though if someone is using a different delimiter, this will break.
                 path_parts = input_file.split("/")
