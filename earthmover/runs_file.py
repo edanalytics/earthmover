@@ -143,6 +143,7 @@ class RunsFile:
         # Hash the params
         if self.earthmover.params:
             params_hash = util.get_string_hash(self.earthmover.params)
+            print(f"params: {self.earthmover.params}")
         else:
             params_hash = ""
 
