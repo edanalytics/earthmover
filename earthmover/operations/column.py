@@ -7,11 +7,51 @@ import string
 from earthmover.operations.operation import Operation
 from earthmover import util
 
-from typing import Dict, List, Tuple
+from pydantic import BaseModel, ValidationError, ConfigDict, model_validator
+from rich import print_json
+
+from typing import Dict, List, Tuple, Self
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
 
+class NodeConfig(BaseModel):
+    '''
+    The parent class for all node configs
+    '''
+    debug: bool = False
+    expect: List[str] = None
+    require_rows: bool | int = False
+    show_progress: bool = False
+    repartition: bool = False
+
+class OperationConfig(NodeConfig):
+    '''
+    A child of the NodeConfig model. This one will serve as parent for all config of nodes with type operation.
+    '''
+    operation: str
+
+class AddColumnsConfig(OperationConfig):
+    '''
+    The specific model for configs of the add columns operation. A child of the OperationConfig model.
+    '''
+    columns: dict[str, str]  # TODO: might this be a list of dictionaries as well?
+    model_config = ConfigDict(extra='forbid')
+
+class MapValuesConfig(OperationConfig):
+    column: str = None
+    columns: List[str] = None
+    mapping: dict = None
+    map_file: str = None
+
+    # Handle mutually exclusive values
+    @model_validator(mode='after')  # documentation unclear on why to use 'after' instead of 'before'
+    def mutually_exclusive(self) -> Self:
+        if (self.column and self.columns) or (not self.column and not self.columns):
+            raise ValueError("a `map_values` operation must specify either one `column` or several `columns` to convert, but not both.")
+        if (self.mapping and self.map_file) or (not self.mapping and not self.map_file):
+            raise ValueError("must define either `mapping` (list of old_value: new_value) or a `map_file` (two-column CSV or TSV), but not both.")
+        return self
 
 class AddColumnsOperation(Operation):
     """
@@ -24,7 +64,24 @@ class AddColumnsOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)
+        try:
+            config_model = AddColumnsConfig(**self.config.to_dict())
+            self.columns_dict = config_model.columns  # create a pydantic model for configs
+        except ValidationError as e:
+            dtls = e.errors()
+            for err in dtls:
+                # Handle missing values
+                if err['type'] == 'missing':
+                    print(f"`{self.name}` must define `{err['loc'][0]}`")
+                # Handle unexpected values
+                if err['type'] == 'extra_forbidden':
+                    print(f"Config `{err['loc'][0]}` not defined for node `{self.name}`")
+            
+            # Print the input data to console
+            print("Input data:")
+            print_json(data=dtls[0]['input']) 
+            exit(1)
+        # self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)  # <---- Original functionality
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
@@ -305,31 +362,46 @@ class MapValuesOperation(Operation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Only 'column' or 'columns' can be populated
-        _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
-        _columns = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
+        # Only 'column' or 'columns' can be populated  # <---- Old functionality
+        # _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
+        # _columns = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
 
-        if bool(_column) == bool(_columns):  # Fail if both or neither are populated.
-            self.error_handler.throw(
-                "a `map_values` operation must specify either one `column` or several `columns` to convert"
-            )
-            raise
+        # if bool(_column) == bool(_columns):  # Fail if both or neither are populated.
+        #     self.error_handler.throw(
+        #         "a `map_values` operation must specify either one `column` or several `columns` to convert"
+        #     )
+        #     raise
+
+        try:
+            config_model = MapValuesConfig(**self.config.to_dict())
+            _column = config_model.column  # create a pydantic model for configs
+            _columns = config_model.columns  # create a pydantic model for configs
+
+        except ValidationError as e:
+            dtls = e.errors()
+            for err in dtls:
+                print(err['msg'])
+            
+            # Print the input data to console
+            print("Input data:")
+            print_json(data=dtls[0]['input']) 
+            exit(1)
 
         self.columns_list = _columns or [_column]  # `[None]` evaluates to True
 
         #
-        _mapping  = self.error_handler.assert_get_key(self.config, 'mapping', dtype=dict, required=False)
-        _map_file = self.error_handler.assert_get_key(self.config, 'map_file', dtype=str, required=False)
+        # _mapping  = self.error_handler.assert_get_key(self.config, 'mapping', dtype=dict, required=False)
+        # _map_file = self.error_handler.assert_get_key(self.config, 'map_file', dtype=str, required=False)
 
-        if _mapping:
-            self.mapping = _mapping
-        elif _map_file:
-            self.mapping = self._read_map_file(_map_file)
-        else:
-            self.error_handler.throw(
-                "must define either `mapping` (list of old_value: new_value) or a `map_file` (two-column CSV or TSV)"
-            )
-            raise
+        # if _mapping:
+        #     self.mapping = _mapping
+        # elif _map_file:
+        #     self.mapping = self._read_map_file(_map_file)
+        # else:
+        #     self.error_handler.throw(
+        #         "must define either `mapping` (list of old_value: new_value) or a `map_file` (two-column CSV or TSV)"
+        #     )
+        #     raise
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
