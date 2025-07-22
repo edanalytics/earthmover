@@ -341,8 +341,8 @@ class MapValuesOperation(Operation):
             _column = config_model.column  # create a pydantic model for configs
             _columns = config_model.columns  # create a pydantic model for configs
 
-            _mapping  = self.error_handler.assert_get_key(self.config, 'mapping', dtype=dict, required=False)
-            _map_file = self.error_handler.assert_get_key(self.config, 'map_file', dtype=str, required=False)
+            _mapping  = config_model.mapping
+            _map_file = config_model.map_file
 
         except ValidationError as e:
             dtls = e.errors()
