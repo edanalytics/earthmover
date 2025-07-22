@@ -7,51 +7,15 @@ import string
 from earthmover.operations.operation import Operation
 from earthmover import util
 
-from pydantic import BaseModel, ValidationError, ConfigDict, model_validator
+from pydantic import BaseModel, ValidationError
+from earthmover.nodes.pydantic_configs import *
+
 from rich import print_json
 
 from typing import Dict, List, Tuple, Self
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
-
-class NodeConfig(BaseModel):
-    '''
-    The parent class for all node configs
-    '''
-    debug: bool = False
-    expect: List[str] = None
-    require_rows: bool | int = False
-    show_progress: bool = False
-    repartition: bool = False
-
-class OperationConfig(NodeConfig):
-    '''
-    A child of the NodeConfig model. This one will serve as parent for all config of nodes with type operation.
-    '''
-    operation: str
-
-class AddColumnsConfig(OperationConfig):
-    '''
-    The specific model for configs of the add columns operation. A child of the OperationConfig model.
-    '''
-    columns: dict[str, str]  # TODO: might this be a list of dictionaries as well?
-    model_config = ConfigDict(extra='forbid')
-
-class MapValuesConfig(OperationConfig):
-    column: str = None
-    columns: List[str] = None
-    mapping: dict = None
-    map_file: str = None
-
-    # Handle mutually exclusive values
-    @model_validator(mode='after')  # documentation unclear on why to use 'after' instead of 'before'
-    def mutually_exclusive(self) -> Self:
-        if (self.column and self.columns) or (not self.column and not self.columns):
-            raise ValueError("a `map_values` operation must specify either one `column` or several `columns` to convert, but not both.")
-        if (self.mapping and self.map_file) or (not self.mapping and not self.map_file):
-            raise ValueError("must define either `mapping` (list of old_value: new_value) or a `map_file` (two-column CSV or TSV), but not both.")
-        return self
 
 class AddColumnsOperation(Operation):
     """
@@ -377,6 +341,9 @@ class MapValuesOperation(Operation):
             _column = config_model.column  # create a pydantic model for configs
             _columns = config_model.columns  # create a pydantic model for configs
 
+            _mapping  = self.error_handler.assert_get_key(self.config, 'mapping', dtype=dict, required=False)
+            _map_file = self.error_handler.assert_get_key(self.config, 'map_file', dtype=str, required=False)
+
         except ValidationError as e:
             dtls = e.errors()
             for err in dtls:
@@ -388,20 +355,7 @@ class MapValuesOperation(Operation):
             exit(1)
 
         self.columns_list = _columns or [_column]  # `[None]` evaluates to True
-
-        #
-        # _mapping  = self.error_handler.assert_get_key(self.config, 'mapping', dtype=dict, required=False)
-        # _map_file = self.error_handler.assert_get_key(self.config, 'map_file', dtype=str, required=False)
-
-        # if _mapping:
-        #     self.mapping = _mapping
-        # elif _map_file:
-        #     self.mapping = self._read_map_file(_map_file)
-        # else:
-        #     self.error_handler.throw(
-        #         "must define either `mapping` (list of old_value: new_value) or a `map_file` (two-column CSV or TSV)"
-        #     )
-        #     raise
+        self.mapping = _mapping or self._read_map_file(_map_file)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
@@ -419,7 +373,8 @@ class MapValuesOperation(Operation):
             for _column in self.columns_list:
                 data[_column] = data[_column].replace(self.mapping)
 
-        except Exception as _:
+        except Exception as e:
+            print(f"!!! {e}")
             self.error_handler.throw(
                 "error during `map_values` operation... check mapping shape and `column(s)`?"
             )
