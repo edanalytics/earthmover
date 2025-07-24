@@ -61,11 +61,12 @@ class Node:
 
         # Verify all configs provided by the user are specified for the node.
         # (This ensures the user doesn't pass in unexpected or misspelled configs.)
-        for _config in self.config:
-            if _config not in self.allowed_configs:
-                self.logger.warning(
-                    f"Config `{_config}` not defined for node `{self.name}`."
-                )
+        # Commented out because this should be handled by pydantic's schema validation
+        # for _config in self.config:
+        #     if _config not in self.allowed_configs:
+        #         self.logger.warning(
+        #             f"Config `{_config}` not defined for node `{self.name}`."
+        #         )
 
         # Always check for debug and expectations
         self.debug = self.debug or self.config.get('debug', False)

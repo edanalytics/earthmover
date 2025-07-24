@@ -28,23 +28,7 @@ class AddColumnsOperation(Operation):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        try:
-            config_model = AddColumnsConfig(**self.config.to_dict())
-            self.columns_dict = config_model.columns  # create a pydantic model for configs
-        except ValidationError as e:
-            dtls = e.errors()
-            for err in dtls:
-                # Handle missing values
-                if err['type'] == 'missing':
-                    print(f"`{self.name}` must define `{err['loc'][0]}`")
-                # Handle unexpected values
-                if err['type'] == 'extra_forbidden':
-                    print(f"Config `{err['loc'][0]}` not defined for node `{self.name}`")
-            
-            # Print the input data to console
-            print("Input data:")
-            print_json(data=dtls[0]['input']) 
-            exit(1)
+        self.columns_dict = assert_valid_schema(self, 'AddColumns', self.config).columns
         # self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)  # <---- Original functionality
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
@@ -336,23 +320,12 @@ class MapValuesOperation(Operation):
         #     )
         #     raise
 
-        try:
-            config_model = MapValuesConfig(**self.config.to_dict())
-            _column = config_model.column  # create a pydantic model for configs
-            _columns = config_model.columns  # create a pydantic model for configs
+        config_model: 'MapValuesConfig' = assert_valid_schema(self, 'MapValues', self.config)
+        _column = config_model.column
+        _columns = config_model.columns
 
-            _mapping  = config_model.mapping
-            _map_file = config_model.map_file
-
-        except ValidationError as e:
-            dtls = e.errors()
-            for err in dtls:
-                print(err['msg'])
-            
-            # Print the input data to console
-            print("Input data:")
-            print_json(data=dtls[0]['input']) 
-            exit(1)
+        _mapping = config_model.mapping
+        _map_file = config_model.map_file
 
         self.columns_list = _columns or [_column]  # `[None]` evaluates to True
         self.mapping = _mapping or self._read_map_file(_map_file)
