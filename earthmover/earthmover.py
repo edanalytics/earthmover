@@ -101,7 +101,7 @@ class Earthmover:
         self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
 
         # Set the temporary directory in cases of disk-spillage.
-        dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
+        dask.config.set({'temporary_directory': "/efs/dask_temp"})
 
         # Set a directory for installing packages.
         self.packages_dir = os.path.join(os.getcwd(), 'packages')
