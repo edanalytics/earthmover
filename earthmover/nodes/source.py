@@ -313,13 +313,14 @@ class FileSource(Source):
 
         names = file_format[name_col]
         header = config.get('header_rows', "infer")
+        encoding = config.get('encoding', "utf8")
         converters = {c:str for c in names}
         if use_widths:
             widths = list(file_format[width_col])
-            return dd.read_fwf(file, widths=widths, header=header, names=names, converters=converters)
+            return dd.read_fwf(file, widths=widths, header=header, names=names, converters=converters, encoding=encoding)
         else:
             colspecs = list(zip(file_format.start_index, file_format.end_index))
-            return dd.read_fwf(file, colspecs=colspecs, header=header, names=names, converters=converters)
+            return dd.read_fwf(file, colspecs=colspecs, header=header, names=names, converters=converters, encoding=encoding)
 
     def _get_read_lambda(self, file_type: str, sep: Optional[str] = None):
         """
