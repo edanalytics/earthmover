@@ -50,33 +50,3 @@ class MapValuesConfig(OperationConfig):
         return self
     
 
-def assert_valid_schema(cls, operation_name, configs):
-    '''
-    Validate the config schema for a given operation.
-
-    :param cls: the class instance of the operation in question, use `self` when inside that class
-    :param operation_name: the name of the operation to perform in PascalCase (e.g., AddColumns, MapValues, etc.)
-    :param configs: the config schema for the given operation
-    :return: a pydantic model object that contains the config schema
-    :raise: ValidationError if the schema is incorrect
-    '''
-
-    try:
-        config_class = globals().get(f"{operation_name}Config")
-        config_model = config_class(**configs.to_dict())
-        # print_json(data=config_model.model_dump()) # show successful model configs
-        return config_model
-    except ValidationError as e:
-        print("Invalid configs were given. See input:")
-        print_json(data=configs.to_dict())  # can only print the configs for the specific operation
-
-        dtls = e.errors()[0]  # take the first error only, if multiple
-        # Handle missing values
-        if dtls['type'] == 'missing':
-            cls.error_handler.throw(f"`{cls.name}` must define `{dtls['loc'][0]}`")
-        # Handle unexpected values
-        if dtls['type'] == 'extra_forbidden':
-            cls.error_handler.throw(f"Config `{dtls['loc'][0]}` not defined for node `{cls.name}`")
-        # Handle other errors (mutually exclusive, etc.)
-        else:
-            cls.error_handler.throw(dtls['msg'])

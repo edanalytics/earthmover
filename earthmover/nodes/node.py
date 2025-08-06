@@ -7,6 +7,10 @@ import warnings
 
 from dask.diagnostics import ProgressBar
 
+from pydantic import BaseModel, ValidationError, ConfigDict, model_validator, create_model
+
+from rich import print_json
+
 from earthmover import util
 
 from typing import Dict, List, Tuple, Optional, Union
@@ -25,7 +29,7 @@ class Node:
     """
     type: str = None
     allowed_configs: Tuple[str] = ('debug', 'expect', 'require_rows', 'show_progress', 'repartition')
-
+    
     def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         self.name: str = name
         self.config: 'YamlMapping' = config
@@ -58,14 +62,17 @@ class Node:
         self.show_progress: bool = self.config.get('show_progress', self.earthmover.state_configs["show_progress"])
         self.progress_bar: ProgressBar = ProgressBar(minimum=10, dt=5.0)  # Always instantiate, but only use if `show_progress is True`.
         self.head_was_displayed: bool = False  # Workaround to prevent displaying the head twice when debugging.
+    
+        # Schema validation using pydantic, is `None` unless the given operation is in the `pydantic_tested_operations` tuple
+        self.pydantic_config = self.assert_valid_schema(self.config) if 'operations:add_columns' in self.full_name else None
 
         # Verify all configs provided by the user are specified for the node.
         # (This ensures the user doesn't pass in unexpected or misspelled configs.)
-        # Commented out because this should be handled by pydantic's schema validation
+        # This should be handled by pydantic's schema validation, remove when all operations work with pydantic
         # for _config in self.config:
         #     if _config not in self.allowed_configs:
         #         self.logger.warning(
-        #             f"Config `{_config}` not defined for node `{self.name}`."
+        #             f"[old_functionality] Config `{_config}` not defined for node `{self.name}`."
         #         )
 
         # Always check for debug and expectations
@@ -203,3 +210,46 @@ class Node:
         if source_name not in self.upstream_sources:
             self.error_handler.throw(f"Source {source_name} not found in Node sources list.")
         self.upstream_sources[source_name] = node
+
+    def assert_valid_schema(self, configs: 'YamlMapping'):
+        '''
+        Validate the config schema for a given operation.
+
+        :param cls: the class instance of the operation in question, use `self` when inside that class
+        :param operation_name: the name of the operation to perform in PascalCase (e.g., AddColumns, MapValues, etc.)
+        :param configs: the config schema for the given operation
+        :return: a pydantic model object that contains the config schema
+        :raise: ValidationError if the schema is incorrect
+        '''
+        self.logger.info("Testing schema with pydantic...")
+        try:
+            OperationConfig = create_model('OperationConfig', 
+                                        __config__= ConfigDict(extra='forbid'),
+                                        debug=(bool, False),
+                                        expect=(List[str], None),
+                                        require_rows=(bool | int, False),
+                                        show_progress=(bool, False),
+                                        repartition=(bool, False),
+                                        operation=str
+                                        )
+            # Create pydantic model for specific operation
+            AddColumnsConfig = create_model('AddColumnsConfig', __base__=OperationConfig, **self.allowed_configs)
+
+            # Create the pydantic model
+            config_model = AddColumnsConfig(**configs.to_dict())
+            # print_json(data=config_model.model_dump()) # show successful model configs
+            return config_model
+        except ValidationError as e:
+            print("Invalid configs were given. See input:")
+            print_json(data=configs.to_dict())  # can only print the configs for the specific operation
+
+            dtls = e.errors()[0]  # take the first error only, if multiple
+            # Handle missing values
+            if dtls['type'] == 'missing':
+                self.error_handler.throw(f"`{self.name}` must define `{dtls['loc'][0]}`")
+            # Handle unexpected values
+            if dtls['type'] == 'extra_forbidden':
+                self.error_handler.throw(f"Config `{dtls['loc'][0]}` not defined for node `{self.name}`")
+            # Handle other errors (mutually exclusive, etc.)
+            else:
+                self.error_handler.throw(dtls['msg'])

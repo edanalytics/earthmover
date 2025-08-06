@@ -7,10 +7,7 @@ import string
 from earthmover.operations.operation import Operation
 from earthmover import util
 
-from pydantic import BaseModel, ValidationError
 from earthmover.nodes.pydantic_configs import *
-
-from rich import print_json
 
 from typing import Dict, List, Tuple, Self
 from typing import TYPE_CHECKING
@@ -21,15 +18,13 @@ class AddColumnsOperation(Operation):
     """
 
     """
-    allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
-        'columns',
-    )
+    allowed_configs: Dict[str, type] = {
+        'columns': Dict[str,str]
+    }   
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.columns_dict = assert_valid_schema(self, 'AddColumns', self.config).columns
-        # self.columns_dict = self.error_handler.assert_get_key(self.config, 'columns', dtype=dict)  # <---- Original functionality
+        self.columns_dict: Dict[str,str] = self.pydantic_config.columns
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
@@ -311,23 +306,26 @@ class MapValuesOperation(Operation):
         super().__init__(*args, **kwargs)
 
         # Only 'column' or 'columns' can be populated  # <---- Old functionality
-        # _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
-        # _columns = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
+        _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
+        _columns = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
 
-        # if bool(_column) == bool(_columns):  # Fail if both or neither are populated.
-        #     self.error_handler.throw(
-        #         "a `map_values` operation must specify either one `column` or several `columns` to convert"
-        #     )
-        #     raise
+        if bool(_column) == bool(_columns):  # Fail if both or neither are populated.
+            self.error_handler.throw(
+                "a `map_values` operation must specify either one `column` or several `columns` to convert"
+            )
+            raise
 
-        config_model: 'MapValuesConfig' = assert_valid_schema(self, 'MapValues', self.config)
-        _column = config_model.column
-        _columns = config_model.columns
+        # config_model: 'MapValuesConfig' = assert_valid_schema(self, 'MapValues', self.config)
+        # _column = config_model.column
+        # _columns = config_model.columns
 
-        _mapping = config_model.mapping
-        _map_file = config_model.map_file
+        # _mapping = config_model.mapping
+        # _map_file = config_model.map_file
 
         self.columns_list = _columns or [_column]  # `[None]` evaluates to True
+
+        _mapping  = self.error_handler.assert_get_key(self.config, 'mapping', dtype=dict, required=False)
+        _map_file = self.error_handler.assert_get_key(self.config, 'map_file', dtype=str, required=False)
         self.mapping = _mapping or self._read_map_file(_map_file)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
