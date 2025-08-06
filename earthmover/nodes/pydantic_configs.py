@@ -67,16 +67,16 @@ def assert_valid_schema(cls, operation_name, configs):
         # print_json(data=config_model.model_dump()) # show successful model configs
         return config_model
     except ValidationError as e:
-        print("A compilation error occurred. Input data:")
+        print("Invalid configs were given. See input:")
         print_json(data=configs.to_dict())  # can only print the configs for the specific operation
 
         dtls = e.errors()[0]  # take the first error only, if multiple
         # Handle missing values
         if dtls['type'] == 'missing':
-            cls.logger.warning(f"`{cls.name}` must define `{dtls['loc'][0]}`")
+            cls.error_handler.throw(f"`{cls.name}` must define `{dtls['loc'][0]}`")
         # Handle unexpected values
         if dtls['type'] == 'extra_forbidden':
-            cls.logger.warning(f"Config `{dtls['loc'][0]}` not defined for node `{cls.name}`")
+            cls.error_handler.throw(f"Config `{dtls['loc'][0]}` not defined for node `{cls.name}`")
         # Handle other errors (mutually exclusive, etc.)
         else:
             cls.error_handler.throw(dtls['msg'])
