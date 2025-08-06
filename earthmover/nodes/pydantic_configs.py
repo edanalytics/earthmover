@@ -2,7 +2,7 @@ from pydantic import BaseModel, ValidationError, ConfigDict, model_validator, cr
 from pydantic_core import PydanticCustomError 
 from rich import print_json
 
-from typing import Dict, List, Tuple, Self
+from typing import Dict, List, Self
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
@@ -20,20 +20,24 @@ class NodeConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
 
-
-# Dynamically create model for operation configs
+# Dynamically create model for operation configs, which inherits from NodeConfig
 OperationConfig = create_model('OperationConfig', __base__=NodeConfig, operation=str)
+
 
 class AddColumnsConfig(OperationConfig):
     '''
     The specific model for configs of the add columns operation. A child of the OperationConfig model.
     '''
-    columns: dict[str, str]  # TODO: might this be a list of dictionaries as well?
+    columns: Dict[str, str]  # TODO: might this be a list of dictionaries as well?
+
 
 class MapValuesConfig(OperationConfig):
+    '''
+    The specific model for configs of the add columns operation. A child of the OperationConfig model.
+    '''
     column: str = None
     columns: List[str] = None
-    mapping: dict = None
+    mapping: Dict = None
     map_file: str = None
 
     # Handle mutually exclusive values TODO: move this to the parent-most class and make the values dynamic
@@ -45,6 +49,7 @@ class MapValuesConfig(OperationConfig):
             raise PydanticCustomError('mutually_exc', "must define either `mapping` (list of old_value: new_value) or a `map_file` (two-column CSV or TSV), but not both.")
         return self
     
+
 def assert_valid_schema(cls, operation_name, configs):
     '''
     Validate the config schema for a given operation.
@@ -62,19 +67,16 @@ def assert_valid_schema(cls, operation_name, configs):
         # print_json(data=config_model.model_dump()) # show successful model configs
         return config_model
     except ValidationError as e:
-        dtls = e.errors()
-        for err in dtls:
-            # Handle missing values
-            if err['type'] == 'missing':
-                cls.logger.warning(f"`{cls.name}` must define `{err['loc'][0]}`")
-            # Handle unexpected values
-            if err['type'] == 'extra_forbidden':
-                cls.logger.warning(f"Config `{err['loc'][0]}` not defined for node `{cls.name}` sthsdryhdty")
-            if err['type'] == 'mutually_exc':
-                cls.logger.warning(err['msg'])
-            
-        
-        # Print the input data to console, TODO: try to put this nicely printed json into an exception message instead
-        print("Input data:")
+        print("A compilation error occurred. Input data:")
         print_json(data=configs.to_dict())  # can only print the configs for the specific operation
-        exit(1)
+
+        dtls = e.errors()[0]  # take the first error only, if multiple
+        # Handle missing values
+        if dtls['type'] == 'missing':
+            cls.logger.warning(f"`{cls.name}` must define `{dtls['loc'][0]}`")
+        # Handle unexpected values
+        if dtls['type'] == 'extra_forbidden':
+            cls.logger.warning(f"Config `{dtls['loc'][0]}` not defined for node `{cls.name}`")
+        # Handle other errors (mutually exclusive, etc.)
+        else:
+            cls.error_handler.throw(dtls['msg'])
