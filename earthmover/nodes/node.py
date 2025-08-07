@@ -7,13 +7,14 @@ import warnings
 
 from dask.diagnostics import ProgressBar
 
-from pydantic import BaseModel, ValidationError, ConfigDict, model_validator, create_model
+from pydantic import ValidationError, ConfigDict, model_validator, create_model
+from pydantic_core import PydanticCustomError 
 
 from rich import print_json
 
 from earthmover import util
 
-from typing import Dict, List, Tuple, Optional, Union
+from typing import Dict, List, Tuple, Optional, Union, Self
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
@@ -63,7 +64,7 @@ class Node:
         self.progress_bar: ProgressBar = ProgressBar(minimum=10, dt=5.0)  # Always instantiate, but only use if `show_progress is True`.
         self.head_was_displayed: bool = False  # Workaround to prevent displaying the head twice when debugging.
     
-        # Schema validation using pydantic, is `None` unless the given operation is in the `pydantic_tested_operations` tuple
+        # Schema validation using pydantic, TODO: get rid of if statement when all operations support pydantic
         self.pydantic_config = self.assert_valid_schema(self.config) if 'operations:add_columns' in self.full_name else None
 
         # Verify all configs provided by the user are specified for the node.
@@ -221,35 +222,71 @@ class Node:
         :return: a pydantic model object that contains the config schema
         :raise: ValidationError if the schema is incorrect
         '''
-        self.logger.info("Testing schema with pydantic...")
+        # Let user know the schema is being validated
+        self.logger.info(f"validating {self.name} schema with pydantic...")
+        
         try:
-            OperationConfig = create_model('OperationConfig', 
+            # Create pydantic model for a generic node
+            GenericConfig = create_model('GenericConfig', 
                                         __config__= ConfigDict(extra='forbid'),
                                         debug=(bool, False),
                                         expect=(List[str], None),
                                         require_rows=(bool | int, False),
                                         show_progress=(bool, False),
-                                        repartition=(bool, False),
-                                        operation=str
+                                        repartition=(bool, False)
                                         )
-            # Create pydantic model for specific operation
-            AddColumnsConfig = create_model('AddColumnsConfig', __base__=OperationConfig, **self.allowed_configs)
 
+            # Add operation to allowed configs if needed
+            if 'operation' in self.full_name:
+                self.allowed_configs['operation'] = str
+
+            # Create pydantic model for specific operation
+            SpecificConfig = create_model('SpecificConfig', __base__=GenericConfig, 
+                                          __validators__={
+                                              'mutually_exclusive': model_validator(mode='after')(self.mutually_exclusive)
+                                              }, 
+                                          **self.allowed_configs)
+ 
             # Create the pydantic model
-            config_model = AddColumnsConfig(**configs.to_dict())
+            config_model = SpecificConfig(**configs.to_dict())
             # print_json(data=config_model.model_dump()) # show successful model configs
             return config_model
         except ValidationError as e:
-            print("Invalid configs were given. See input:")
-            print_json(data=configs.to_dict())  # can only print the configs for the specific operation
+            self.handle_schema_errors(configs, e)
 
-            dtls = e.errors()[0]  # take the first error only, if multiple
-            # Handle missing values
-            if dtls['type'] == 'missing':
-                self.error_handler.throw(f"`{self.name}` must define `{dtls['loc'][0]}`")
-            # Handle unexpected values
-            if dtls['type'] == 'extra_forbidden':
-                self.error_handler.throw(f"Config `{dtls['loc'][0]}` not defined for node `{self.name}`")
-            # Handle other errors (mutually exclusive, etc.)
-            else:
-                self.error_handler.throw(dtls['msg'])
+    def mutually_exclusive(self) -> Self:
+        """
+        Handle mutually-exclusive fields constraint, used as a `model_validator` in a pydantic model.
+        TODO: this currently works only for the `map_values` operation. Must be adapted to work with any
+
+        :return: self
+        :raise: ValidationError if the config defines two values that are mutually exclusive     
+        """
+        if self.operation == 'map_values':
+            if (self.column and self.columns) or (not self.column and not self.columns):
+                raise PydanticCustomError('mutually_exc', "a `map_values` operation must specify either one `column` or several `columns` to convert, but not both.")
+            if (self.mapping and self.map_file) or (not self.mapping and not self.map_file):
+                raise PydanticCustomError('mutually_exc', "must define either `mapping` (list of old_value: new_value) or a `map_file` (two-column CSV or TSV), but not both.")
+        return self
+
+    def handle_schema_errors(self, configs: 'YamlMapping', e: ValidationError):
+        """
+        Helper to handle exceptions raised by pydantic's schema validation.
+
+        :param configs: the YAML mapping of the configs for this earthmover project
+        :param e: the exception thrown by pydantic
+        :raise: the relevant error message
+        """
+        print("Invalid configs were given. See input:")
+        print_json(data=configs.to_dict())  # can only print the configs for the specific operation
+
+        dtls = e.errors()[0]  # take the first error only, if multiple
+        # Handle missing values
+        if dtls['type'] == 'missing':
+            self.error_handler.throw(f"`{self.name}` must define `{dtls['loc'][0]}`")
+        # Handle unexpected values
+        if dtls['type'] == 'extra_forbidden':
+            self.error_handler.throw(f"Config `{dtls['loc'][0]}` not defined for node `{self.name}`")
+        # Handle other errors (mutually exclusive, etc.)
+        else:
+            self.error_handler.throw(dtls['msg'])
