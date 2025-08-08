@@ -293,6 +293,11 @@ class Node:
             self.error_handler.throw(dtls['msg'])
 
     def create_node_config(self):
+        """
+        Helper to create the generic NodeConfig pydantic model.
+        
+        :return: the `NodeConfig` class
+        """
         NodeConfig: 'BaseModel' = create_model('NodeConfig', 
                             __config__= ConfigDict(extra='forbid'),
                             **Node.allowed_configs

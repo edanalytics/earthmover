@@ -305,18 +305,12 @@ class MapValuesOperation(Operation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Only 'column' or 'columns' can be populated  # <---- Old functionality
+        # Define columns, pydantic will take care of mutual-exclusion errors
         _column  = self.pydantic_config.column
         _columns = self.pydantic_config.columns
-
-        # if bool(_column) == bool(_columns):  # Fail if both or neither are populated.
-        #     self.error_handler.throw(
-        #         "a `map_values` operation must specify either one `column` or several `columns` to convert"
-        #     )
-        #     raise
-
         self.columns_list = _columns or [_column]  # `[None]` evaluates to True
 
+        # Define mapping, pydantic will take care of mutual-exclusion errors
         _mapping  = self.pydantic_config.mapping
         _map_file = self.pydantic_config.map_file
         self.mapping = _mapping or self._read_map_file(_map_file)
