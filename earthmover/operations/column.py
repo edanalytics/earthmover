@@ -7,9 +7,7 @@ import string
 from earthmover.operations.operation import Operation
 from earthmover import util
 
-from earthmover.nodes.pydantic_configs import *
-
-from typing import Dict, List, Tuple, Self
+from typing import Dict, Tuple, Type
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
@@ -18,7 +16,7 @@ class AddColumnsOperation(Operation):
     """
 
     """
-    allowed_configs: Dict[str, type] = {
+    allowed_configs: Dict[str, Type] = {
         'columns': Dict[str,str]
     }   
 
@@ -314,13 +312,6 @@ class MapValuesOperation(Operation):
                 "a `map_values` operation must specify either one `column` or several `columns` to convert"
             )
             raise
-
-        # config_model: 'MapValuesConfig' = assert_valid_schema(self, 'MapValues', self.config)
-        # _column = config_model.column
-        # _columns = config_model.columns
-
-        # _mapping = config_model.mapping
-        # _map_file = config_model.map_file
 
         self.columns_list = _columns or [_column]  # `[None]` evaluates to True
 

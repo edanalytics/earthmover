@@ -7,7 +7,7 @@ import warnings
 
 from dask.diagnostics import ProgressBar
 
-from pydantic import ValidationError, ConfigDict, model_validator, create_model
+from pydantic import ValidationError, ConfigDict, model_validator, create_model, BaseModel
 from pydantic_core import PydanticCustomError 
 
 from rich import print_json
@@ -29,7 +29,13 @@ class Node:
 
     """
     type: str = None
-    allowed_configs: Tuple[str] = ('debug', 'expect', 'require_rows', 'show_progress', 'repartition')
+    allowed_configs: Dict[str, Tuple] = {
+        'debug': (bool, False),
+        'expect': (List[str], None),
+        'require_rows': (bool | int, False),
+        'show_progress': (bool, False),
+        'repartition': (bool, False)
+    }
     
     def __init__(self, name: str, config: 'YamlMapping', *, earthmover: 'Earthmover'):
         self.name: str = name
@@ -227,21 +233,14 @@ class Node:
         
         try:
             # Create pydantic model for a generic node
-            GenericConfig = create_model('GenericConfig', 
-                                        __config__= ConfigDict(extra='forbid'),
-                                        debug=(bool, False),
-                                        expect=(List[str], None),
-                                        require_rows=(bool | int, False),
-                                        show_progress=(bool, False),
-                                        repartition=(bool, False)
-                                        )
+            NodeConfig = self.create_node_config()
 
             # Add operation to allowed configs if needed
             if 'operation' in self.full_name:
                 self.allowed_configs['operation'] = str
 
             # Create pydantic model for specific operation
-            SpecificConfig = create_model('SpecificConfig', __base__=GenericConfig, 
+            SpecificConfig = create_model('SpecificConfig', __base__=NodeConfig, 
                                           __validators__={
                                               'mutually_exclusive': model_validator(mode='after')(self.mutually_exclusive)
                                               }, 
@@ -290,3 +289,10 @@ class Node:
         # Handle other errors (mutually exclusive, etc.)
         else:
             self.error_handler.throw(dtls['msg'])
+
+    def create_node_config(self):
+        NodeConfig: 'BaseModel' = create_model('NodeConfig', 
+                            __config__= ConfigDict(extra='forbid'),
+                            **Node.allowed_configs
+                        )
+        return NodeConfig
