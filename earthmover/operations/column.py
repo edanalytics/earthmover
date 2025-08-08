@@ -7,7 +7,7 @@ import string
 from earthmover.operations.operation import Operation
 from earthmover import util
 
-from typing import Dict, Tuple, Type
+from typing import Dict, Tuple, Type, List
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
@@ -295,28 +295,30 @@ class MapValuesOperation(Operation):
     """
 
     """
-    allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
-        'column', 'columns', 'mapping', 'map_file',
-    )
+    allowed_configs: Dict[str, Tuple] = {
+        'column': (str, None),
+        'columns': (List[str], None),
+        'mapping': (Dict, None),
+        'map_file': (str, None) 
+    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Only 'column' or 'columns' can be populated  # <---- Old functionality
-        _column  = self.error_handler.assert_get_key(self.config, 'column', dtype=str, required=False)
-        _columns = self.error_handler.assert_get_key(self.config, 'columns', dtype=list, required=False)
+        _column  = self.pydantic_config.column
+        _columns = self.pydantic_config.columns
 
-        if bool(_column) == bool(_columns):  # Fail if both or neither are populated.
-            self.error_handler.throw(
-                "a `map_values` operation must specify either one `column` or several `columns` to convert"
-            )
-            raise
+        # if bool(_column) == bool(_columns):  # Fail if both or neither are populated.
+        #     self.error_handler.throw(
+        #         "a `map_values` operation must specify either one `column` or several `columns` to convert"
+        #     )
+        #     raise
 
         self.columns_list = _columns or [_column]  # `[None]` evaluates to True
 
-        _mapping  = self.error_handler.assert_get_key(self.config, 'mapping', dtype=dict, required=False)
-        _map_file = self.error_handler.assert_get_key(self.config, 'map_file', dtype=str, required=False)
+        _mapping  = self.pydantic_config.mapping
+        _map_file = self.pydantic_config.map_file
         self.mapping = _mapping or self._read_map_file(_map_file)
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':

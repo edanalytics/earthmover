@@ -71,7 +71,9 @@ class Node:
         self.head_was_displayed: bool = False  # Workaround to prevent displaying the head twice when debugging.
     
         # Schema validation using pydantic, TODO: get rid of if statement when all operations support pydantic
-        self.pydantic_config = self.assert_valid_schema(self.config) if 'operations:add_columns' in self.full_name else None
+        if 'operations:add_columns' in self.full_name or 'operations:map_values' in self.full_name:
+            self.pydantic_config = self.assert_valid_schema(self.config)  
+        else: self.pydantic_config = None
 
         # Verify all configs provided by the user are specified for the node.
         # (This ensures the user doesn't pass in unexpected or misspelled configs.)
