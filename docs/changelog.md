@@ -1,10 +1,14 @@
 This page tracks releases of `earthmover`, with a summary of what was changed, fixed, added in each new version.
 
-### Unreleased changes
-
-* feature: [Add support for non-UTF8 file encodings for fixed-width inputs](https://github.com/edanalytics/earthmover/pull/165)
 
 ## 2025 releases
+
+### [v0.4.6](https://github.com/edanalytics/earthmover/releases/tag/v0.4.6)
+(Released 2025-08-14)
+
+* bugfix: `rename_columns` operation to an existing column name could result in two columns of the same name; now this results in an error
+* feature: [Add support for non-UTF8 file encodings for fixed-width inputs](https://github.com/edanalytics/earthmover/pull/165)
+
 
 ### [v0.4.5](https://github.com/edanalytics/earthmover/releases/tag/v0.4.5)
 (Released 2025-07-11)

@@ -176,7 +176,7 @@ class RenameColumnsOperation(Operation):
 
         for old_col, new_col in self.columns_dict.items():
             if new_col in data.columns:
-                self.logger.warning(
+                self.error_handler.throw(
                     f"Rename column operation overwrites existing column `{new_col}`."
                 )
             if old_col not in data.columns:
