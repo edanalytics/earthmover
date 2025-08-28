@@ -1,5 +1,8 @@
 This page tracks releases of `earthmover`, with a summary of what was changed, fixed, added in each new version.
 
+### Unreleased changes
+
+* bugfix: Projects with imported packages not injecting CLI env vars into underlying configuration
 
 ## 2025 releases
 

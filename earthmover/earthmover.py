@@ -171,6 +171,17 @@ class Earthmover:
             self.user_configs.to_disk(self.compiled_yaml_file)
         self.user_configs = self.inject_cli_overrides(self.user_configs)
 
+        # Add any config values that are NOT defined in the top-level config but ARE defined
+        # in imported packages. This can enable you to, for example, pass a param like OUTPUT_DIR
+        # as a CLI env var (with -p) even if the top-level earthmover.yaml does not unpack it
+        # Note that the top-level config still takes precedence, so if you have output_dir hardcoded
+        # in earthmover.yaml, but parameterized in an imported package, then passing -p {"OUTPUT_DIR"}
+        # has no effect
+        full_user_configs = self.user_configs.to_dict()
+        self.state_configs.update(full_user_configs.get("config", {}))
+        # update metadata in case this value has changed
+        self.metadata['output_dir'] = self.state_configs['output_dir']
+
         ### Compile the nodes and add to the graph type-by-type.
         self.sources = self.compile_node_configs(
             self.error_handler.assert_get_key(self.user_configs, 'sources', dtype=dict, required=True),
