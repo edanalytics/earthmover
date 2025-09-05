@@ -600,6 +600,39 @@ The above example shows a transformation of the courses source, which consists o
 
     Besides the join column(s), if a column `my_column` with the same name exists in both tables and is not dropped, it will be renamed `my_column_x` and `my_column_y`, from the left and right respectively, in the result.
 
+??? example "melt"
+
+    Unpivots the source from wide to long format, where the names of columns become values in a generic "variable" column, and the values of those columns shift to a generic "values" column
+
+    ```yaml
+        - operation: melt
+            sources:
+            - $sources.score_col_for_each_subject
+            # Column(s) from the wide dataset to keep as row identifiers in the long dataset
+            id_vars: student_id
+            # Column(s) from the wide dataset to translate into values of the "variable" columns. If omitted, melt all columns not in id_vars. 
+            value_vars: [math_score, reading_score, science_score, writing_score]
+            # Optional name of the column containing value_vars. efault to "variable"
+            var_name: subject
+            # Optional name of the column containing the values of the value_vars columns. Default to "value"
+            value_name: score
+    ```
+
+??? example "pivot"
+
+    Opposite of `melt` - pivots a source from long to wide format, where the unique values of old columns become the column names of new ones
+
+    ```yaml
+        - operation: melt
+            sources:
+            - $sources.melted_scores
+            # Column(s) in long dataset whose unique values are names of columns in the wide dataset
+            cols_by: [math_score, reading_score, science_score, writing_score]
+            # Column(s) in long dataset that define the rows in the wide dataset
+            rows_by: student_id
+            # Column(s) in long dataset used to populate the wide dataset's columns
+            values: subject
+    ```
 
 <hr />
 
