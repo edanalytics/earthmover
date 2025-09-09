@@ -337,8 +337,6 @@ class PivotOperation(Operation):
             )
 
         try:
-            data_copy = data.copy()
-
             # Check for uniqueness: index + columns should uniquely identify values
             # This is required for a pivot without aggregation
             if self.rows_by:
@@ -346,8 +344,8 @@ class PivotOperation(Operation):
             else:
                 key_cols = [self.cols_by]
 
-            unique_combinations = data_copy[key_cols].drop_duplicates()
-            total_rows = len(data_copy)
+            unique_combinations = data[key_cols].drop_duplicates()
+            total_rows = len(data)
             unique_rows = len(unique_combinations)
 
             if total_rows != unique_rows:
@@ -358,20 +356,15 @@ class PivotOperation(Operation):
                 )
 
             # Convert columns to category dtype for Dask compatibility
-            data_copy[self.cols_by] = data_copy[self.cols_by].astype('category').cat.as_known()
+            data[self.cols_by] = data[self.cols_by].astype('category').cat.as_known()
 
-            # For multiple columns, use groupby approach to avoid multi-index issues
+            # For multiple columns, create a composite key to avoid dask's multi-index issues
             if self.rows_by and len(self.rows_by) > 1:
-                # Create a composite key that preserves all index information
-                data_copy['_temp_composite_key'] = data_copy[self.rows_by[0]].astype(str)
+                data['_temp_composite_key'] = data[self.rows_by[0]].astype(str)
                 for col in self.rows_by[1:]:
-                    data_copy['_temp_composite_key'] = data_copy['_temp_composite_key'] + '|' + data_copy[col].astype(str)
+                    data['_temp_composite_key'] = data['_temp_composite_key'] + '|' + data[col].astype(str)
 
-                # Group by composite key and columns, then take first value (since we validated uniqueness)
-                grouped = data_copy.groupby(['_temp_composite_key', self.cols_by])[self.values].first().reset_index()
-
-                # Pivot using the grouped data
-                pivoted_data = grouped.pivot_table(
+                pivoted_data = data.pivot_table(
                     index='_temp_composite_key',
                     columns=self.cols_by,
                     values=self.values,
@@ -382,11 +375,7 @@ class PivotOperation(Operation):
                 pivoted_data = pivoted_data.reset_index()
 
                 # Split the composite key back into individual columns
-                split_cols = pivoted_data['_temp_composite_key'].str.split('|', expand=True, n=len(self.rows_by)-1)
-                for i, col_name in enumerate(self.rows_by):
-                    pivoted_data[col_name] = split_cols[i]
-
-                # Drop the temporary composite key column
+                pivoted_data[self.rows_by] = pivoted_data['_temp_composite_key'].str.split('|', expand=True, n=len(self.rows_by)-1)
                 pivoted_data = pivoted_data.drop('_temp_composite_key', axis=1)
 
                 # Reorder columns to put index columns first
@@ -397,8 +386,7 @@ class PivotOperation(Operation):
                 # Single column or no index - use groupby approach
                 if self.rows_by:
                     # Single column index
-                    grouped = data_copy.groupby([self.rows_by[0], self.cols_by])[self.values].first().reset_index()
-                    pivoted_data = grouped.pivot_table(
+                    pivoted_data = data.pivot_table(
                         index=self.rows_by[0],
                         columns=self.cols_by,
                         values=self.values,
@@ -406,8 +394,7 @@ class PivotOperation(Operation):
                     )
                 else:
                     # No index - just pivot on columns
-                    grouped = data_copy.groupby(self.cols_by)[self.values].first().reset_index()
-                    pivoted_data = grouped.pivot_table(
+                    pivoted_data = data.pivot_table(
                         columns=self.cols_by,
                         values=self.values,
                         aggfunc='first'
