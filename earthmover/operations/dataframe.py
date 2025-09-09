@@ -337,8 +337,6 @@ class PivotOperation(Operation):
             )
 
         try:
-            data_copy = data.copy()
-
             # Check for uniqueness: index + columns should uniquely identify values
             # This is required for a pivot without aggregation
             if self.rows_by:
@@ -346,8 +344,8 @@ class PivotOperation(Operation):
             else:
                 key_cols = [self.cols_by]
 
-            unique_combinations = data_copy[key_cols].drop_duplicates()
-            total_rows = len(data_copy)
+            unique_combinations = data[key_cols].drop_duplicates()
+            total_rows = len(data)
             unique_rows = len(unique_combinations)
 
             if total_rows != unique_rows:
@@ -358,19 +356,19 @@ class PivotOperation(Operation):
                 )
 
             # Convert columns to category dtype for Dask compatibility
-            data_copy[self.cols_by] = data_copy[self.cols_by].astype('category').cat.as_known()
+            data[self.cols_by] = data[self.cols_by].astype('category').cat.as_known()
 
             # For multiple columns, use groupby approach to avoid multi-index issues
             if self.rows_by and len(self.rows_by) > 1:
                 # Create a composite key that preserves all index information
-                data_copy['_temp_composite_key'] = data_copy[self.rows_by[0]].astype(str)
+                data['_temp_composite_key'] = data[self.rows_by[0]].astype(str)
                 for col in self.rows_by[1:]:
-                    data_copy['_temp_composite_key'] = data_copy['_temp_composite_key'] + '|' + data_copy[col].astype(str)
+                    data['_temp_composite_key'] = data['_temp_composite_key'] + '|' + data[col].astype(str)
 
                 # Group by composite key and columns, then take first value (since we validated uniqueness)
 
                 # Pivot using the grouped data
-                pivoted_data = data_copy.pivot_table(
+                pivoted_data = data.pivot_table(
                     index='_temp_composite_key',
                     columns=self.cols_by,
                     values=self.values,
@@ -394,7 +392,7 @@ class PivotOperation(Operation):
                 # Single column or no index - use groupby approach
                 if self.rows_by:
                     # Single column index
-                    pivoted_data = data_copy.pivot_table(
+                    pivoted_data = data.pivot_table(
                         index=self.rows_by[0],
                         columns=self.cols_by,
                         values=self.values,
@@ -402,7 +400,7 @@ class PivotOperation(Operation):
                     )
                 else:
                     # No index - just pivot on columns
-                    pivoted_data = data_copy.pivot_table(
+                    pivoted_data = data.pivot_table(
                         columns=self.cols_by,
                         values=self.values,
                         aggfunc='first'
