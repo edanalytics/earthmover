@@ -626,12 +626,12 @@ The above example shows a transformation of the courses source, which consists o
         - operation: melt
             sources:
             - $sources.melted_scores
-            # Column(s) in long dataset whose unique values are names of columns in the wide dataset
-            cols_by: [math_score, reading_score, science_score, writing_score]
+            # Column in long dataset whose unique values are names of columns in the wide dataset - to pivot by multiple columns, use sequential pivots
+            cols_by: subject
             # Column(s) in long dataset that define the rows in the wide dataset
             rows_by: student_id
             # Column(s) in long dataset used to populate the wide dataset's columns
-            values: subject
+            values: score
     ```
 
 <hr />
