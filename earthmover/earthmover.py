@@ -177,8 +177,8 @@ class Earthmover:
 
         ### Optionally merge packages to update user-configs and write the composed YAML to disk.
         self.user_configs = self.merge_packages() or self.user_configs
-        self.update_state_configs(self.user_configs.get("config"))
         self.user_configs = self.inject_cli_overrides(self.user_configs)
+        self.update_state_configs(self.user_configs.get("config"))
         if to_disk:
             self.user_configs.to_disk(self.compiled_yaml_file)
 
