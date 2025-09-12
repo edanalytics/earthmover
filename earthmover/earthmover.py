@@ -96,12 +96,6 @@ class Earthmover:
         # convert state_configs to YamlMapping so we can inject CLI overrides
         self.state_configs = YamlMapping().update(self.state_configs)
         self.state_configs = self.inject_cli_overrides(self.state_configs, "config.")
-        
-        # Prepare the output directory for destinations.
-        self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
-
-        # Set the temporary directory in cases of disk-spillage.
-        dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
 
         # Set a directory for installing packages.
         self.packages_dir = os.path.join(os.getcwd(), 'packages')
@@ -115,11 +109,27 @@ class Earthmover:
             "row_counts": {}
         }
 
+        # Update state configs
+        self.update_state_configs(self.state_configs)
+
         ### Prepare objects that are initialized during compile and deps.
         self.user_configs: 'YamlMapping' = None
         self.package_graph: Graph = None
         self.graph: Graph = None
 
+
+    ### Abstract state_configs updates so they can be called by `__init__()` and `compile()`
+    def update_state_configs(self, configs):
+        # Prepare the output directory for destinations.
+        self.state_configs['output_dir'] = os.path.expanduser(configs['output_dir'])
+
+        # Set the temporary directory in cases of disk-spillage.
+        if ('tmp_dir' in configs.keys()):
+            dask.config.set({'temporary_directory': configs['tmp_dir']})
+
+        # Update metadata output_dir
+        self.metadata["output_dir"] = configs["output_dir"]
+    
 
     ### Template-Parsing Methods
     def load_project_configs(self, filepath: str):
@@ -167,20 +177,10 @@ class Earthmover:
 
         ### Optionally merge packages to update user-configs and write the composed YAML to disk.
         self.user_configs = self.merge_packages() or self.user_configs
+        self.update_state_configs(self.user_configs.get("config"))
+        self.user_configs = self.inject_cli_overrides(self.user_configs)
         if to_disk:
             self.user_configs.to_disk(self.compiled_yaml_file)
-        self.user_configs = self.inject_cli_overrides(self.user_configs)
-
-        # Add any config values that are NOT defined in the top-level config but ARE defined
-        # in imported packages. This can enable you to, for example, pass a param like OUTPUT_DIR
-        # as a CLI env var (with -p) even if the top-level earthmover.yaml does not unpack it
-        # Note that the top-level config still takes precedence, so if you have output_dir hardcoded
-        # in earthmover.yaml, but parameterized in an imported package, then passing -p {"OUTPUT_DIR"}
-        # has no effect
-        full_user_configs = self.user_configs.to_dict()
-        self.state_configs.update(full_user_configs.get("config", {}))
-        # update metadata in case this value has changed
-        self.metadata['output_dir'] = self.state_configs['output_dir']
 
         ### Compile the nodes and add to the graph type-by-type.
         self.sources = self.compile_node_configs(
