@@ -1,7 +1,7 @@
 version: 2
 
 config:
-  log_level: DEBUG
+  log_level: ERROR
   output_dir: ./output/
   show_stacktrace: True
 
