@@ -1,5 +1,8 @@
 This page tracks releases of `earthmover`, with a summary of what was changed, fixed, added in each new version.
 
+## Unreleased changes
+
+* feature: Add `melt` and `pivot` as dataframe operations
 
 ## 2025 releases
 

@@ -1,0 +1,7 @@
+{
+  "student_id": "{{ student_id }}",
+  "student_name": "{{ student_name }}",
+  "grade_level": {{ grade_level }},
+  "subject": "{{ subject }}",
+  "score": {{ score }}
+}

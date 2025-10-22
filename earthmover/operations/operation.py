@@ -31,6 +31,8 @@ class Operation(Node):
             'join': dataframe_operations.JoinOperation,
             'union': dataframe_operations.UnionOperation,
             'debug': dataframe_operations.DebugOperation,
+            'melt': dataframe_operations.MeltOperation,
+            'pivot': dataframe_operations.PivotOperation,
 
             'add_columns': column_operations.AddColumnsOperation,
             'modify_columns': column_operations.ModifyColumnsOperation,
