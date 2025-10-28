@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import re
 import warnings
+from collections import OrderedDict
 
 from earthmover.nodes.node import Node
 from earthmover import util
@@ -159,7 +160,7 @@ class FileDestination(Destination):
         self.size = os.path.getsize(self.file)
 
     def render_row(self, row: pd.Series, jinja_template):
-        row_data = row if isinstance(row, dict) else row.to_dict()
+        row_data = row if isinstance(row, dict) else row.to_dict(into=OrderedDict)
         row_data = {
             field: self.cast_output_dtype(value)
             for field, value in row_data.items()
