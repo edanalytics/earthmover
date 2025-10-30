@@ -612,9 +612,9 @@ The above example shows a transformation of the courses source, which consists o
             id_vars: student_id
             # Column(s) from the wide dataset to translate into values of the "variable" columns. If omitted, melt all columns not in id_vars. 
             value_vars: [math_score, reading_score, science_score, writing_score]
-            # Optional name of the column containing value_vars. efault to "variable"
+            # Optional name of the column containing value_vars. default to "melt_variable"
             var_name: subject
-            # Optional name of the column containing the values of the value_vars columns. Default to "value"
+            # Optional name of the column containing the values of the value_vars columns. Default to "melt_value"
             value_name: score
     ```
 
@@ -623,7 +623,7 @@ The above example shows a transformation of the courses source, which consists o
     Opposite of `melt` - pivots a source from long to wide format, where the unique values of old columns become the column names of new ones
 
     ```yaml
-        - operation: melt
+        - operation: pivot
             sources:
             - $sources.melted_scores
             # Column in long dataset whose unique values are names of columns in the wide dataset - to pivot by multiple columns, use sequential pivots

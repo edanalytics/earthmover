@@ -272,9 +272,9 @@ class MeltOperation(Operation):
             self.error_handler.throw(f"`value_vars` must be a string or list, got {type(self.value_vars)}")
 
         # name for the new column that will hold the unpivoted column names
-        self.var_name = self.error_handler.assert_get_key(self.config, 'var_name', dtype=str, required=False, default='variable')
+        self.var_name = self.error_handler.assert_get_key(self.config, 'var_name', dtype=str, required=False, default='melt_variable')
         # name for the new column that will hold the values
-        self.value_name = self.error_handler.assert_get_key(self.config, 'value_name', dtype=str, required=False, default='value')
+        self.value_name = self.error_handler.assert_get_key(self.config, 'value_name', dtype=str, required=False, default='melt_value')
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         super().execute(data, **kwargs)
