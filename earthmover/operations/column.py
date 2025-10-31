@@ -105,6 +105,11 @@ class ModifyColumnsOperation(Operation):
             raise
 
         # TODO: Allow user to specify string that represents current column value.
+        if 'value' in data.columns:
+            # prevent existing `value` column from being clobbered, if it exists
+            self.error_handler.throw(
+                f"error in `modify_columns` operation; a column named `value` already exists, and would be removed by this operation... please rename it before using `modify_columns`"
+            )
         data['value'] = data[col]
 
         data[col] = data.apply(

@@ -610,12 +610,12 @@ class Earthmover:
         """
         # 5. config_defaults are already set as fallbacks
 
-        # 4. Parent parameter_defaults from composed YAML
+        # 4. Parent config / parameter defaults from composed YAML
         final_params = {}
         parent_defaults = composed_user_configs.get("config", {}).get("parameter_defaults", {})
         final_params.update(parent_defaults)
 
-        # 3. Child parameter_defaults (override parents)
+        # 3. Child config / parameter defaults (override parents)
         final_params.update(self.parameter_defaults)
 
         # 2. CLI -p params (override defaults)
