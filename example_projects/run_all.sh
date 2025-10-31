@@ -75,5 +75,18 @@ earthmover run -f
 rm -rf outputs/*, packages/*
 echo "  ... done!"
 
+echo "  running 11_composition..."
+cd ../11a_multi_parent/
+earthmover deps
+earthmover run -f
+rm -rf outputs/*, packages/*
+echo "  ... done!"
+
+echo "  running 12_melt_pivot..."
+cd ../12_melt_pivot/
+earthmover run -f
+rm -rf outputs/*
+echo "  ... done!"
+
 cd ../
 echo "all examples have run, goodbye"

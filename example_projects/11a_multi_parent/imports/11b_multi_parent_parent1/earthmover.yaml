@@ -1,0 +1,11 @@
+version: 2
+
+config:
+  log_level: DEBUG
+  output_dir: ./output-1/
+  parameter_defaults:
+    OUTPUT_DIR: ./output-1/
+    BASE_DIR: ./base-1/
+
+# This parent defines output_dir to output-1/ and BASE_DIR to ./base-1/
+

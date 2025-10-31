@@ -320,7 +320,7 @@ In the example below, an `earthmover` project `projA` depends on a package `proj
     ```
 
 #### Composition considerations
-* The `config` section is **not** composed from the installed packages, with the exception of `macros` and `parameter_defaults`. Specify all desired configuration in the top-level project.
+* The `config` section can be composed from the installed packages, but all config settings in the top-level project take precedence. If your project imports multiple packages with conflicting configuration, those settings must be specified in the top-level project to remove ambiguity.
 
 * There is no limit to the number of packages that can be imported and no limit to how deeply they can be nested (i.e. packages can import other packages). However, there are a few things to keep in mind with using multiple packages.
   - If multiple packages at the same level (e.g. `projA/packages/pkgB` and `projA/packages/pkgC`, not `projA/packages/pkgB/packages/pkgC`) include same-named nodes, the package specified later in the `packages` list will overwrite. If the node is also specified in the top-level project, its version of the node will overwrite as usual.

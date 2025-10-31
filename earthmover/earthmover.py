@@ -1,3 +1,4 @@
+import copy
 import dask
 import itertools
 import json
@@ -6,6 +7,7 @@ import tempfile
 import networkx as nx
 import pathlib
 import os
+import re
 import shutil
 import string
 import time
@@ -140,7 +142,8 @@ class Earthmover:
         configs = JinjaEnvironmentYamlLoader.load_project_configs(filepath, params=self.params)
 
         # 1. Update project parameter defaults from the template, if any
-        for key, val in configs.get("parameter_defaults", {}).items():
+        self.parameter_defaults = configs.get("parameter_defaults", {})
+        for key, val in self.parameter_defaults.items():
             self.params.setdefault(key, val)
 
         # 2. There may be config keys that expect an environment variable but for which a default is also defined.
@@ -176,9 +179,16 @@ class Earthmover:
         self.graph = Graph(error_handler=self.error_handler)
 
         ### Optionally merge packages to update user-configs and write the composed YAML to disk.
+        # Before merging, check for potential conflicts if installing multiple packages
+        self.detect_package_config_conflicts()
         self.user_configs = self.merge_packages() or self.user_configs
         self.user_configs = self.inject_cli_overrides(self.user_configs)
-        self.update_state_configs(self.user_configs.get("config"))
+
+        # Apply precedence rules for composed projects
+        composed_config = self.resolve_composed_config(self.user_configs)
+        self.user_configs['config'] = composed_config
+        self.update_state_configs(composed_config)
+
         if to_disk:
             self.user_configs.to_disk(self.compiled_yaml_file)
 
@@ -585,6 +595,102 @@ class Earthmover:
                 nested_package_dir = os.path.join(package_node['package'].package_path, 'packages')
                 nested_package_subgraph = nx.ego_graph(self.package_graph, package_name)
                 self.build_package_graph(root_node=package_name, package_subgraph=nested_package_subgraph, packages_dir=nested_package_dir, install=install)
+
+    def resolve_composed_config(self, composed_user_configs):
+        """
+        Resolve final parameter values with correct precedence and expand any remaining variables in the config block
+          5. (lowest) config_defaults (hardcoded fallbacks)
+          4. Parent parameter_defaults (from composed YAML)
+          3. Child parameter_defaults (from original YAML)
+          2. CLI -p params
+          1. (highest) CLI --set overrides (passed to this function)
+        
+        :param composed_user_configs:
+        :return:
+        """
+        # 5. config_defaults are already set as fallbacks
+
+        # 4. Parent parameter_defaults from composed YAML
+        final_params = {}
+        parent_defaults = composed_user_configs.get("config", {}).get("parameter_defaults", {})
+        final_params.update(parent_defaults)
+
+        # 3. Child parameter_defaults (override parents)
+        final_params.update(self.parameter_defaults)
+
+        # 2. CLI -p params (override defaults)
+        final_params.update(self.params)
+
+        # 1: CLI --set overrides are already in composed_user_configs.config
+        config_with_vars = composed_user_configs.get("config", {})
+
+        # Re-apply parameter substitution for any ${PARAM} values
+        final_config = copy.deepcopy(config_with_vars)
+        for key, val in final_config.items():
+            if isinstance(val, str):
+                template = string.Template(val)
+                final_config[key] = template.safe_substitute(final_params)
+
+        return final_config
+
+    def detect_package_config_conflicts(self):
+        """
+        Before merging packages, check if parents at the same level have conflicting config settings.
+        If the child does not set a value for that setting, throw an error. We will not pick between
+        the parents.
+
+        This only runs on packages we directly import, but that seems reasonable. If my grandparents
+        have a conflict, that is my parent's problem.
+
+        :return:
+        """
+        parent_packages = list(self.package_graph.successors('root'))
+        if len(parent_packages) <= 1:
+            return
+
+        self.build_package_graph(root_node='root', package_subgraph=self.package_graph, packages_dir=self.packages_dir, install=False)
+
+        # Collect parent configs and child config
+        parent_configs = {}
+        for pkg_name in parent_packages:
+            pkg_node = self.package_graph.nodes[pkg_name]['package']
+            pkg_node.load_package_yaml(self.params, self.macros)
+            parent_configs[pkg_name] = pkg_node.package_yaml.get("config", {})
+
+        child_config = JinjaEnvironmentYamlLoader.load_project_configs(self.config_file, params={})
+        child_parameter_defaults = child_config.get("parameter_defaults", {})
+
+        # Check hard-coded config block values
+        skip_keys = {'parameter_defaults', 'macros', 'log_level', 'show_stacktrace', 'show_graph'}
+        for config_key in {k for pkg_config in parent_configs.values() for k in pkg_config.keys()} - skip_keys:
+            parent_values = {pkg_name: pkg_config[config_key] for pkg_name, pkg_config in parent_configs.items() if config_key in pkg_config}
+            if len(parent_values) > 1 and len(set(str(v) for v in parent_values.values())) > 1:
+                if config_key not in child_config:
+                    self._throw_config_conflict(config_key, parent_values, is_parameter=False)
+
+        # Check parameter_defaults conflicts, for params used in child config
+        child_params = {param for val in child_config.values() if isinstance(val, str) and '${' in val 
+                       for param in re.findall(r'\$\{([^}]+)\}', val)}
+
+        parent_param_defaults = {pkg_name: pkg_config.get("parameter_defaults", {}) 
+                                   for pkg_name, pkg_config in parent_configs.items() 
+                                   if pkg_config.get("parameter_defaults")}
+
+        for param_name in child_params.intersection({k for params in parent_param_defaults.values() for k in params.keys()}):
+            parent_param_values = {pkg_name: params[param_name] for pkg_name, params in parent_param_defaults.items() if param_name in params}
+            if len(parent_param_values) > 1 and len(set(str(v) for v in parent_param_values.values())) > 1:
+                if param_name not in child_parameter_defaults:
+                    self._throw_config_conflict(param_name, parent_param_values, is_parameter=True)
+
+    def _throw_config_conflict(self, key_name, parent_values, is_parameter=False):
+        msg_type = "parameter_defaults" if is_parameter else "config values"
+        location = "parameter_defaults" if is_parameter else "config"
+        conflict_list = "".join(f"  - {pkg_name}: {value}\n" for pkg_name, value in parent_values.items())
+        conflict_msg = f"""Conflicting {msg_type} for '{key_name}' between imported packages:
+{conflict_list}
+Child project does not define '{key_name}' in {location}, so Earthmover cannot determine which value to use. Please define '{key_name}' in the child project's {location}."""
+        self.error_handler.throw(conflict_msg)
+
 
     def clean(self):
         """

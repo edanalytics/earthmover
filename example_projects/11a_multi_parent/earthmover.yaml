@@ -1,0 +1,29 @@
+version: 2
+
+config:
+  log_level: DEBUG
+  show_stacktrace: True
+  # uncomment this block to resolve conflict between parents
+  # output_dir: ./resolved_output/
+
+packages: 
+  parent1:
+    local: 'imports/11b_multi_parent_parent1/'
+  parent2:
+    local: 'imports/11b_multi_parent_parent2/'
+
+sources:
+  test_source:
+    file: ./sources/test.csv
+    header_rows: 1
+    columns:
+      - id
+      - name
+
+destinations:
+  test_output:
+    source: $sources.test_source
+    template: ./templates/test.jsont
+    extension: jsonl
+    linearize: True
+
