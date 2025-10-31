@@ -5,8 +5,3 @@ config:
   output_dir: ./output-2/
   parameter_defaults:
     OUTPUT_DIR: ./output-2/
-    BASE_DIR: ./base-2/
-
-# This parent defines output_dir to output-2/ and BASE_DIR to ./base-2/
-# This creates conflicts with parent1 when the child doesn't define these values
-

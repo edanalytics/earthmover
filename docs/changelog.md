@@ -2,7 +2,7 @@ This page tracks releases of `earthmover`, with a summary of what was changed, f
 
 ### Unreleased changes
 
-* bugfix: Projects with imported packages not injecting CLI env vars into underlying configuration
+* feature: Introduce precedence order for resolving configuration when using project composition
 
 ## 2025 releases
 
