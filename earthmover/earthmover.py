@@ -150,8 +150,9 @@ class Earthmover:
         # parse self.overrides into configs:
         if self.overrides:
             for key, value in self.overrides.items():
-                if not prefix or key.startswith(prefix):
-                    configs.set_path(key.lstrip(prefix), value)
+                if prefix and key.startswith(prefix):
+                    key = key.removeprefix(prefix)
+                configs.set_path(key, value)
         return configs
 
     def compile(self, to_disk: bool = False):
