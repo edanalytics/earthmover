@@ -2,9 +2,11 @@ version: 2
 
 config:
   log_level: DEBUG
-  output_dir: ./output/
   show_stacktrace: True
-
+# uncomment this block to test child override behavior
+#  output_dir: ${OUTPUT_DIR}
+#  parameter_defaults:
+#    OUTPUT_DIR: ./child_override/
 
 packages: 
   edfi_example_project:

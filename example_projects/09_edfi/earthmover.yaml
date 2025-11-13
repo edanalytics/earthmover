@@ -2,8 +2,10 @@ version: 2
 
 config:
   log_level: DEBUG
-  output_dir: ./output/
+  output_dir: ./config-output/ #${OUTPUT_DIR}
   # show_graph: True
+  parameter_defaults:
+    OUTPUT_DIR: ./imported-output/
 
 
 sources:

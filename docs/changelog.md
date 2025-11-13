@@ -3,6 +3,7 @@ This page tracks releases of `earthmover`, with a summary of what was changed, f
 ## Unreleased changes
 
 * feature: Add `melt` and `pivot` as dataframe operations
+* feature: Introduce precedence order for resolving configuration when using project composition
 
 ## 2025 releases
 
