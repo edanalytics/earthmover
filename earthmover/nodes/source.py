@@ -5,6 +5,7 @@ import io
 import os
 import pandas as pd
 import re
+import string
 import hashlib
 
 from earthmover.nodes.node import Node
@@ -83,12 +84,36 @@ class Source(Node):
             # Get all existing columns
             existing_columns = self.data.columns.tolist()
 
-            # Combine existing columns with optional fields
-            all_columns = existing_columns + list(set(self.optional_fields).difference(existing_columns))
+            # Check for optional fields that would become duplicates after snake_case normalization
+            # by normalizing both existing columns and optional fields for comparison
+            def normalize_for_comparison(text):
+                """Normalize text similar to snake_case_columns for duplicate detection"""
+                import string
+                punctuation_regex = re.compile("[" + re.escape(string.punctuation) + " ]")
+                text = re.sub(r'(.)([A-Z][a-z]+)', r'\1_\2', str(text))
+                text = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', text)
+                text = punctuation_regex.sub("_", text)
+                text = re.sub(r'_+', '_', text)
+                text = re.sub(r'^_', '', text)
+                return text.lower()
+            
+            normalized_existing = {normalize_for_comparison(col): col for col in existing_columns}
+            optional_to_add = []
+            for opt_field in self.optional_fields:
+                normalized_opt = normalize_for_comparison(opt_field)
+                # Only add if it doesn't exist (exact match) and won't become a duplicate after normalization
+                if opt_field not in existing_columns and normalized_opt not in normalized_existing:
+                    optional_to_add.append(opt_field)
+                    normalized_existing[normalized_opt] = opt_field
+
+            # Combine existing columns with optional fields that won't create duplicates
+            all_columns = existing_columns + optional_to_add
 
             # Construct a schema with all columns, initializing optional fields to empty strings
             meta = pd.DataFrame(columns=all_columns)
-            meta = meta.astype({col: "object" for col in self.optional_fields})  # Ensure optional fields have correct type
+            # Only set dtype for optional fields that are actually being added
+            if optional_to_add:
+                meta = meta.astype({col: "object" for col in optional_to_add})  # Ensure optional fields have correct type
 
             # Apply to each partition
             self.data = self.data.map_partitions(
@@ -107,7 +132,7 @@ class FileSource(Source):
     is_hashable: bool = True
     allowed_configs: Tuple[str] = (
         'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
-        'file', 'type', 'columns', 'header_rows', 'colspec_file', 'colspecs', 'colspec_headers', 'rename_cols',
+        'file', 'type', 'columns', 'header_rows', 'super_header_rows', 'colspec_file', 'colspecs', 'colspec_headers', 'rename_cols',
         'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
     )
 
@@ -149,6 +174,9 @@ class FileSource(Source):
                 f"argument `rename_cols` is set, but does not specify `columns` (which are required in this case)"
             )
             raise
+
+        # Super header rows configuration for multi-row header processing
+        self.super_header_rows = self.error_handler.assert_get_key(self.config, 'super_header_rows', dtype=int, required=False)
 
         # Initialize the read_lambda.
         _sep = util.get_sep(self.file_type)
@@ -322,9 +350,81 @@ class FileSource(Source):
             colspecs = list(zip(file_format.start_index, file_format.end_index))
             return dd.read_fwf(file, colspecs=colspecs, header=header, names=names, converters=converters, encoding=encoding)
 
+    def _process_super_headers(self, file: str, sep: Optional[str] = None):
+        """
+        Process multi-row headers by combining sparse super header values from row 1
+        with actual column headers from row 3 (or the last row in super_header_rows).
+        
+        :param file: Path to the CSV file
+        :param sep: CSV separator
+        :return: List of combined header names
+        """
+        import csv
+        
+        # Read the first N rows as headers
+        encoding = self.config.get('encoding', 'utf-8-sig')  # utf-8-sig handles BOM
+        with open(file, 'r', encoding=encoding) as f:
+            reader = csv.reader(f, delimiter=sep if sep else ',')
+            headers = [next(reader) for _ in range(self.super_header_rows)]
+        
+        # Validate that we have the expected structure
+        # The last row should have the actual column headers
+        if len(headers) < 2:
+            self.error_handler.throw(
+                f"`super_header_rows` must be at least 2, got {self.super_header_rows}"
+            )
+            raise
+        
+        # Create a long format DataFrame for processing
+        long_headers_data = []
+        for row_idx, row in enumerate(headers):
+            for col_idx, value in enumerate(row):
+                # Convert empty strings to None for forward-fill
+                processed_value = value.strip() if value and value.strip() else None
+                long_headers_data.append({
+                    'col_i': col_idx,
+                    'value': processed_value,
+                    'row_i': row_idx
+                })
+        
+        long_headers = pd.DataFrame(long_headers_data)
+        
+        # Forward-fill within each row (grouped by row_i), not across rows
+        # This ensures super header values propagate horizontally within each row
+        # (matching the Python preprocessing script behavior)
+        long_headers['value'] = long_headers.groupby('row_i')['value'].ffill()
+        
+        # Pivot back to wide format
+        wide_headers = long_headers.pivot_table(
+            values='value', 
+            index='col_i', 
+            columns='row_i', 
+            aggfunc='first'
+        ).reset_index()
+        
+        # Combine row 0 (sparse super headers) with the last row (actual column headers)
+        # Using "__" as separator
+        row_0_col = 0  # First row (sparse super headers)
+        row_last_col = self.super_header_rows - 1  # Last row (actual column headers)
+        
+        def combine_headers(row):
+            parts = []
+            if pd.notna(row[row_0_col]) and str(row[row_0_col]).strip():
+                parts.append(str(row[row_0_col]).strip())
+            if pd.notna(row[row_last_col]) and str(row[row_last_col]).strip():
+                parts.append(str(row[row_last_col]).strip())
+            combined = '__'.join(parts)
+            # Remove leading and trailing underscores
+            combined = re.sub(r'^_+|_+$', '', combined)
+            return combined
+        
+        wide_headers['concat_colname'] = wide_headers.apply(combine_headers, axis=1)
+        
+        return wide_headers['concat_colname'].tolist()
+
     def _get_read_lambda(self, file_type: str, sep: Optional[str] = None):
         """
-
+        
         :param file_type:
         :param sep:
         :return:
@@ -335,9 +435,35 @@ class FileSource(Source):
             _header_rows = config.get('header_rows', 1)
             return int(_header_rows) - 1  # If header_rows = 1, skip none.
 
+        def __read_csv_with_super_headers(file, config):
+            """ Read CSV with super header processing if specified. """
+            if self.super_header_rows:
+                # Process super headers
+                header_names = self._process_super_headers(file, sep=sep)
+                # Skip the super header rows when reading data
+                return dd.read_csv(
+                    file, 
+                    sep=sep, 
+                    dtype=str, 
+                    encoding=config.get('encoding', "utf8"), 
+                    keep_default_na=False, 
+                    skiprows=self.super_header_rows,
+                    names=header_names
+                )
+            else:
+                # Standard CSV reading
+                return dd.read_csv(
+                    file, 
+                    sep=sep, 
+                    dtype=str, 
+                    encoding=config.get('encoding', "utf8"), 
+                    keep_default_na=False, 
+                    skiprows=__get_skiprows(config)
+                )
+
         # We don't want to activate the function inside this helper function.
         read_lambda_mapping = {
-            'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
+            'csv'       : __read_csv_with_super_headers,
             'excel'     : lambda file, config: pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False),
             'feather'   : lambda file, _     : pd.read_feather(file),
             'fixedwidth': self.__read_fwf,
@@ -350,7 +476,7 @@ class FileSource(Source):
             'spss'      : lambda file, _     : pd.read_spss(file),
             'stata'     : lambda file, _     : pd.read_stata(file),
             'xml'       : lambda file, config: pd.read_xml(file, xpath=config.get('xpath', "./*")),
-            'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
+            'tsv'       : __read_csv_with_super_headers,  # TSV uses same logic as CSV
         }
         return read_lambda_mapping.get(file_type)
 
