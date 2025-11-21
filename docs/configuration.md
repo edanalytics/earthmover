@@ -182,8 +182,8 @@ Each source must have a name (which is how it is referenced by transformations a
 
 | source type | format | file type | notes |
 |---|---|---|---|
-| file {: rowspan=13} | row-based {: rowspan=3} | `.csv` | Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8). |
-| `.tsv` | Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8). |
+| file {: rowspan=13} | row-based {: rowspan=3} | `.csv` | Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8).  <br> Alternatively specify `spare_header_rows` to combine multiple rows of headers into a unique set of column names (see example below) |
+| `.tsv` | Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8). <br> Alternatively specify `spare_header_rows` to combine multiple rows of headers into a unique set of column names (see example below) |
 | `.txt` | A fixed-width text file; see the [documentation below](#fixed-width-config) for configuration details. |
 | column-based | `.parquet`, `.feather`, `.orc` | These require the [`pyarrow` library](https://arrow.apache.org/docs/python/index.html), which can be installed with `pip install pyarrow` or similar |
 | structured {: rowspan=4} | `.json` | Optionally specify a `object_type` (`frame` or `series`) and `orientation` (see [these docs](https://pandas.pydata.org/docs/reference/api/pandas.read_json.html)) to interpret different JSON structures. |
@@ -323,6 +323,29 @@ Using a fixed-width file (FWF) as a source requires additional metadata, configu
     1234,2005,54321
     1235,2006,54322
     ...
+    ```
+
+    ```yaml+jinja
+    sources:
+      mydata:
+        file: ./data/mydata.csv
+        sparse_header_rows: 2
+    ```
+
+    (for an input file like...)
+
+    ```csv title="mydata.csv"
+    red,,green,,
+    id,year,code,id,year,code
+    1234,2005,54321,1234,2005,54321
+    1235,2006,54322,1234,2005,54321
+    ...
+    ```
+    This reads in as a single-header table like:
+    ```csv
+    red__id,red__year,red__code,green__id,green__year,green__code
+    1234,2005,54321,1234,2005,54321
+    1235,2006,54322,1234,2005,54321
     ```
 
 === "`.tsv`"

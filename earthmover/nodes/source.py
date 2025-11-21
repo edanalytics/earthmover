@@ -108,7 +108,7 @@ class FileSource(Source):
     is_hashable: bool = True
     allowed_configs: Tuple[str] = (
         'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
-        'file', 'type', 'columns', 'header_rows', 'super_header_rows', 'colspec_file', 'colspecs', 'colspec_headers', 'rename_cols',
+        'file', 'type', 'columns', 'header_rows', 'sparse_header_rows', 'colspec_file', 'colspecs', 'colspec_headers', 'rename_cols',
         'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
     )
 
@@ -150,9 +150,6 @@ class FileSource(Source):
                 f"argument `rename_cols` is set, but does not specify `columns` (which are required in this case)"
             )
             raise
-
-        # Super header rows configuration for multi-row header processing
-        self.super_header_rows = self.error_handler.assert_get_key(self.config, 'super_header_rows', dtype=int, required=False)
 
         # Initialize the read_lambda.
         _sep = util.get_sep(self.file_type)
@@ -326,47 +323,49 @@ class FileSource(Source):
             colspecs = list(zip(file_format.start_index, file_format.end_index))
             return dd.read_fwf(file, colspecs=colspecs, header=header, names=names, converters=converters, encoding=encoding)
 
-    def _process_super_headers(self, file: str, sep: Optional[str] = None):
+    def _process_sparse_headers(self, file: str, sparse_header_rows: int, encoding: str, sep: Optional[str] = None):
         """
-        Process multi-row headers by combining sparse super header values from row 1
-        with actual column headers from row 3 (or the last row in super_header_rows).
-        
-        :param file: Path to the CSV file
-        :param sep: CSV separator
+        Process multi-row headers by combining sparse header values from row 1
+        with actual column headers from the bottom row of sparse_header_rows
+
+        Input:
+    |         | LETTERS       |              | SCREENER     |             |               |              |
+    |         |               |              |              |             |               |              |
+    | student | letters_score | letters_date | shapes_score | shapes_date | letters_score | letters_date |
+    |---------|---------------|--------------|--------------|-------------|---------------|--------------|
+    | 100     | 5             | 3/24         | 8            | 3/24        | 5             | 3/24         |
+
+        Output:
+    | student | LETTERS__letters_score | LETTERS__letters_date | SCREENER__shapes_score | SCREENER__shapes_date | SCREENER__letters_score | SCREENER__letters_date |
+    |---------|------------------------|-----------------------|------------------------|-----------------------|-------------------------|------------------------|
+    | 100     | 5                      | 3/24                  | 8                      | 3/24                  | 5                       | 3/24                   |
+
+        :param file:
+        :param config:
+        :param sep:
         :return: List of combined header names
         """
         # Read the first N rows as headers
-        encoding = self.config.get('encoding', 'utf-8-sig')  # utf-8-sig handles BOM
         with open(file, 'r', encoding=encoding) as f:
             reader = csv.reader(f, delimiter=sep if sep else ',')
-            headers = [next(reader) for _ in range(self.super_header_rows)]
-        
+            headers = [next(reader) for _ in range(sparse_header_rows)]
+
         # Validate that we have the expected structure
         # The last row should have the actual column headers
         if len(headers) < 2:
             self.error_handler.throw(
-                f"`super_header_rows` must be at least 2, got {self.super_header_rows}"
+                f"`sparse_header_rows` must be at least 2, got {sparse_header_rows}"
             )
-        
-        # Create a long format DataFrame for processing
-        long_headers_data = []
-        for row_idx, row in enumerate(headers):
-            for col_idx, value in enumerate(row):
-                # Convert empty strings to None for forward-fill
-                processed_value = value.strip() if value and value.strip() else None
-                long_headers_data.append({
-                    'col_i': col_idx,
-                    'value': processed_value,
-                    'row_i': row_idx
-                })
-        
-        long_headers = pd.DataFrame(long_headers_data)
-        
-        # Forward-fill within each row (grouped by row_i), not across rows
-        # This ensures super header values propagate horizontally within each row
-        # (matching the Python preprocessing script behavior)
+
+        # Process headers to get long headers
+        long_headers = pd.DataFrame({
+            'col_i': [idx for row in headers for idx, value in enumerate(row)],
+            'value': [value.strip() if value and value.strip() else None for row in headers for value in row],
+            'row_i': [row_i for row_i, row in enumerate(headers) for _ in row]
+        })
+        # Forward fill long headers within each row
         long_headers['value'] = long_headers.groupby('row_i')['value'].ffill()
-        
+
         # Pivot back to wide format
         wide_headers = long_headers.pivot_table(
             values='value', 
@@ -374,25 +373,15 @@ class FileSource(Source):
             columns='row_i', 
             aggfunc='first'
         ).reset_index()
-        
-        # Combine row 0 (sparse super headers) with the last row (actual column headers)
-        # Using "__" as separator
-        row_0_col = 0  # First row (sparse super headers)
-        row_last_col = self.super_header_rows - 1  # Last row (actual column headers)
-        
-        def combine_headers(row):
-            parts = []
-            if pd.notna(row[row_0_col]) and str(row[row_0_col]).strip():
-                parts.append(str(row[row_0_col]).strip())
-            if pd.notna(row[row_last_col]) and str(row[row_last_col]).strip():
-                parts.append(str(row[row_last_col]).strip())
-            combined = '__'.join(parts)
-            # Remove leading and trailing underscores
-            combined = re.sub(r'^_+|_+$', '', combined)
-            return combined
-        
-        wide_headers['concat_colname'] = wide_headers.apply(combine_headers, axis=1)
-        
+
+        # Concatenate column names with separator '__'
+        wide_headers['concat_colname'] = wide_headers[[0, sparse_header_rows - 1]].apply(
+            lambda x: '__'.join(x.dropna().astype(str)), 
+            axis=1
+        )
+        # Remove leading and trailing underscores
+        wide_headers['concat_colname'] = wide_headers['concat_colname'].apply(lambda x: re.sub('^_+|_+$', '', x))
+
         return wide_headers['concat_colname'].tolist()
 
     def _get_read_lambda(self, file_type: str, sep: Optional[str] = None):
@@ -409,15 +398,17 @@ class FileSource(Source):
             return int(_header_rows) - 1  # If header_rows = 1, skip none.
 
         def __read_csv(file, config):
-            """ Read CSV with super header processing if specified. """
+            """ Read CSV with sparse header processing if specified. """
+            sparse_header_rows = self.error_handler.assert_get_key(config, 'sparse_header_rows', dtype=int, required=False)
+            encoding = config.get('encoding', "utf8")
             return dd.read_csv(
                 file, 
                 sep=sep, 
                 dtype=str, 
-                encoding=config.get('encoding', "utf8"), 
+                encoding=encoding, 
                 keep_default_na=False, 
-                skiprows=self.super_header_rows if self.super_header_rows else __get_skiprows(config),
-                names=self._process_super_headers(file, sep=sep) if self.super_header_rows else None
+                skiprows=sparse_header_rows if sparse_header_rows else __get_skiprows(config),
+                names=self._process_sparse_headers(file, sparse_header_rows, encoding, sep=sep) if sparse_header_rows else None
             )
 
         # We don't want to activate the function inside this helper function.

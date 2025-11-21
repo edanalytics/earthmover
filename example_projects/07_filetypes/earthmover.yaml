@@ -49,6 +49,14 @@ sources:
       - [11,20]
       - [21,24]
       - [25,29]
+  users5:
+    file: ./sources/users_sparse_headers.csv
+    # ^ This CSV has a "sparse header" structure:
+    #   Row 1: Sparse category headers (Math Scores, English Scores)
+    #   Row 2: Empty row
+    #   Row 3: Actual column names (student_id, test1, test2, test3, etc.)
+    #   The sparse_header_rows setting combines row 1 and row 3 with "__" separator
+    sparse_header_rows: 3
 
 transformations:
   users4:
@@ -79,5 +87,10 @@ destinations:
   users/4:
     source: $transformations.users4
     template: ./templates/user.jsont
+    extension: jsonl
+    linearize: True
+  users/5:
+    source: $sources.users5
+    template: ./templates/user_sparse.jsont
     extension: jsonl
     linearize: True
