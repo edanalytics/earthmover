@@ -121,10 +121,11 @@ class JinjaEnvironmentYamlLoader(yaml.SafeLoader):
         """
         # Load the YAML filepath and apply environment-variable templating.
         raw_yaml = cls.template_open_filepath(filepath, params)
+        parent_dir = os.path.dirname(filepath)
 
         # Expand Jinja and complete full parsing
         try:
-            raw_yaml = util.build_jinja_template(raw_yaml, macros=macros).render()
+            raw_yaml = util.build_jinja_template(raw_yaml, macros=macros, base_dir=parent_dir).render()
             yaml_configs = yaml.load(raw_yaml, Loader=cls)
 
         except yaml.YAMLError as err:
