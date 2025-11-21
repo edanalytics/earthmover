@@ -350,8 +350,6 @@ class FileSource(Source):
             reader = csv.reader(f, delimiter=sep if sep else ',')
             headers = [next(reader) for _ in range(sparse_header_rows)]
 
-        # Validate that we have the expected structure
-        # The last row should have the actual column headers
         if len(headers) < 2:
             self.error_handler.throw(
                 f"`sparse_header_rows` must be at least 2, got {sparse_header_rows}"
