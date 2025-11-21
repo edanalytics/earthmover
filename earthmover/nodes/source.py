@@ -1,3 +1,4 @@
+import csv
 import dask.config as dask_config
 import dask.dataframe as dd
 import ftplib
@@ -5,7 +6,6 @@ import io
 import os
 import pandas as pd
 import re
-import string
 import hashlib
 
 from earthmover.nodes.node import Node
@@ -84,36 +84,12 @@ class Source(Node):
             # Get all existing columns
             existing_columns = self.data.columns.tolist()
 
-            # Check for optional fields that would become duplicates after snake_case normalization
-            # by normalizing both existing columns and optional fields for comparison
-            def normalize_for_comparison(text):
-                """Normalize text similar to snake_case_columns for duplicate detection"""
-                import string
-                punctuation_regex = re.compile("[" + re.escape(string.punctuation) + " ]")
-                text = re.sub(r'(.)([A-Z][a-z]+)', r'\1_\2', str(text))
-                text = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', text)
-                text = punctuation_regex.sub("_", text)
-                text = re.sub(r'_+', '_', text)
-                text = re.sub(r'^_', '', text)
-                return text.lower()
-            
-            normalized_existing = {normalize_for_comparison(col): col for col in existing_columns}
-            optional_to_add = []
-            for opt_field in self.optional_fields:
-                normalized_opt = normalize_for_comparison(opt_field)
-                # Only add if it doesn't exist (exact match) and won't become a duplicate after normalization
-                if opt_field not in existing_columns and normalized_opt not in normalized_existing:
-                    optional_to_add.append(opt_field)
-                    normalized_existing[normalized_opt] = opt_field
-
-            # Combine existing columns with optional fields that won't create duplicates
-            all_columns = existing_columns + optional_to_add
+            # Combine existing columns with optional fields
+            all_columns = existing_columns + list(set(self.optional_fields).difference(existing_columns))
 
             # Construct a schema with all columns, initializing optional fields to empty strings
             meta = pd.DataFrame(columns=all_columns)
-            # Only set dtype for optional fields that are actually being added
-            if optional_to_add:
-                meta = meta.astype({col: "object" for col in optional_to_add})  # Ensure optional fields have correct type
+            meta = meta.astype({col: "object" for col in self.optional_fields})  # Ensure optional fields have correct type
 
             # Apply to each partition
             self.data = self.data.map_partitions(
@@ -359,8 +335,6 @@ class FileSource(Source):
         :param sep: CSV separator
         :return: List of combined header names
         """
-        import csv
-        
         # Read the first N rows as headers
         encoding = self.config.get('encoding', 'utf-8-sig')  # utf-8-sig handles BOM
         with open(file, 'r', encoding=encoding) as f:
@@ -373,7 +347,6 @@ class FileSource(Source):
             self.error_handler.throw(
                 f"`super_header_rows` must be at least 2, got {self.super_header_rows}"
             )
-            raise
         
         # Create a long format DataFrame for processing
         long_headers_data = []
@@ -424,7 +397,7 @@ class FileSource(Source):
 
     def _get_read_lambda(self, file_type: str, sep: Optional[str] = None):
         """
-        
+
         :param file_type:
         :param sep:
         :return:
@@ -435,35 +408,22 @@ class FileSource(Source):
             _header_rows = config.get('header_rows', 1)
             return int(_header_rows) - 1  # If header_rows = 1, skip none.
 
-        def __read_csv_with_super_headers(file, config):
+        def __read_csv(file, config):
             """ Read CSV with super header processing if specified. """
-            if self.super_header_rows:
-                # Process super headers
-                header_names = self._process_super_headers(file, sep=sep)
-                # Skip the super header rows when reading data
-                return dd.read_csv(
-                    file, 
-                    sep=sep, 
-                    dtype=str, 
-                    encoding=config.get('encoding', "utf8"), 
-                    keep_default_na=False, 
-                    skiprows=self.super_header_rows,
-                    names=header_names
-                )
-            else:
-                # Standard CSV reading
-                return dd.read_csv(
-                    file, 
-                    sep=sep, 
-                    dtype=str, 
-                    encoding=config.get('encoding', "utf8"), 
-                    keep_default_na=False, 
-                    skiprows=__get_skiprows(config)
-                )
+            return dd.read_csv(
+                file, 
+                sep=sep, 
+                dtype=str, 
+                encoding=config.get('encoding', "utf8"), 
+                keep_default_na=False, 
+                skiprows=self.super_header_rows if self.super_header_rows else __get_skiprows(config),
+                names=self._process_super_headers(file, sep=sep) if self.super_header_rows else None
+            )
 
         # We don't want to activate the function inside this helper function.
         read_lambda_mapping = {
-            'csv'       : __read_csv_with_super_headers,
+            'csv'       : __read_csv,
+            'tsv'       : __read_csv,
             'excel'     : lambda file, config: pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False),
             'feather'   : lambda file, _     : pd.read_feather(file),
             'fixedwidth': self.__read_fwf,
@@ -476,7 +436,6 @@ class FileSource(Source):
             'spss'      : lambda file, _     : pd.read_spss(file),
             'stata'     : lambda file, _     : pd.read_stata(file),
             'xml'       : lambda file, config: pd.read_xml(file, xpath=config.get('xpath', "./*")),
-            'tsv'       : __read_csv_with_super_headers,  # TSV uses same logic as CSV
         }
         return read_lambda_mapping.get(file_type)
 
