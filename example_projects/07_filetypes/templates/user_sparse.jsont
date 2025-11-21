@@ -1,0 +1,10 @@
+{
+    "student_id": {{student_id|int}},
+    "Math Scores__test1": {{__row_data__["Math Scores__test1"]|int}},
+    "Math Scores__test2": {{__row_data__["Math Scores__test2"]|int}},
+    "Math Scores__test3": {{__row_data__["Math Scores__test3"]|int}},
+    "English Scores__test1": {{__row_data__["English Scores__test1"]|int}},
+    "English Scores__test2": {{__row_data__["English Scores__test2"]|int}},
+    "English Scores__test3": {{__row_data__["English Scores__test3"]|int}},
+}
+

@@ -1,3 +1,4 @@
+import csv
 import dask.config as dask_config
 import dask.dataframe as dd
 import ftplib
@@ -107,7 +108,7 @@ class FileSource(Source):
     is_hashable: bool = True
     allowed_configs: Tuple[str] = (
         'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
-        'file', 'type', 'columns', 'header_rows', 'colspec_file', 'colspecs', 'colspec_headers', 'rename_cols',
+        'file', 'type', 'columns', 'header_rows', 'sparse_header_rows', 'colspec_file', 'colspecs', 'colspec_headers', 'rename_cols',
         'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
     )
 
@@ -322,6 +323,65 @@ class FileSource(Source):
             colspecs = list(zip(file_format.start_index, file_format.end_index))
             return dd.read_fwf(file, colspecs=colspecs, header=header, names=names, converters=converters, encoding=encoding)
 
+    def _process_sparse_headers(self, file: str, sparse_header_rows: int, encoding: str, sep: Optional[str] = None):
+        """
+        Process multi-row headers by combining sparse header values from row 1
+        with actual column headers from the bottom row of sparse_header_rows
+
+        Input:
+    |         | LETTERS       |              | SCREENER     |             |               |              |
+    |         |               |              |              |             |               |              |
+    | student | letters_score | letters_date | shapes_score | shapes_date | letters_score | letters_date |
+    |---------|---------------|--------------|--------------|-------------|---------------|--------------|
+    | 100     | 5             | 3/24         | 8            | 3/24        | 5             | 3/24         |
+
+        Output:
+    | student | LETTERS__letters_score | LETTERS__letters_date | SCREENER__shapes_score | SCREENER__shapes_date | SCREENER__letters_score | SCREENER__letters_date |
+    |---------|------------------------|-----------------------|------------------------|-----------------------|-------------------------|------------------------|
+    | 100     | 5                      | 3/24                  | 8                      | 3/24                  | 5                       | 3/24                   |
+
+        :param file:
+        :param config:
+        :param sep:
+        :return: List of combined header names
+        """
+        # Read the first N rows as headers
+        with open(file, 'r', encoding=encoding) as f:
+            reader = csv.reader(f, delimiter=sep if sep else ',')
+            headers = [next(reader) for _ in range(sparse_header_rows)]
+
+        if len(headers) < 2:
+            self.error_handler.throw(
+                f"`sparse_header_rows` must be at least 2, got {sparse_header_rows}"
+            )
+
+        # Process headers to get long headers
+        long_headers = pd.DataFrame({
+            'col_i': [idx for row in headers for idx, value in enumerate(row)],
+            'value': [value.strip() if value and value.strip() else None for row in headers for value in row],
+            'row_i': [row_i for row_i, row in enumerate(headers) for _ in row]
+        })
+        # Forward fill long headers within each row
+        long_headers['value'] = long_headers.groupby('row_i')['value'].ffill()
+
+        # Pivot back to wide format
+        wide_headers = long_headers.pivot_table(
+            values='value', 
+            index='col_i', 
+            columns='row_i', 
+            aggfunc='first'
+        ).reset_index()
+
+        # Concatenate column names with separator '__'
+        wide_headers['concat_colname'] = wide_headers[[0, sparse_header_rows - 1]].apply(
+            lambda x: '__'.join(x.dropna().astype(str)), 
+            axis=1
+        )
+        # Remove leading and trailing underscores
+        wide_headers['concat_colname'] = wide_headers['concat_colname'].apply(lambda x: re.sub('^_+|_+$', '', x))
+
+        return wide_headers['concat_colname'].tolist()
+
     def _get_read_lambda(self, file_type: str, sep: Optional[str] = None):
         """
 
@@ -335,9 +395,24 @@ class FileSource(Source):
             _header_rows = config.get('header_rows', 1)
             return int(_header_rows) - 1  # If header_rows = 1, skip none.
 
+        def __read_csv(file, config):
+            """ Read CSV with sparse header processing if specified. """
+            sparse_header_rows = self.error_handler.assert_get_key(config, 'sparse_header_rows', dtype=int, required=False)
+            encoding = config.get('encoding', "utf8")
+            return dd.read_csv(
+                file, 
+                sep=sep, 
+                dtype=str, 
+                encoding=encoding, 
+                keep_default_na=False, 
+                skiprows=sparse_header_rows if sparse_header_rows else __get_skiprows(config),
+                names=self._process_sparse_headers(file, sparse_header_rows, encoding, sep=sep) if sparse_header_rows else None
+            )
+
         # We don't want to activate the function inside this helper function.
         read_lambda_mapping = {
-            'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
+            'csv'       : __read_csv,
+            'tsv'       : __read_csv,
             'excel'     : lambda file, config: pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False),
             'feather'   : lambda file, _     : pd.read_feather(file),
             'fixedwidth': self.__read_fwf,
@@ -350,7 +425,6 @@ class FileSource(Source):
             'spss'      : lambda file, _     : pd.read_spss(file),
             'stata'     : lambda file, _     : pd.read_stata(file),
             'xml'       : lambda file, config: pd.read_xml(file, xpath=config.get('xpath', "./*")),
-            'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
         }
         return read_lambda_mapping.get(file_type)
 
