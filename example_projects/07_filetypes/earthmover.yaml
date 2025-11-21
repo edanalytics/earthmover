@@ -53,10 +53,9 @@ sources:
     file: ./sources/users_sparse_headers.csv
     # ^ This CSV has a "sparse header" structure:
     #   Row 1: Sparse category headers (Math Scores, English Scores)
-    #   Row 2: Empty row
-    #   Row 3: Actual column names (student_id, test1, test2, test3, etc.)
+    #   Row 2: Actual column names (student_id, test1, test2, test3, etc.)
     #   The sparse_header_rows setting combines row 1 and row 3 with "__" separator
-    sparse_header_rows: 3
+    sparse_header_rows: 2
 
 transformations:
   users4:
