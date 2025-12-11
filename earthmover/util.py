@@ -123,12 +123,12 @@ def jinja2_template_error_lineno():
         tb = tb.tb_next
 
 
-def build_jinja_template(template_string: str, macros: str = ""):
+def build_jinja_template(template_string: str, macros: str = "", base_dir: str = './'):
     """
 
     """
     template = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(os.path.dirname('./'))
+        loader=jinja2.FileSystemLoader(base_dir)
     ).from_string(macros.strip() + template_string)
 
     template.globals['md5'] = lambda x: hashlib.md5(x.encode('utf-8')).hexdigest()
