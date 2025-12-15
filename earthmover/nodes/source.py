@@ -347,7 +347,7 @@ class FileSource(Source):
             """ Flatten and (potentially) fill multi-level (potentially sparse) headers for CSV, TSV, and Excel reads. """
             _header = config.get('header_rows', 1)
             _fill_sparse_headers = config.get('fill_sparse_headers', False)
-            if type(_header) is list and type(_header) is not str:
+            if type(_header) is list:
                 pass
             elif type(_header) is int or type(_header) is str:
                 _header = [ int(_header) - 1 ]
