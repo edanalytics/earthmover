@@ -182,15 +182,15 @@ Each source must have a name (which is how it is referenced by transformations a
 
 | source type | format | file type | notes |
 |---|---|---|---|
-| file {: rowspan=13} | row-based {: rowspan=3} | `.csv` | Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8). |
-| `.tsv` | Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8). |
+| file {: rowspan=13} | row-based {: rowspan=3} | `.csv` | Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8). See also [multi-line & sparse headers](#multi-line-sparse-headers). |
+| `.tsv` | Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8). See also [multi-line & sparse headers](#multi-line-sparse-headers). |
 | `.txt` | A fixed-width text file; see the [documentation below](#fixed-width-config) for configuration details. |
 | column-based | `.parquet`, `.feather`, `.orc` | These require the [`pyarrow` library](https://arrow.apache.org/docs/python/index.html), which can be installed with `pip install pyarrow` or similar |
 | structured {: rowspan=4} | `.json` | Optionally specify a `object_type` (`frame` or `series`) and `orientation` (see [these docs](https://pandas.pydata.org/docs/reference/api/pandas.read_json.html)) to interpret different JSON structures. |
 | `.jsonl` or `.ndjson` | Files with a flat JSON structure per line. |
 | `.xml` | Optionally specify an `xpath` to [select a set of nodes](https://pandas.pydata.org/docs/reference/api/pandas.read_xml.html) deeper in the XML. |
 | `.html` | Optionally specify a regex to `match` for [selecting one of many tables](https://pandas.pydata.org/docs/reference/api/pandas.read_html.html) in the HTML. This can be used to extract tables from a live web page. |
-| Excel | `.xls`, `.xlsx`, `.xlsm`, `.xlsb`, `.odf`, `.ods` and `.odt` | Optionally specify the `sheet` name (as a string) or index (as an integer) to load. |
+| Excel | `.xls`, `.xlsx`, `.xlsm`, `.xlsb`, `.odf`, `.ods` and `.odt` | Optionally specify the `sheet` name (as a string) or index (as an integer) to load. See also [multi-line headers](#multi-line-sparse-headers). |
 | other {: rowspan=4} | `.pkl` or `.pickle` | A [pickled](https://docs.python.org/3/library/pickle.html) Python object (typically a Pandas dataframe) |
 | `.sas7bdat` | A [SAS data file](https://documentation.sas.com/doc/en/pgmsascdc/9.4_3.5/hostwin/n0sk6o15955yoen19n9ghdziqw1u.htm) |
 | `.sav` | A [SPSS data file](https://www.ibm.com/docs/en/spss-statistics/saas?topic=files-spss-statistics-data) |
@@ -199,6 +199,59 @@ Each source must have a name (which is how it is referenced by transformations a
 | FTP | various | - | FTP file sources are supported via [ftplib](https://docs.python.org/3/library/ftplib.html). They must specify an FTP `connection` string with the path to the file. |
 
 File `type` is inferred from the file extension, however you may manually specify `type:` (`csv`, `tsv`, `fixedwidth`, `parquet`, `feather`, `orc`, `json`, `jsonl`, `xml`, `html`, `excel`, `pickle`, `sas`, `spss`, or `stata`) to force `earthmover` to treat a file with an arbitrary extension as a certain type. Remote file paths (`https://somesite.com/path/to/file.csv`) generally work.
+
+#### Multi-line & sparse headers
+`csv`, `tsv`, and `excel` files may have **multi-line headers**.
+
+??? info "Multi-line header example"
+    ```csv
+    ,,X,X,Y,Y
+    a,b,a,b,a,b
+    1,2,3,4,5,6
+    7,8,9,10,11,12
+    ```
+    (Both header lines are needed to disambiguate between columns `X.a` and `Y.a`.)
+
+`earthmover` supports multi-line headers via a _list_ of (0-based) `header_rows` indices. (Omitted row indices are skipped.) The final column names will be formed by joining column names from each level with two underscores (`__`).
+
+Furthermore, some `csv` and `tsv` files may have **sparse** multi-line headers.
+
+??? info "Sparse multi-line header example"
+    ```csv
+    ,,X,,Y,
+    a,b,a,b,a,b
+    1,2,3,4,5,6
+    7,8,9,10,11,12
+    ```
+    (In the first header row, `X` and `Y` can be filled to the right to produce the first example.)
+
+`earthmover` additionally supports filling in sparse headers with `fill_sparse_headers: True`, which fills non-empty column names to the right &mdash; up to the next non-empty column name.
+
+
+!!! info "Configuration example"
+
+    Puting these together, an `earthmover.yml` such as
+    ```yaml
+    sources:
+      mydata:
+        file: ./example.csv
+        header_rows: [0, 1]
+        fill_sparse_headers: True
+    ```
+    with a file like
+    ```csv
+    ,,X,,Y,
+    a,b,a,b,a,b
+    1,2,3,4,5,6
+    7,8,9,10,11,12
+    ```
+    will produce a dataframe with column names like
+
+    | a | b | X__a | X__B | Y__a | Y__b |
+    | --- | --- | --- | --- | --- | --- |
+    | 1 | 2 | 3 | 4 | 5 | 6 |
+    | 7 | 8 | 9 | 10 | 11 | 12 |
+
 
 
 #### Fixed-width config
@@ -471,6 +524,28 @@ Using a fixed-width file (FWF) as a source requires additional metadata, configu
     sources:
       mydata:
         connection: "ftp://user:pass@host:port/path/to/mydata.csv"
+    ```
+
+=== "`.csv` (multi-line & sparse header)"
+
+    ```yaml+jinja
+    sources:
+      mydata:
+        file: ./sources/mydata.csv
+        header_rows: [0,2,3]
+        fill_sparse_headers: True
+    ```
+
+    (for an input file like...)
+
+    ```csv title="mydata.csv"
+    I,,,,II,,,,III,,,,IV,,,
+    --- this line is ignored ---
+    1,,2,,3,,4,,5,,6,,7,,8,
+    a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p
+    00,01,02,03,04,05,06,07,08,09,0A,0B,0C,0D,0E,0F
+    10,11,12,13,14,15,16,17,18,19,1A,1B,1C,1D,1E,1F
+    ...
     ```
 
 <hr />

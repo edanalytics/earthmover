@@ -81,5 +81,11 @@ earthmover run -f
 rm -rf output/*
 echo "  ... done!"
 
+echo "  running 13_multiline_sparse_headers..."
+cd ../13_multiline_sparse_headers/
+earthmover run -f
+rm -rf output/*
+echo "  ... done!"
+
 cd ../
 echo "all examples have run, goodbye"

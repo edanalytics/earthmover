@@ -107,7 +107,8 @@ class FileSource(Source):
     is_hashable: bool = True
     allowed_configs: Tuple[str] = (
         'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
-        'file', 'type', 'columns', 'header_rows', 'colspec_file', 'colspecs', 'colspec_headers', 'rename_cols',
+        'file', 'type', 'columns', 'header_rows', 'fill_sparse_headers',
+        'colspec_file', 'colspecs', 'colspec_headers', 'rename_cols',
         'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
     )
 
@@ -331,14 +332,68 @@ class FileSource(Source):
         """
         # Define any other helpers that will be used below.
         def __get_skiprows(config: 'YamlMapping'):
-            """ Retrieve or set default for header_rows value for CSV reads. """
-            _header_rows = config.get('header_rows', 1)
-            return int(_header_rows) - 1  # If header_rows = 1, skip none.
+            """ Determine (from `header_rows`) how many rows to skip when reading CSV/TSV/Excel files. """
+            _skiprows = config.get('header_rows', 1)
+            if type(_skiprows) is list:
+                return max(_skiprows)
+            elif type(_skiprows) is int or type(_skiprows) is str:
+                return int(_skiprows) - 1  # If header_rows = 1, skip none.
+            else:
+                self.error_handler.throw(
+                    "source `header_rows` must be an integer (the row number to use as the header) or list (of row numbers that constitute a multi-line header)"
+                )
+
+        def __get_flattened_columns(file, config: 'YamlMapping'):
+            """ Flatten and (potentially) fill multi-level (potentially sparse) headers for CSV, TSV, and Excel reads. """
+            _header = config.get('header_rows', 1)
+            _fill_sparse_headers = config.get('fill_sparse_headers', False)
+            if type(_header) is list and type(_header) is not str:
+                pass
+            elif type(_header) is int or type(_header) is str:
+                _header = [ int(_header) - 1 ]
+            else:
+                self.error_handler.throw(
+                    "source `header_rows` must be an integer (the row number to use as the header) or list (of row numbers that constitute a multi-line header)"
+                )
+            # read the first few rows of the file to load the (potentially multi-line, potentially sparse) header
+            if file_type == 'csv' or file_type == 'tsv':
+                # (use `pd.read_csv()` - not `dd.read_csv()` - because dask doesn't support a [list] `header`)
+                df = pd.read_csv(file, sep=sep, dtype=str, encoding="utf8", keep_default_na=False, header=_header, nrows=max(_header)+1)
+            elif file_type == 'excel':
+                df = pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False, header=_header, nrows=max(_header)+1)
+            else:
+                self.error_handler.throw(
+                    "internal error: `__get_flattened_columns()` may only be called for csv, tsv, or excel `file_type`s."
+                )
+            if df.columns.nlevels == 1:
+                flattened_columns = df.columns
+            else:
+                # flatten multi-line header to tuples
+                flattened_columns = list(map(list, zip(*[            # 4. pivot cols x levels to levels x cols
+                    [
+                        "" if part.startswith('Unnamed: ') else part # 3. replace Unnamed with ""
+                        for part in list(tupl)                       # 2. iterate over levels
+                    ] for tupl in df.columns.to_flat_index()         # 1. iterate over flattened index tuples
+                ])))
+                # fill in sparse header
+                if _fill_sparse_headers:
+                    flattened_columns = [[
+                        value if value != ""                        # 3. fill in value, if it's not empty; else...
+                        else next((s for s in row[i::-1] if s), "") # 4. first non-empty string value moving backwards, or ""
+                        for i, value in enumerate(row)              # 2. iterate over col names in header row
+                    ] for row in flattened_columns ]                # 1. iterate over header levels
+                # flatten multi-line header tuples to single string col names
+                flattened_columns = [
+                    "__".join(x).removeprefix("__").removesuffix("__") # 2. join across levels, trimming
+                    for x in list(map(list, zip(*flattened_columns)))  # 1. pivot back to cols x levels
+                ]
+            return flattened_columns
+                
 
         # We don't want to activate the function inside this helper function.
         read_lambda_mapping = {
-            'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
-            'excel'     : lambda file, config: pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False),
+            'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, header=0, skiprows=__get_skiprows(config), names=__get_flattened_columns(file, config)),
+            'excel'     : lambda file, config: pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False, header=0, skiprows=__get_skiprows(config), names=__get_flattened_columns(file, config)),
             'feather'   : lambda file, _     : pd.read_feather(file),
             'fixedwidth': self.__read_fwf,
             'html'      : lambda file, config: pd.read_html(file, match=config.get('match', ".+"), keep_default_na=False)[0],
@@ -350,7 +405,7 @@ class FileSource(Source):
             'spss'      : lambda file, _     : pd.read_spss(file),
             'stata'     : lambda file, _     : pd.read_stata(file),
             'xml'       : lambda file, config: pd.read_xml(file, xpath=config.get('xpath', "./*")),
-            'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, skiprows=__get_skiprows(config)),
+            'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, header=0, skiprows=__get_skiprows(config), names=__get_flattened_columns(file, config)),
         }
         return read_lambda_mapping.get(file_type)
 
