@@ -333,11 +333,11 @@ class FileSource(Source):
         # Define any other helpers that will be used below.
         def __get_skiprows(config: 'YamlMapping'):
             """ Determine (from `header_rows`) how many rows to skip when reading CSV/TSV/Excel files. """
-            _skiprows = config.get('header_rows', 1)
-            if type(_skiprows) is list:
-                return max(_skiprows)
-            elif type(_skiprows) is int or type(_skiprows) is str:
-                return int(_skiprows) - 1  # If header_rows = 1, skip none.
+            _header_rows = config.get('header_rows', 1)
+            if type(_header_rows) is list:
+                return max(_header_rows)
+            elif type(_header_rows) is int or type(_header_rows) is str:
+                return int(_header_rows) - 1  # If header_rows = 1, skip none.
             else:
                 self.error_handler.throw(
                     "source `header_rows` must be an integer (the row number to use as the header) or list (of row numbers that constitute a multi-line header)"
@@ -345,12 +345,12 @@ class FileSource(Source):
 
         def __get_flattened_columns(file, config: 'YamlMapping'):
             """ Flatten and (potentially) fill multi-level (potentially sparse) headers for CSV, TSV, and Excel reads. """
-            _header = config.get('header_rows', 1)
+            _header_rows = config.get('header_rows', 1)
             _fill_sparse_headers = config.get('fill_sparse_headers', False)
-            if type(_header) is list:
+            if type(_header_rows) is list:
                 pass
-            elif type(_header) is int or type(_header) is str:
-                _header = [ int(_header) - 1 ]
+            elif type(_header_rows) is int or type(_header_rows) is str:
+                _header_rows = [ int(_header_rows) - 1 ]
             else:
                 self.error_handler.throw(
                     "source `header_rows` must be an integer (the row number to use as the header) or list (of row numbers that constitute a multi-line header)"
@@ -358,9 +358,9 @@ class FileSource(Source):
             # read the first few rows of the file to load the (potentially multi-line, potentially sparse) header
             if file_type == 'csv' or file_type == 'tsv':
                 # (use `pd.read_csv()` - not `dd.read_csv()` - because dask doesn't support a [list] `header`)
-                df = pd.read_csv(file, sep=sep, dtype=str, encoding="utf8", keep_default_na=False, header=_header, nrows=max(_header)+1)
+                df = pd.read_csv(file, sep=sep, dtype=str, encoding="utf8", keep_default_na=False, header=_header_rows, nrows=max(_header_rows)+1)
             elif file_type == 'excel':
-                df = pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False, header=_header, nrows=max(_header)+1)
+                df = pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False, header=_header_rows, nrows=max(_header_rows)+1)
             else:
                 self.error_handler.throw(
                     "internal error: `__get_flattened_columns()` may only be called for csv, tsv, or excel `file_type`s."
