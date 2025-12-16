@@ -334,9 +334,9 @@ class FileSource(Source):
         def __get_skiprows(config: 'YamlMapping'):
             """ Determine (from `header_rows`) how many rows to skip when reading CSV/TSV/Excel files. """
             _header_rows = config.get('header_rows', 1)
-            if type(_header_rows) is list:
+            if isinstance(_header_rows, list):
                 return max(_header_rows)
-            elif type(_header_rows) is int or type(_header_rows) is str:
+            elif isinstance(_header_rows, int) or isinstance(_header_rows, str):
                 return int(_header_rows) - 1  # If header_rows = 1, skip none.
             else:
                 self.error_handler.throw(
@@ -347,9 +347,9 @@ class FileSource(Source):
             """ Flatten and (potentially) fill multi-level (potentially sparse) headers for CSV, TSV, and Excel reads. """
             _header_rows = config.get('header_rows', 1)
             _fill_sparse_headers = config.get('fill_sparse_headers', False)
-            if type(_header_rows) is list:
+            if isinstance(_header_rows, list):
                 pass
-            elif type(_header_rows) is int or type(_header_rows) is str:
+            elif isinstance(_header_rows, int) or isinstance(_header_rows, str):
                 _header_rows = [ int(_header_rows) - 1 ]
             else:
                 self.error_handler.throw(
@@ -366,27 +366,38 @@ class FileSource(Source):
                     "internal error: `__get_flattened_columns()` may only be called for csv, tsv, or excel `file_type`s."
                 )
             if df.columns.nlevels == 1:
-                flattened_columns = df.columns
-            else:
-                # flatten multi-line header to tuples
-                flattened_columns = list(map(list, zip(*[            # 4. pivot cols x levels to levels x cols
-                    [
-                        "" if part.startswith('Unnamed: ') else part # 3. replace Unnamed with ""
-                        for part in list(tupl)                       # 2. iterate over levels
-                    ] for tupl in df.columns.to_flat_index()         # 1. iterate over flattened index tuples
-                ])))
-                # fill in sparse header
-                if _fill_sparse_headers:
-                    flattened_columns = [[
-                        value if value != ""                        # 3. fill in value, if it's not empty; else...
-                        else next((s for s in row[i::-1] if s), "") # 4. first non-empty string value moving backwards, or ""
-                        for i, value in enumerate(row)              # 2. iterate over col names in header row
-                    ] for row in flattened_columns ]                # 1. iterate over header levels
-                # flatten multi-line header tuples to single string col names
-                flattened_columns = [
-                    "__".join(x).removeprefix("__").removesuffix("__") # 2. join across levels, trimming
-                    for x in list(map(list, zip(*flattened_columns)))  # 1. pivot back to cols x levels
-                ]
+                return df.columns
+            # else: flatten multi-line header to tuples
+            # an example: given the header
+            # > ,,X,,Y,
+            # > a,b,a,b,a,b
+            # The steps below produce:
+            # 1. [("Unnamed: 1","a"), ("Unnamed: 2","b"), ("X","a"), ("Unnamed: 3","b"), ("Y","a"), ("Unnamed: 4","b")]
+            # 3. [("","a"), ("","b"), ("X","a"), ("","b"), ("Y","a"), ("","b")]
+            # 4. [["", "", "X", "", "Y", ""], ["a", "b", "a", "b", "a", "b"]]
+            flattened_columns = list(map(list, zip(*[            # 4. pivot cols x levels to levels x cols
+                [
+                    "" if part.startswith('Unnamed: ') else part # 3. replace Unnamed with ""
+                    for part in list(tupl)                       # 2. iterate over levels
+                ] for tupl in df.columns.to_flat_index()         # 1. iterate over flattened index tuples
+            ])))
+            # fill in sparse header
+            # continuing the above example, the below produces:
+            # [["", "", "X", "X", "Y", "Y"], ["a", "b", "a", "b", "a", "b"]]
+            if _fill_sparse_headers:
+                flattened_columns = [[
+                    value if value                              # 3. fill in value, if it's not empty; else...
+                    else next((s for s in row[i::-1] if s), "") # 4. first non-empty string value moving backwards, or ""
+                    for i, value in enumerate(row)              # 2. iterate over col names in header row
+                ] for row in flattened_columns ]                # 1. iterate over header levels
+            # flatten multi-line header tuples to single string col names
+            # and finally, the below gives:
+            # 1. [["", "a"], ["","b"], ["X","a"], ["X","b"], ["Y","a"], ["Y","b"]]
+            # 2. ["a", "b", "X__a", "X__b", "Y__a", "Y__b"]
+            flattened_columns = [
+                "__".join(x).removeprefix("__").removesuffix("__") # 2. join across levels, trimming
+                for x in zip(*flattened_columns)  # 1. pivot back to cols x levels
+            ]
             return flattened_columns
                 
 
