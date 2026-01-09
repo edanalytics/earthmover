@@ -1,6 +1,16 @@
 This page tracks releases of `earthmover`, with a summary of what was changed, fixed, added in each new version.
 
 
+## 2026 releases
+
+### [v0.4.8](https://github.com/edanalytics/earthmover/releases/tag/v0.4.8)
+(Released 2026-01-09)
+
+* bugfix: [fix Jinja `import`s pathing under package composition](https://github.com/edanalytics/earthmover/pull/178)
+* feature: [add handling for multi-line and sparse header structures](https://github.com/edanalytics/earthmover/pull/168)
+
+
+
 ## 2025 releases
 
 ### [v0.4.7](https://github.com/edanalytics/earthmover/releases/tag/v0.4.7)

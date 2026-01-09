@@ -1,0 +1,18 @@
+version: 2
+
+config:
+  output_dir: ./output/
+  show_stacktrace: True
+  log_level: INFO
+
+sources:
+  test:
+    file: ./sources/test.csv
+    header_rows: [0,2,3]
+    fill_sparse_headers: True
+
+destinations:
+  test:
+    source: $sources.test
+    extension: jsonl
+    linearize: True
