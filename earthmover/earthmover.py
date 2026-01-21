@@ -479,6 +479,14 @@ class Earthmover:
         if all(False for _ in self.package_graph.successors('root')):
             return
         
+        # Convert any filepath parameters into absolute paths prior to merging to avoid looking for files within packages
+        for param in self.params:
+            try:
+                if os.path.exists(self.params[param]):
+                    self.params[param] = os.path.abspath(self.params[param])
+            finally:
+                continue
+        
         self.build_package_graph(root_node='root', package_subgraph=self.package_graph, packages_dir=self.packages_dir, install=False)
 
         # Merge each package yaml into the predecessor yaml, storing the result in the predecessor
