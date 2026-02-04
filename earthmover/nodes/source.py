@@ -358,7 +358,7 @@ class FileSource(Source):
             # read the first few rows of the file to load the (potentially multi-line, potentially sparse) header
             if file_type == 'csv' or file_type == 'tsv':
                 # (use `pd.read_csv()` - not `dd.read_csv()` - because dask doesn't support a [list] `header`)
-                df = pd.read_csv(file, sep=sep, dtype=str, encoding="utf8", keep_default_na=False, header=_header_rows, nrows=max(_header_rows)+1)
+                df = pd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, header=_header_rows, nrows=max(_header_rows)+1)
             elif file_type == 'excel':
                 df = pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False, header=_header_rows, nrows=max(_header_rows)+1)
             else:
