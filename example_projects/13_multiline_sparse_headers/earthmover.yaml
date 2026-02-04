@@ -10,6 +10,7 @@ sources:
     file: ./sources/test.csv
     header_rows: [0,2,3]
     fill_sparse_headers: True
+    encoding: Windows-1252
 
 destinations:
   test:
