@@ -1,0 +1,1739 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../contributing/">
+      
+      
+        <link rel="next" href="../license/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Changelog - earthmover docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#2026-releases" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="earthmover docs" class="md-header__button md-logo" aria-label="earthmover docs" data-md-component="logo">
+      
+  <img src="../assets/ea-earthmover-icon.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            earthmover docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Changelog
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/edanalytics/earthmover" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    earthmover
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../learn/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Learn
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../setup/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Setup
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../configuration/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Project configuration
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../usage/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Usage
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../practices/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Best Practices
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../design/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Design
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../packages/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Packages
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../contributing/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Contributing
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../license/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  License
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="earthmover docs" class="md-nav__button md-logo" aria-label="earthmover docs" data-md-component="logo">
+      
+  <img src="../assets/ea-earthmover-icon.png" alt="logo">
+
+    </a>
+    earthmover docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/edanalytics/earthmover" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    earthmover
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../learn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Learn
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../practices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Best Practices
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../packages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#2026-releases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026 releases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2026 releases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v049" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.4.9
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v048" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.4.8
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2025-releases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2025 releases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2025 releases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v047" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.4.7
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v046" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.4.6
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v045" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.4.5
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v044" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.4.4
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v043" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.4.3
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2024-releases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2024 releases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2024 releases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v042" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.4.2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v041" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.4.1
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v040" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.4.0
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v038" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.3.8
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v037" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.3.7
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v036" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.3.6
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v035" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.3.5
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v034" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.3.4
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v033" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.3.3
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v032" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.3.2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v031" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.3.1
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v030" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.3.0
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v021" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.2.1
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2023-releases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2023 releases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2023 releases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v020" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.2.0
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v016" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.1.6
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v015" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.1.5
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v014" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.1.4
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v013" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.1.3
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v012" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.1.2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v011" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.1.1
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v010" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.1.0
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v007" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.0.7
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v006" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.0.6
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2022-releases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2022 releases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2022 releases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v005" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.0.5
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v004" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.0.4
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v003" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.0.3
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v002" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.0.2
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../license/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    License
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+  <h1>Changelog</h1>
+
+<p>This page tracks releases of <code>earthmover</code>, with a summary of what was changed, fixed, added in each new version.</p>
+<h2 id="2026-releases">2026 releases</h2>
+<h3 id="v049"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.4.9">v0.4.9</a></h3>
+<p>(Released 2026-02-09)</p>
+<ul>
+<li>bugfix: <a href="https://github.com/edanalytics/earthmover/pull/183">fix links to doc site images</a></li>
+<li>bugfix: <a href="https://github.com/edanalytics/earthmover/pull/186">re-enable support for <code>encoding</code> field in CSV sources</a></li>
+</ul>
+<h3 id="v048"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.4.8">v0.4.8</a></h3>
+<p>(Released 2026-01-09)</p>
+<ul>
+<li>bugfix: <a href="https://github.com/edanalytics/earthmover/pull/178">fix Jinja <code>import</code>s pathing under package composition</a></li>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/168">add handling for multi-line and sparse header structures</a></li>
+</ul>
+<h2 id="2025-releases">2025 releases</h2>
+<h3 id="v047"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.4.7">v0.4.7</a></h3>
+<p>(Released 2025-11-13)</p>
+<ul>
+<li>bugfix: <a href="https://github.com/edanalytics/earthmover/pull/171">column jumbling when using <code>optional_columns</code></a></li>
+<li>bugfix: <a href="https://github.com/edanalytics/earthmover/pull/175"><code>earthmover init</code> failure when installed via pip</a></li>
+<li>bugfix: <a href="https://github.com/edanalytics/earthmover/pull/174">use <code>removeprefix()</code> not <code>lstrip()</code> when processing <code>--set</code> flags</a></li>
+<li>bugfix: <a href="https://github.com/edanalytics/earthmover/pull/170">prevent existing <code>value</code> column from being clobbered, if it exists</a></li>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/168">add <code>melt</code> and <code>pivot</code> dataframe operations</a></li>
+</ul>
+<h3 id="v046"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.4.6">v0.4.6</a></h3>
+<p>(Released 2025-08-14)</p>
+<ul>
+<li>bugfix: <a href="https://github.com/edanalytics/earthmover/pull/166"><code>rename_columns</code> operation to an existing column name could result in two columns of the same name; now this results in an error</a></li>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/165">Add support for non-UTF8 file encodings for fixed-width inputs</a></li>
+</ul>
+<h3 id="v045"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.4.5">v0.4.5</a></h3>
+<p>(Released 2025-07-11)</p>
+<ul>
+<li>bugfix: <a href="https://github.com/edanalytics/earthmover/pull/161">update MANIFEST.in to fix <code>earthmover init</code></a></li>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/148">New year, new docs!</a></li>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/156">wildcard matching for columns</a></li>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/159">multi-directional sorting</a></li>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/162">make <code>SqlSource</code>s hashable (work with state-tracking)</a></li>
+</ul>
+<h3 id="v044"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.4.4">v0.4.4</a></h3>
+<p>(Released 2025-03-06)</p>
+<ul>
+<li>bugfix: <a href="https://github.com/edanalytics/earthmover/pull/153">improve exception-handling when loading a <code>SQLSource</code> using SQLAlchemy 2.x</a></li>
+</ul>
+<h3 id="v043"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.4.3">v0.4.3</a></h3>
+<p>(Released 2025-01-23)</p>
+<ul>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/139">allow a <code>colspec_file</code> config with column info for <code>fixedwidth</code> inputs</a></li>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/150">error messages for <code>keep_columns</code> and <code>drop_columns</code> now specify the columns</a></li>
+</ul>
+<h2 id="2024-releases">2024 releases</h2>
+<h3 id="v042"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.4.2">v0.4.2</a></h3>
+<p>(Released 2024-11-15)</p>
+<ul>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/141">interpolate params into destination templates</a></li>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/143">lowercase columns</a></li>
+<li>fix: <a href="https://github.com/edanalytics/earthmover/pull/142">optional fields recursion</a></li>
+<li>fix: <a href="https://github.com/edanalytics/earthmover/pull/140"><code>earthmover deps</code> fails when not all params are passed</a></li>
+<li>fix: <a href="https://github.com/edanalytics/earthmover/pull/146">make all pandas/dask config conditional on &gt;3.10</a></li>
+</ul>
+<h3 id="v041"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.4.1">v0.4.1</a></h3>
+<p>(Released 2024-11-15)</p>
+<ul>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/133">allow specifying <code>colspecs</code> for fixed-width files</a></li>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/130">allow <code>config</code> params to be passable at the CLI and have a <code>parameter_default</code></a></li>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/137">refactor Source columns list logic as a select instead of a rename</a></li>
+<li>bugfix: []<code>earthmover deps</code> failed to find nested local packages](https://github.com/edanalytics/earthmover/pull/134)</li>
+<li>bugfix: <a href="https://github.com/edanalytics/earthmover/pull/134">relative paths not resolved correct when using project composition</a></li>
+<li>bugfix: <code>--results-file</code> required a directory prefix</li>
+<li>bugfix: <a href="https://github.com/edanalytics/earthmover/pull/136">some functionality was broken for Python versions &lt; 3.10</a></li>
+</ul>
+<h3 id="v040"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.4.0">v0.4.0</a></h3>
+<p>(Released 2024-10-16)</p>
+<ul>
+<li>feature: add support for Python 3.12, with corresponding updates to core dataframe dependencies</li>
+<li>feature: add <code>--set</code> flag for overriding values within <code>earthmover.yml</code> from the command line</li>
+</ul>
+<h3 id="v038"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.3.8">v0.3.8</a></h3>
+<p>(Released 2024-09-06)</p>
+<ul>
+<li>bugfix: Jinja in destination <code>header</code> failed if dataframe is empty</li>
+</ul>
+<h3 id="v037"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.3.7">v0.3.7</a></h3>
+<p>(Released 2024-09-04)</p>
+<ul>
+<li>feature: implementing a limit_rows operation</li>
+<li>feature: add support for a <code>require_rows</code> boolean or non-negative int on any node</li>
+<li>feature: add support for Jinja in a destination node header and footer</li>
+<li>bugfix: union fails with duplicate columns</li>
+</ul>
+<h3 id="v036"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.3.6">v0.3.6</a></h3>
+<p>(Released 2024-08-07)</p>
+<ul>
+<li>feature: add <code>json_array_agg</code> function to <code>group_by</code> operation</li>
+<li>feature: select all columns using "*" in <code>modify_columns</code> operation</li>
+<li>internal: set working directory to the location of the <code>earthmover.yaml</code> file</li>
+<li>documentation: add information on <code>earthmover init</code> and <code>earthmover clean</code> to the README</li>
+<li>bugfix: fix bug with <code>earthmover clean</code> that could have removed earthmover.yaml files</li>
+</ul>
+<h3 id="v035"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.3.5">v0.3.5</a></h3>
+<p>(Released 2024-07-12)</p>
+<ul>
+<li>feature: add <code>earthmover init</code> command to initialize a new sample project in the expected bundle structure</li>
+<li>internal: expand test run to include the new <code>debug</code> and <code>flatten</code> operations, as well as a nested JSON source file</li>
+<li>internal: improve customization in write behavior in new file destinations</li>
+<li>bugfix: Fix bug when writing null values in <code>FileDestination</code></li>
+</ul>
+<h3 id="v034"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.3.4">v0.3.4</a></h3>
+<p>(Released 2024-06-26)</p>
+<ul>
+<li>hotfix: Fix bug when writing out JSON in <code>FileDestination</code></li>
+</ul>
+<h3 id="v033"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.3.3">v0.3.3</a></h3>
+<p>(Released 2024-06-18)</p>
+<ul>
+<li>hotfix: Resolve incompatible package dependencies</li>
+<li>hotfix: Fix type casting of nested JSON for destination templates</li>
+</ul>
+<h3 id="v032"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.3.2">v0.3.2</a></h3>
+<p>(Released 2024-06-14)</p>
+<ul>
+<li>feature: Add <code>DebugOperation</code> for logging data head, tail, columns, or metadata midrun</li>
+<li>feature: Add <code>FlattenOperation</code> for splitting and exploding string columns into values</li>
+<li>feature: Add optional 'fill_missing_columns' field to <code>UnionOperation</code> to fill disjunct columns with nulls, instead of raising an error (default <code>False</code>)</li>
+<li>feature: Add <code>git_auth_timeout</code> config when entering Git credentials during package composition</li>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/87">Add <code>earthmover clean</code> command that removes local project artifacts</a></li>
+<li>feature: only output compiled template during <code>earthmover compile</code></li>
+<li>feature: Render full row into JSON lines when <code>template</code> is undefined in <code>FileDestination</code></li>
+<li>internal: Move <code>FileSource</code> size-checking and <code>FtpSource</code> FTP-connecting from compile to execute</li>
+<li>internal: Move template-file check from compile to execute in <code>FileDestination</code></li>
+<li>internal: Allow filepaths to be passed to an optional <code>FileSource</code>, and check for file before creating empty dataframe</li>
+<li>internal: Build an empty dataframe if an empty folder is passed to an optional <code>FileSource</code></li>
+<li>internal: fix some examples in README</li>
+<li>internal: remove GitPython dependency</li>
+<li>bugfix: fix bug in <code>FileDestination</code> where <code>linearize: False</code> resulted in BOM characters</li>
+<li>bugfix: fix bug where nested JSON would be loaded as a stringified Python dictionary</li>
+<li>bugfix: <a href="https://github.com/edanalytics/earthmover/pull/87">Ensure command list in help menu and log output is always consistent</a></li>
+<li>bugfix: fix bug in <code>ModifyColumnsOperation</code> where <code>__row_data__</code> was not exposed in Jinja templating</li>
+</ul>
+<h3 id="v031"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.3.1">v0.3.1</a></h3>
+<p>(Released 2024-04-26)</p>
+<ul>
+<li>internal: allow any ordering of Transformations during graph-building in compile</li>
+<li>internal: only create a <code>/packages</code> dir when <code>earthmover deps</code> succeeds</li>
+</ul>
+<h3 id="v030"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.3.0">v0.3.0</a></h3>
+<p>(Released 2024-04-17)</p>
+<ul>
+<li>feature: add project composition using <code>packages</code> keyword in template file (see README)</li>
+<li>feature: add installation extras for optional libraries, and improve error logging to notify which is missing</li>
+<li>feature: <code>GroupByWithRankOperation</code> cumulatively sums record counts by group-by columns</li>
+<li>feature: setting <code>log_level: DEBUG</code> in template configs or setting <code>debug: True</code> for a node displays the head of the node mid-run </li>
+<li>feature: add <code>optional_fields</code> key to all Sources to add optional empty columns when missing from schema</li>
+<li>feature: add optional <code>ignore_errors</code> and <code>exact_match</code> boolean flags to <code>DateFormatOperation</code></li>
+<li>internal: force-cast a dataframe to string-type before writing as a Destination</li>
+<li>internal: remove attempted directory-hashing when a source is a directory (i.e., Parquet)</li>
+<li>internal: refactor project to standardize import paths for Node and Operation</li>
+<li>internal: add <code>Node.full_name</code> attribute and <code>Node.set_upstream_source()</code> method</li>
+<li>internal: unify graph-building into compilation</li>
+<li>internal: refactor compilation and execution code for cleanliness</li>
+<li>internal: unify <code>Node.compile()</code> into initialization to ease Node development</li>
+<li>internal: Remove unused <code>group_by_with_count</code> and <code>group_by_with_agg</code> operations</li>
+</ul>
+<h3 id="v021"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.2.1">v0.2.1</a></h3>
+<p>(Released 2024-04-08)</p>
+<ul>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/75">adding fromjson() function to Jinja</a></li>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/68">fix docs typos</a></li>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/56"><code>SortRowsOperation</code> sorts the dataset by <code>columns</code></a></li>
+</ul>
+<h2 id="2023-releases">2023 releases</h2>
+<h3 id="v020"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.2.0">v0.2.0</a></h3>
+<p>(Released 2023-09-11)</p>
+<ul>
+<li>breaking change: remove <code>source</code> as Operation config and move to Transformation; this simplifies templates and reduces memory usage</li>
+<li>breaking change: <code>version: 2</code> required in Earthmover YAML files </li>
+<li>feature: <code>SnakeCaseColumnsOperation</code> converts all columns to snake_case</li>
+<li>feature: <code>show_progress</code> can be turned on globally in <code>config</code> or locally in any Source, Transformation, or Destination to display a progress bar</li>
+<li>feature: <code>repartition</code> can be turned on in any applicable <code>Node</code> to alter Dask partition-sizes post-execute</li>
+<li>feature: improve performance when writing Destination files</li>
+<li>feature: improved Earthmover YAML-parsing and config-retrieval</li>
+<li>internal: rename <code>YamlEnvironmentJinjaLoader</code> to <code>JinjaEnvironmentYamlLoader</code> for better transparency of use</li>
+<li>internal: simplify Earthmover.build_graph()</li>
+<li>internal: unify Jinja rendering into a single util function, instead of redeclaring across project</li>
+<li>internal: unify <code>Node.verify()</code> into <code>Node.execute()</code> for improved code legibility</li>
+<li>internal: improve attribute declarations across project</li>
+<li>internal: improve type-hinting and doc-strings across project</li>
+<li>bugfix: refactor SqlSource to be compatible with SQLAlchemy 2.x</li>
+</ul>
+<h3 id="v016"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.1.6">v0.1.6</a></h3>
+<p>(Released 2023-07-11)</p>
+<ul>
+<li>bugfix: <a href="https://github.com/edanalytics/earthmover/pull/40">fixing a bug to create the results_file directory if needed</a></li>
+<li>bugfix: <a href="https://github.com/edanalytics/earthmover/pull/41">process a copy of each nodes data at each step, to avoid modifying original node data which downstreams nodes may rely on</a></li>
+</ul>
+<h3 id="v015"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.1.5">v0.1.5</a></h3>
+<p>(Released 2023-06-13)</p>
+<ul>
+<li>bugfix: <a href="https://github.com/edanalytics/earthmover/pull/34">fixing a bug to skip hashing missing optional source files</a></li>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/37">adding a tmp_dir config so we can tell Dask where to store data it spills to disk</a></li>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/35">adding a <code>--results-file</code> option to produce structured run metadata</a></li>
+<li>feature: <a href="https://github.com/edanalytics/earthmover/pull/36">adding a skip exit code</a></li>
+</ul>
+<h3 id="v014"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.1.4">v0.1.4</a></h3>
+<p>(Released 2023-05-12)</p>
+<ul>
+<li>bugfix: <code>config.state</code>_file was being ignored when specified</li>
+<li>
+<p>bugfix: further issues with multi-line <code>config.macros</code> - the resolution here (hopefully the last one!) is to pre-load macros (so they can be injected into run-time Jinja contexts) and then just allow the Jinja to render and macro definitions down to nothing in the config YAML... you do have to be careful with Jinja linebreak suppression, i.e.
+    <div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">config</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">macros</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">&gt;</span><span class="w"> </span><span class="c1"># this is a macro!</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="no">{%- macro test() -%}</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="no">testing!</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="no">{%- endmacro -%}</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nt">sources</span><span class="p">:</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nn">...</span>
+</span></code></pre></div>
+    could render down to
+    <div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">config</span><span class="p">:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">macros</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">&gt;</span><span class="w"> </span><span class="c1"># this is a macro!sources:</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nn">...</span>
+</span></code></pre></div>
+    which will fail with an error about no sources defined.</p>
+</li>
+<li>
+<p>bugfix: charset issues when reading / writing non-UTF8 files - this should be resolved by enforcing every file read/write to specify UTF8 encoding</p>
+</li>
+</ul>
+<h3 id="v013"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.1.3">v0.1.3</a></h3>
+<p>(Released 2023-05-05)</p>
+<ul>
+<li>feature: implement ability to call <code>{{ md5(column) }}</code> in Jinja throughout eathmover, with a framework for other Python functions to be added in the future</li>
+<li>bugfix: fix multi-line macros issue</li>
+</ul>
+<h3 id="v012"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.1.2">v0.1.2</a></h3>
+<p>(Released 2023-05-02)</p>
+<ul>
+<li>bugfix: fix continued issues with environment variable expansion under Windows by changing from <code>os.path.expandvars()</code> to native Python <code>String.Template</code> implementation</li>
+<li>bugfix: change how earthmover loads <code>config.macros</code> from YAML to prevent issues with multi-line macros definitions</li>
+</ul>
+<h3 id="v011"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.1.1">v0.1.1</a></h3>
+<p>(Released 2023-03-27)</p>
+<ul>
+<li>bugfix: a single quote in the config YAML could prevent environment variable expansion from working since <code>os.path.expandvars()</code> <a href="https://hg.python.org/cpython/file/v2.7.3/Lib/ntpath.py#l330">does not expand variables within single quotes</a> in Python under Windows</li>
+</ul>
+<h3 id="v010"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.1.0">v0.1.0</a></h3>
+<p>(Released 2023-03-23)</p>
+<ul>
+<li>feature: added parse-time Jinja templating to YAML configuration</li>
+</ul>
+<blockquote>
+<p><img alt="⚠" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@16.0.1/assets/svg/26a0.svg" title=":warning:" /> <strong>Potentially breaking change:</strong> if your config YAML contains <code>add_columns</code> or <code>modify_columns</code> operations <em>with Jinja expressions</em>, these will now be parsed at YAML load time. To preserve the Jinja for runtime parsing, wrap the expressions with <code>{%raw%}...{%endraw%}</code>. See <a href="../usage/#jinja-in-yaml-configuration">YAML parsing</a> for further information.</p>
+</blockquote>
+<ul>
+<li>feature: removed dependency on matplotlib, which is only required if your YAML specified <code>config.show_graph: True</code>... now if you try to <code>show_graph</code> without matplotlib installed, you'll get an error prompting you to install matplotlib</li>
+</ul>
+<h3 id="v007"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.0.7">v0.0.7</a></h3>
+<p>(Released 2023-02-23)</p>
+<ul>
+<li>feature: added <code>str_min()</code> and <code>str_max()</code> functions for <code>group by</code> operation</li>
+</ul>
+<h3 id="v006"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.0.6">v0.0.6</a></h3>
+<p>(Released 2023-02-17)</p>
+<ul>
+<li>feature: pass <code>__row_data__</code> dict into Jinja templates for easier dynamic column referencing</li>
+<li>bugfix: parameter / env var interpolation into YAML keys, not just values</li>
+<li>refactor error handling key assertion methods</li>
+<li>refactor YAML loader line number context handling</li>
+</ul>
+<h2 id="2022-releases">2022 releases</h2>
+<h3 id="v005"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.0.5">v0.0.5</a></h3>
+<p>(Released 2022-12-16)</p>
+<ul>
+<li>trim nodes not connected to a destination from DAG</li>
+<li>ensure all source datatypes return a Dask dataframe</li>
+<li>update <a href="../usage/#optional-sources">optional source functionality</a> to require <code>columns</code> list, and pass an empty dataframe through the DAG</li>
+</ul>
+<h3 id="v004"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.0.4">v0.0.4</a></h3>
+<p>(Released 2022-10-27)</p>
+<ul>
+<li>support running in Google Colab</li>
+</ul>
+<h3 id="v003"><a href="https://github.com/edanalytics/earthmover/releases/tag/v0.0.3">v0.0.3</a></h3>
+<p>(Released 2022-10-27)</p>
+<ul>
+<li>support for Python 3.7</li>
+</ul>
+<h3 id="v002"><a href="https://github.com/edanalytics/earthmover/releases/tag/0.0.2">v0.0.2</a></h3>
+<p>(Released 2022-09-22)</p>
+<ul>
+<li>initial release</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../contributing/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Contributing">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Contributing
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../license/" class="md-footer__link md-footer__link--next" aria-label="Next: License">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                License
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      <code>earthmover</code> is maintained by <a href="https://www.edanalytics.org/">Education Analytics</a>
+    </div>
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.linkedin.com/company/education-analytics" target="_blank" rel="noopener" title="www.linkedin.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3M135.4 416H69V202.2h66.5V416zM102.2 96a38.5 38.5 0 1 1 0 77 38.5 38.5 0 1 1 0-77m282.1 320h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://x.com/AnalyticsEA" target="_blank" rel="noopener" title="x.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M357.2 48h70.6L273.6 224.2 455 464H313L201.7 318.6 74.5 464H3.8l164.9-188.5L-5.2 48h145.6l100.5 132.9zm-24.8 373.8h39.1L119.1 88h-42z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.instagram.com/educationanalytics/" target="_blank" rel="noopener" title="www.instagram.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M224.3 141a115 115 0 1 0-.6 230 115 115 0 1 0 .6-230m-.6 40.4a74.6 74.6 0 1 1 .6 149.2 74.6 74.6 0 1 1-.6-149.2m93.4-45.1a26.8 26.8 0 1 1 53.6 0 26.8 26.8 0 1 1-53.6 0m129.7 27.2c-1.7-35.9-9.9-67.7-36.2-93.9-26.2-26.2-58-34.4-93.9-36.2-37-2.1-147.9-2.1-184.9 0-35.8 1.7-67.6 9.9-93.9 36.1s-34.4 58-36.2 93.9c-2.1 37-2.1 147.9 0 184.9 1.7 35.9 9.9 67.7 36.2 93.9s58 34.4 93.9 36.2c37 2.1 147.9 2.1 184.9 0 35.9-1.7 67.7-9.9 93.9-36.2 26.2-26.2 34.4-58 36.2-93.9 2.1-37 2.1-147.8 0-184.8M399 388c-7.8 19.6-22.9 34.7-42.6 42.6-29.5 11.7-99.5 9-132.1 9s-102.7 2.6-132.1-9c-19.6-7.8-34.7-22.9-42.6-42.6-11.7-29.5-9-99.5-9-132.1s-2.6-102.7 9-132.1c7.8-19.6 22.9-34.7 42.6-42.6 29.5-11.7 99.5-9 132.1-9s102.7-2.6 132.1 9c19.6 7.8 34.7 22.9 42.6 42.6 11.7 29.5 9 99.5 9 132.1s2.7 102.7-9 132.1"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/edanalytics" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.code.copy", "content.code.select", "navigation.footer", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.path", "navigation.expand", "toc.integrate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
