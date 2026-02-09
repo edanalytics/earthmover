@@ -3,6 +3,13 @@ This page tracks releases of `earthmover`, with a summary of what was changed, f
 
 ## 2026 releases
 
+### [v0.4.9](https://github.com/edanalytics/earthmover/releases/tag/v0.4.9)
+(Released 2026-02-09)
+
+* bugfix: [fix links to doc site images](https://github.com/edanalytics/earthmover/pull/183)
+* bugfix: [re-enable support for `encoding` field in CSV sources](https://github.com/edanalytics/earthmover/pull/186)
+
+
 ### [v0.4.8](https://github.com/edanalytics/earthmover/releases/tag/v0.4.8)
 (Released 2026-01-09)
 
