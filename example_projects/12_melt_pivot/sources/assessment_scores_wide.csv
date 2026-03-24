@@ -1,0 +1,11 @@
+student_id,student_name,grade_level,math_score,reading_score,science_score,writing_score
+001,Alice Johnson,9,85,92,78,88
+002,Bob Smith,9,92,87,85,90
+003,Carol Davis,10,78,95,82,85
+004,David Wilson,10,88,89,91,87
+005,Eve Brown,9,95,85,88,92
+006,Frank Miller,10,82,91,79,84
+007,Grace Lee,9,89,88,93,89
+008,Henry Taylor,10,91,84,86,91
+009,Iris Garcia,9,87,93,84,86
+010,Jack Anderson,10,93,87,90,88

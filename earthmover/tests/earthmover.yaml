@@ -407,6 +407,63 @@ transformations:
         from_format: "%m/%d/%Y"
         to_format: "%Y-%m-%d"
 
+  # Test melt operation - basic case with id_vars and value_vars
+  melt_basic:
+    source: $sources.mammal_species
+    operations:
+      - operation: melt
+        id_vars: [Species, Genus]
+        value_vars: [AvgWeightKg, AvgLifespanYrs]
+        var_name: measurement_type
+        value_name: measurement_value
+
+  # Test melt operation - no id_vars (melt all columns)
+  melt_no_id_vars:
+    source: $sources.bird_species
+    operations:
+      - operation: melt
+        value_vars: [avg_weight_kg, avg_lifespan_yrs]
+        var_name: attribute
+        value_name: value
+
+  # Test melt operation - single id_vars and value_vars (string format)
+  melt_single_vars:
+    source: $sources.fish_species
+    operations:
+      - operation: melt
+        id_vars: species
+        value_vars: avg_weight_kg
+        var_name: metric
+        value_name: measurement
+
+  # Test melt operation - no value_vars (melt all non-id_vars columns)
+  melt_no_value_vars:
+    source: $sources.reptile_species
+    operations:
+      - operation: melt
+        id_vars: [species, genus]
+        var_name: characteristic
+        value_name: value
+
+  # Test pivot operation - basic case with multi-column rows_by
+  pivot_basic:
+    source: $transformations.melt_basic
+    operations:
+      - operation: pivot
+        rows_by: [Species, Genus]
+        cols_by: measurement_type
+        values: measurement_value
+
+  # Test melt and pivot round-trip (should return to original format)
+  melt_pivot_roundtrip:
+    source: $transformations.pivot_basic
+    operations:
+      - operation: melt
+        id_vars: [Species, Genus]
+        value_vars: [AvgWeightKg, AvgLifespanYrs]
+        var_name: measurement_type
+        value_name: measurement_value
+
 
 destinations:
 
@@ -456,6 +513,43 @@ destinations:
 
   wildcards:
     source: $transformations.wildcards
+    template: ${BASE_DIR}/templates/verbatim.jsont
+    extension: jsonl
+    linearize: True
+
+  # Test outputs for melt and pivot operations
+  melt_basic_output:
+    source: $transformations.melt_basic
+    template: ${BASE_DIR}/templates/verbatim.jsont
+    extension: jsonl
+    linearize: True
+
+  melt_no_id_vars_output:
+    source: $transformations.melt_no_id_vars
+    template: ${BASE_DIR}/templates/verbatim.jsont
+    extension: jsonl
+    linearize: True
+
+  melt_single_vars_output:
+    source: $transformations.melt_single_vars
+    template: ${BASE_DIR}/templates/verbatim.jsont
+    extension: jsonl
+    linearize: True
+
+  melt_no_value_vars_output:
+    source: $transformations.melt_no_value_vars
+    template: ${BASE_DIR}/templates/verbatim.jsont
+    extension: jsonl
+    linearize: True
+
+  pivot_basic_output:
+    source: $transformations.pivot_basic
+    template: ${BASE_DIR}/templates/verbatim.jsont
+    extension: jsonl
+    linearize: True
+
+  melt_pivot_roundtrip_output:
+    source: $transformations.melt_pivot_roundtrip
     template: ${BASE_DIR}/templates/verbatim.jsont
     extension: jsonl
     linearize: True

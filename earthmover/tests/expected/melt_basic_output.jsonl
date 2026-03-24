@@ -1,0 +1,42 @@
+{ "Species": "tridactyla" ,"Genus": "Myrmecophaga" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "40"  }
+{ "Species": "cynocephalus" ,"Genus": "Papio" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "15"  }
+{ "Species": "lucifugus" ,"Genus": "Myotis" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "0.008"  }
+{ "Species": "dromedarius" ,"Genus": "Camelus" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "500"  }
+{ "Species": "jubatus" ,"Genus": "Acinonyx" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "45"  }
+{ "Species": "africana" ,"Genus": "Loxodonta" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "4500"  }
+{ "Species": "vulpes" ,"Genus": "Vulpes" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "11"  }
+{ "Species": "reticulata" ,"Genus": "Giraffa" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "1200"  }
+{ "Species": "beringei beringei" ,"Genus": "Gorilla" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "200"  }
+{ "Species": "amphibius" ,"Genus": "Hippopotamus" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "1400"  }
+{ "Species": "rufus" ,"Genus": "Macropus" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "50"  }
+{ "Species": "cinereus" ,"Genus": "Phascolarctos" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "10"  }
+{ "Species": "leo" ,"Genus": "Panthera" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "220"  }
+{ "Species": "pygmaeus" ,"Genus": "Pongo" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "75"  }
+{ "Species": "melanoleuca" ,"Genus": "Ailuropoda" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "120"  }
+{ "Species": "maritimus" ,"Genus": "Ursus" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "300"  }
+{ "Species": "cristata" ,"Genus": "Hystrix" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "15"  }
+{ "Species": "unicornis" ,"Genus": "Rhinoceros" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "2100"  }
+{ "Species": "tigris tigris" ,"Genus": "Panthera" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "200"  }
+{ "Species": "rosmarus" ,"Genus": "Odobenus" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "1100"  }
+{ "Species": "zebra" ,"Genus": "Equus" ,"measurement_type": "AvgWeightKg" ,"measurement_value": "310"  }
+{ "Species": "tridactyla" ,"Genus": "Myrmecophaga" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "14"  }
+{ "Species": "cynocephalus" ,"Genus": "Papio" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "14"  }
+{ "Species": "lucifugus" ,"Genus": "Myotis" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "7"  }
+{ "Species": "dromedarius" ,"Genus": "Camelus" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "40"  }
+{ "Species": "jubatus" ,"Genus": "Acinonyx" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "12"  }
+{ "Species": "africana" ,"Genus": "Loxodonta" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "65"  }
+{ "Species": "vulpes" ,"Genus": "Vulpes" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "4"  }
+{ "Species": "reticulata" ,"Genus": "Giraffa" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "25"  }
+{ "Species": "beringei beringei" ,"Genus": "Gorilla" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "40"  }
+{ "Species": "amphibius" ,"Genus": "Hippopotamus" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "45"  }
+{ "Species": "rufus" ,"Genus": "Macropus" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "8"  }
+{ "Species": "cinereus" ,"Genus": "Phascolarctos" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "15"  }
+{ "Species": "leo" ,"Genus": "Panthera" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "12"  }
+{ "Species": "pygmaeus" ,"Genus": "Pongo" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "40"  }
+{ "Species": "melanoleuca" ,"Genus": "Ailuropoda" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "20"  }
+{ "Species": "maritimus" ,"Genus": "Ursus" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "22"  }
+{ "Species": "cristata" ,"Genus": "Hystrix" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "20"  }
+{ "Species": "unicornis" ,"Genus": "Rhinoceros" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "40"  }
+{ "Species": "tigris tigris" ,"Genus": "Panthera" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "18"  }
+{ "Species": "rosmarus" ,"Genus": "Odobenus" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "40"  }
+{ "Species": "zebra" ,"Genus": "Equus" ,"measurement_type": "AvgLifespanYrs" ,"measurement_value": "20"  }

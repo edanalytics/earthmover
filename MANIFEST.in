@@ -1,4 +1,4 @@
 recursive-include earthmover/tests *.jsonl *.jsont *.yaml *.csv
 include earthmover/VERSION.txt requirements.txt
 include earthmover/include/starter_project/README.md
-include earthmover/include/starter_project/earthmover.yml
+include earthmover/include/starter_project/earthmover.yaml

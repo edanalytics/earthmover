@@ -72,7 +72,19 @@ echo "  running 11_composition..."
 cd ../11_composition/
 earthmover deps
 earthmover run -f
-rm -rf outputs/*, packages/*
+rm -rf output/*, packages/*
+echo "  ... done!"
+
+echo "  running 12_melt_pivot..."
+cd ../12_melt_pivot/
+earthmover run -f
+rm -rf output/*
+echo "  ... done!"
+
+echo "  running 13_multiline_sparse_headers..."
+cd ../13_multiline_sparse_headers/
+earthmover run -f
+rm -rf output/*
 echo "  ... done!"
 
 cd ../

@@ -1,6 +1,41 @@
 This page tracks releases of `earthmover`, with a summary of what was changed, fixed, added in each new version.
 
+
+## 2026 releases
+
+### [v0.4.9](https://github.com/edanalytics/earthmover/releases/tag/v0.4.9)
+(Released 2026-02-09)
+
+* bugfix: [fix links to doc site images](https://github.com/edanalytics/earthmover/pull/183)
+* bugfix: [re-enable support for `encoding` field in CSV sources](https://github.com/edanalytics/earthmover/pull/186)
+
+
+### [v0.4.8](https://github.com/edanalytics/earthmover/releases/tag/v0.4.8)
+(Released 2026-01-09)
+
+* bugfix: [fix Jinja `import`s pathing under package composition](https://github.com/edanalytics/earthmover/pull/178)
+* feature: [add handling for multi-line and sparse header structures](https://github.com/edanalytics/earthmover/pull/168)
+
+
+
 ## 2025 releases
+
+### [v0.4.7](https://github.com/edanalytics/earthmover/releases/tag/v0.4.7)
+(Released 2025-11-13)
+
+* bugfix: [column jumbling when using `optional_columns`](https://github.com/edanalytics/earthmover/pull/171)
+* bugfix: [`earthmover init` failure when installed via pip](https://github.com/edanalytics/earthmover/pull/175)
+* bugfix: [use `removeprefix()` not `lstrip()` when processing `--set` flags](https://github.com/edanalytics/earthmover/pull/174)
+* bugfix: [prevent existing `value` column from being clobbered, if it exists](https://github.com/edanalytics/earthmover/pull/170)
+* feature: [add `melt` and `pivot` dataframe operations](https://github.com/edanalytics/earthmover/pull/168)
+
+
+### [v0.4.6](https://github.com/edanalytics/earthmover/releases/tag/v0.4.6)
+(Released 2025-08-14)
+
+* bugfix: [`rename_columns` operation to an existing column name could result in two columns of the same name; now this results in an error](https://github.com/edanalytics/earthmover/pull/166)
+* feature: [Add support for non-UTF8 file encodings for fixed-width inputs](https://github.com/edanalytics/earthmover/pull/165)
+
 
 ### [v0.4.5](https://github.com/edanalytics/earthmover/releases/tag/v0.4.5)
 (Released 2025-07-11)

@@ -1,0 +1,36 @@
+{ "species": "mississippiensis" ,"genus": "Alligator" ,"characteristic": "id" ,"value": "1"  }
+{ "species": "calyptratus" ,"genus": "Chamaeleo" ,"characteristic": "id" ,"value": "2"  }
+{ "species": "niloticus" ,"genus": "Crocodylus" ,"characteristic": "id" ,"value": "3"  }
+{ "species": "cristatus" ,"genus": "Amblyrhynchus" ,"characteristic": "id" ,"value": "4"  }
+{ "species": "komodoensis" ,"genus": "Varanus" ,"characteristic": "id" ,"value": "5"  }
+{ "species": "suspectum" ,"genus": "Heloderma" ,"characteristic": "id" ,"value": "6"  }
+{ "species": "cristatus" ,"genus": "Triturus" ,"characteristic": "id" ,"value": "7"  }
+{ "species": "horridus" ,"genus": "Crotalus" ,"characteristic": "id" ,"value": "8"  }
+{ "species": "coriacea" ,"genus": "Dermochelys" ,"characteristic": "id" ,"value": "9"  }
+{ "species": "mississippiensis" ,"genus": "Alligator" ,"characteristic": "name" ,"value": "American Alligator"  }
+{ "species": "calyptratus" ,"genus": "Chamaeleo" ,"characteristic": "name" ,"value": "Veiled Chameleon"  }
+{ "species": "niloticus" ,"genus": "Crocodylus" ,"characteristic": "name" ,"value": "Nile Crocodile"  }
+{ "species": "cristatus" ,"genus": "Amblyrhynchus" ,"characteristic": "name" ,"value": "Marine Iguana"  }
+{ "species": "komodoensis" ,"genus": "Varanus" ,"characteristic": "name" ,"value": "Komodo Dragon"  }
+{ "species": "suspectum" ,"genus": "Heloderma" ,"characteristic": "name" ,"value": "Gila Monster"  }
+{ "species": "cristatus" ,"genus": "Triturus" ,"characteristic": "name" ,"value": "Northern Crested Newt"  }
+{ "species": "horridus" ,"genus": "Crotalus" ,"characteristic": "name" ,"value": "Timber Rattlesnake"  }
+{ "species": "coriacea" ,"genus": "Dermochelys" ,"characteristic": "name" ,"value": "Leatherback Sea Turtle"  }
+{ "species": "mississippiensis" ,"genus": "Alligator" ,"characteristic": "avg_lifespan_yrs" ,"value": "40"  }
+{ "species": "calyptratus" ,"genus": "Chamaeleo" ,"characteristic": "avg_lifespan_yrs" ,"value": "6"  }
+{ "species": "niloticus" ,"genus": "Crocodylus" ,"characteristic": "avg_lifespan_yrs" ,"value": "55"  }
+{ "species": "cristatus" ,"genus": "Amblyrhynchus" ,"characteristic": "avg_lifespan_yrs" ,"value": "45"  }
+{ "species": "komodoensis" ,"genus": "Varanus" ,"characteristic": "avg_lifespan_yrs" ,"value": "30"  }
+{ "species": "suspectum" ,"genus": "Heloderma" ,"characteristic": "avg_lifespan_yrs" ,"value": "18"  }
+{ "species": "cristatus" ,"genus": "Triturus" ,"characteristic": "avg_lifespan_yrs" ,"value": "8"  }
+{ "species": "horridus" ,"genus": "Crotalus" ,"characteristic": "avg_lifespan_yrs" ,"value": "15"  }
+{ "species": "coriacea" ,"genus": "Dermochelys" ,"characteristic": "avg_lifespan_yrs" ,"value": "45"  }
+{ "species": "mississippiensis" ,"genus": "Alligator" ,"characteristic": "avg_weight_kg" ,"value": "250"  }
+{ "species": "calyptratus" ,"genus": "Chamaeleo" ,"characteristic": "avg_weight_kg" ,"value": "0.12"  }
+{ "species": "niloticus" ,"genus": "Crocodylus" ,"characteristic": "avg_weight_kg" ,"value": "1000"  }
+{ "species": "cristatus" ,"genus": "Amblyrhynchus" ,"characteristic": "avg_weight_kg" ,"value": "1.5"  }
+{ "species": "komodoensis" ,"genus": "Varanus" ,"characteristic": "avg_weight_kg" ,"value": "85"  }
+{ "species": "suspectum" ,"genus": "Heloderma" ,"characteristic": "avg_weight_kg" ,"value": "2"  }
+{ "species": "cristatus" ,"genus": "Triturus" ,"characteristic": "avg_weight_kg" ,"value": "0.1"  }
+{ "species": "horridus" ,"genus": "Crotalus" ,"characteristic": "avg_weight_kg" ,"value": "1.1"  }
+{ "species": "coriacea" ,"genus": "Dermochelys" ,"characteristic": "avg_weight_kg" ,"value": "500"  }

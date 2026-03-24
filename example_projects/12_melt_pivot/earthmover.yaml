@@ -1,0 +1,55 @@
+version: 2
+
+config:
+  output_dir: ./output/
+  show_stacktrace: True
+  log_level: DEBUG
+
+sources:
+  assessment_scores_wide:
+    file: ./sources/assessment_scores_wide.csv
+    header_rows: 1
+
+transformations:
+  # Melt the wide format data to long format
+  scores_long:
+    source: $sources.assessment_scores_wide
+    operations:
+      - operation: melt
+        id_vars: [student_id, student_name, grade_level]
+        value_vars: [math_score, reading_score, science_score, writing_score]
+        var_name: subject
+        value_name: score
+
+  # Pivot the long format data back to wide format (demonstrating reverse operation)
+  scores_wide_again:
+    source: $transformations.scores_long
+    operations:
+      - operation: pivot
+        rows_by: [student_id, student_name, grade_level]
+        cols_by: subject
+        values: score
+
+  # This would fail because grade_level + subject doesn't uniquely identify scores
+  # (multiple students per grade have the same subject scores)
+  # scores_by_grade:
+  #   source: $transformations.scores_long
+  #   operations:
+  #     - operation: pivot
+  #       index: grade_level
+  #       columns: subject
+  #       values: score
+
+destinations:
+  assessment_scores_long:
+    source: $transformations.scores_long
+    template: ./templates/assessment_score.jsont
+    extension: jsonl
+    linearize: True
+
+  assessment_scores_wide_again:
+    source: $transformations.scores_wide_again
+    template: ./templates/assessment_score_wide.jsont
+    extension: jsonl
+    linearize: True
+

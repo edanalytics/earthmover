@@ -1,0 +1,21 @@
+{ "Species": "africana" ,"Genus": "Loxodonta" ,"AvgLifespanYrs": "65" ,"AvgWeightKg": "4500"  }
+{ "Species": "amphibius" ,"Genus": "Hippopotamus" ,"AvgLifespanYrs": "45" ,"AvgWeightKg": "1400"  }
+{ "Species": "beringei beringei" ,"Genus": "Gorilla" ,"AvgLifespanYrs": "40" ,"AvgWeightKg": "200"  }
+{ "Species": "cinereus" ,"Genus": "Phascolarctos" ,"AvgLifespanYrs": "15" ,"AvgWeightKg": "10"  }
+{ "Species": "cristata" ,"Genus": "Hystrix" ,"AvgLifespanYrs": "20" ,"AvgWeightKg": "15"  }
+{ "Species": "cynocephalus" ,"Genus": "Papio" ,"AvgLifespanYrs": "14" ,"AvgWeightKg": "15"  }
+{ "Species": "dromedarius" ,"Genus": "Camelus" ,"AvgLifespanYrs": "40" ,"AvgWeightKg": "500"  }
+{ "Species": "jubatus" ,"Genus": "Acinonyx" ,"AvgLifespanYrs": "12" ,"AvgWeightKg": "45"  }
+{ "Species": "leo" ,"Genus": "Panthera" ,"AvgLifespanYrs": "12" ,"AvgWeightKg": "220"  }
+{ "Species": "lucifugus" ,"Genus": "Myotis" ,"AvgLifespanYrs": "7" ,"AvgWeightKg": "0.008"  }
+{ "Species": "maritimus" ,"Genus": "Ursus" ,"AvgLifespanYrs": "22" ,"AvgWeightKg": "300"  }
+{ "Species": "melanoleuca" ,"Genus": "Ailuropoda" ,"AvgLifespanYrs": "20" ,"AvgWeightKg": "120"  }
+{ "Species": "pygmaeus" ,"Genus": "Pongo" ,"AvgLifespanYrs": "40" ,"AvgWeightKg": "75"  }
+{ "Species": "reticulata" ,"Genus": "Giraffa" ,"AvgLifespanYrs": "25" ,"AvgWeightKg": "1200"  }
+{ "Species": "rosmarus" ,"Genus": "Odobenus" ,"AvgLifespanYrs": "40" ,"AvgWeightKg": "1100"  }
+{ "Species": "rufus" ,"Genus": "Macropus" ,"AvgLifespanYrs": "8" ,"AvgWeightKg": "50"  }
+{ "Species": "tigris tigris" ,"Genus": "Panthera" ,"AvgLifespanYrs": "18" ,"AvgWeightKg": "200"  }
+{ "Species": "tridactyla" ,"Genus": "Myrmecophaga" ,"AvgLifespanYrs": "14" ,"AvgWeightKg": "40"  }
+{ "Species": "unicornis" ,"Genus": "Rhinoceros" ,"AvgLifespanYrs": "40" ,"AvgWeightKg": "2100"  }
+{ "Species": "vulpes" ,"Genus": "Vulpes" ,"AvgLifespanYrs": "4" ,"AvgWeightKg": "11"  }
+{ "Species": "zebra" ,"Genus": "Equus" ,"AvgLifespanYrs": "20" ,"AvgWeightKg": "310"  }

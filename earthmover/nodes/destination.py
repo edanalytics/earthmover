@@ -70,6 +70,9 @@ class FileDestination(Destination):
         self.extension = self.error_handler.assert_get_key(self.config, 'extension', dtype=str, required=False, default='')
         self.jinja_template = None  # Defined in execute()
 
+        # Render Jinja templates from the directory with the config file
+        self.config_dir = os.path.dirname(self.config.__file__)
+
         #config->extension is optional: if not present, we assume the destination name has an extension
         filename = f"{self.name}.{self.extension}" if self.extension else self.name
         self.file = os.path.join(self.earthmover.state_configs['output_dir'], filename)
@@ -92,7 +95,7 @@ class FileDestination(Destination):
             if self.linearize:
                 template_string = self.EXP.sub(" ", template_string)
 
-            self.jinja_template = util.build_jinja_template(template_string, macros=self.earthmover.macros)
+            self.jinja_template = util.build_jinja_template(template_string, macros=self.earthmover.macros, base_dir=self.config_dir)
 
         except OSError as err:
             self.error_handler.throw(

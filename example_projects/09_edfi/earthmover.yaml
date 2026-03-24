@@ -54,9 +54,12 @@ transformations:
   all_students:
     source: $sources.students_anytown
     operations:
+      {% from 'imports_test.jinja' import imports_work %}
+      {% if imports_work %}
       - operation: union
         sources:
           - $sources.students_someville
+      {% endif %}
       # add district_id:
       - operation: join
         sources:
