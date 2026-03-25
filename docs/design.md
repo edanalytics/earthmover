@@ -108,7 +108,7 @@ Group-by also benefits from sorted input - each worker produces a few groups, an
 ![dask dataframe concat](./assets/dask-dataframe-groupby.png)
 
 
-### Distributed benchmarks
+### Parallelism benchmarks
 To understand the performance characteristics of `earthmover[distributed]`, we have run a battery of workloads and configurations. We present some data below.
 
 ![dask dataframe concat](./assets/distributed-benchmarks.png)
@@ -123,12 +123,15 @@ To understand the performance characteristics of `earthmover[distributed]`, we h
 * (Missing datapoints above indicate runs that did not complete successfully in a reasonable amount of time - typically either Dask killed all workers, or Dask got stuck in a loop where workers are replaced and their tasks retried.)
 
 #### Benchmark takeaways:
-* earthmover distributed can cut runtimes in half (or better)
+* parallelizing earthmover can cut runtimes in half (or better)
 * 4 workers generally performs best - likely a good balance between parallelism and communication overhead
 * eventually memory - not compute - becomes the constraint; without enough memory, workers may not successfully complete
 
 
-### Distributed FAQs
-* **When should I use distributed?** 
-* **What's an optimal configuration?** 
+### Parallelism FAQs
+* **When should I use parallel earthmover?**
 
+    With large input files and/or longer (1m+) runtimes.
+* **What's an optimal configuration?**
+
+    Start with 4 workers. If there's memory pressure, reduce number of workers and/or use a smaller `blocksize` on `sources`.
