@@ -82,7 +82,7 @@ Once data is partitioned, it becomes possible to _process_ it in parallel - this
 
 The scheduler (1) carves up data transformations on an entire dataframe into a graph of smaller transformations on each partition ("tasks"), and it coordinates tasks across the workers (2).
 
-Next, we discuss how [earthmover's `operations`]() work with Dask's partitioning.
+Next, we discuss how [earthmover's `operations`](./configuration/#transformations) work with Dask's partitioning.
 
 #### `union`
 Union is quite straightforward; the partitions of two (or more) dataframes are stacked to form a single larger dataframe.
