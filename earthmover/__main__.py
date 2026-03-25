@@ -108,12 +108,22 @@ def main(argv=None):
         nargs="*",
         help='overrides a setting in the config YAML; example: --set config.tmp_dir /tmp'
     )
+    parser.add_argument("-w", "--workers",
+        type=str,
+        help='distributes processing across several CPU cores; `auto` available-1 cores; example: --workers 4'
+    )
+    parser.add_argument("-m", "--mem_per_worker",
+        type=str,
+        help='memory limit per worker; if unspecified, memory is evenly divided; example: --mem_per_worker 2.4GB'
+    )
 
     # Set empty defaults in case they've not been populated by the user.
     parser.set_defaults(**{
         "selector": "*",
         "params": "",
         "results_file": "",
+        "workers": "",
+        "mem_per_worker": ""
     })
 
     ### Parse the user-inputs and run Earthmover, depending on the command and subcommand passed.
@@ -153,7 +163,9 @@ def main(argv=None):
             logger=logger,
             params='{"BASE_DIR": "' + tests_dir + '"}',
             force=True,
-            skip_hashing=True
+            skip_hashing=True,
+            workers=args.workers,
+            mem_per_worker=args.mem_per_worker,
         )
         em.logger.info("running tests...")
         em.test(tests_dir)
@@ -200,6 +212,8 @@ def main(argv=None):
             cli_state_configs=cli_state_configs,
             results_file=args.results_file,
             overrides=overrides,
+            workers=args.workers,
+            mem_per_worker=args.mem_per_worker,
         )
 
     except Exception as err:

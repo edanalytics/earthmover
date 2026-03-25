@@ -29,6 +29,7 @@ setuptools.setup (
         'parquet': ['pyarrow'],
         'postgres': ['sqlalchemy', 'psycopg2'],
         'xml': ['pyarrow', 'lxml'],
+        'distributed': ['dask.distributed'],
     },
     python_requires = '>=3',
     entry_points = '''

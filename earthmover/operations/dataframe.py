@@ -129,7 +129,8 @@ class JoinOperation(Operation):
             try:
                 left_data = dd.merge(
                     left_data, right_data, how=self.join_type,
-                    left_on=self.left_keys, right_on=self.right_keys
+                    left_on=self.left_keys, right_on=self.right_keys,
+                    shuffle_method="tasks",
                 )
 
             except Exception as _:
@@ -337,16 +338,17 @@ class PivotOperation(Operation):
             )
 
         try:
-            # Check for uniqueness: index + columns should uniquely identify values
-            # This is required for a pivot without aggregation
-            if self.rows_by:
-                key_cols = self.rows_by + [self.cols_by]
-            else:
-                key_cols = [self.cols_by]
+            key_cols = (self.rows_by or []) + [self.cols_by]
 
-            unique_combinations = data[key_cols].drop_duplicates()
-            total_rows = len(data)
-            unique_rows = len(unique_combinations)
+            # Single dask.compute() call for all pre-pivot information.
+            import dask as _dask
+            categories_series, n_total, n_unique = _dask.compute(
+                data[self.cols_by].unique(),
+                data[self.cols_by].size,
+                data[key_cols].drop_duplicates()[self.cols_by].size,
+            )
+            categories = sorted(categories_series.tolist())
+            total_rows, unique_rows = int(n_total), int(n_unique)
 
             if total_rows != unique_rows:
                 self.error_handler.throw(
@@ -355,14 +357,19 @@ class PivotOperation(Operation):
                     f"Consider using group_by to aggregate the data instead."
                 )
 
-            # Convert columns to category dtype for Dask compatibility
-            data[self.cols_by] = data[self.cols_by].astype('category').cat.as_known()
+            # Use an explicit CategoricalDtype with known categories so that the
+            # downstream pivot_table can determine its output schema without any
+            # further implicit computes (cat.as_known() would cause another separate
+            # graph submission and another potential key-spec collision).
+            cat_dtype = pd.CategoricalDtype(categories=categories, ordered=False)
+            data = data.assign(**{self.cols_by: data[self.cols_by].astype(cat_dtype)})
 
-            # For multiple columns, create a composite key to avoid dask's multi-index issues
+            # For multiple index columns, create a composite key to avoid dask's multi-index issues
             if self.rows_by and len(self.rows_by) > 1:
-                data['_temp_composite_key'] = data[self.rows_by[0]].astype(str)
+                composite = data[self.rows_by[0]].astype(str)
                 for col in self.rows_by[1:]:
-                    data['_temp_composite_key'] = data['_temp_composite_key'] + '|' + data[col].astype(str)
+                    composite = composite + '|' + data[col].astype(str)
+                data = data.assign(_temp_composite_key=composite)
 
                 pivoted_data = data.pivot_table(
                     index='_temp_composite_key',
@@ -370,37 +377,37 @@ class PivotOperation(Operation):
                     values=self.values,
                     aggfunc='first'  # should be redundant but we have to pass an arg
                 )
-
-                # Reset index to make it a regular dataframe
                 pivoted_data = pivoted_data.reset_index()
 
-                # Split the composite key back into individual columns
-                pivoted_data[self.rows_by] = pivoted_data['_temp_composite_key'].str.split('|', expand=True, n=len(self.rows_by)-1)
+                # Split the composite key back into individual columns one at a time.
+                # Multi-column in-place assignment (df[list] = df.str.split(...)) reuses
+                # Dask graph keys with different task specs and triggers the duplicate-key warning.
+                split_result = pivoted_data['_temp_composite_key'].str.split('|', expand=True, n=len(self.rows_by) - 1)
+                for i, col in enumerate(self.rows_by):
+                    pivoted_data = pivoted_data.assign(**{col: split_result[i]})
                 pivoted_data = pivoted_data.drop('_temp_composite_key', axis=1)
 
                 # Reorder columns to put index columns first
                 col_order = self.rows_by + [col for col in pivoted_data.columns if col not in self.rows_by]
                 pivoted_data = pivoted_data[col_order]
 
-            else:
-                # Single column or no index - use groupby approach
-                if self.rows_by:
-                    # Single column index
-                    pivoted_data = data.pivot_table(
-                        index=self.rows_by[0],
-                        columns=self.cols_by,
-                        values=self.values,
-                        aggfunc='first'
-                    )
-                else:
-                    # No index - just pivot on columns
-                    pivoted_data = data.pivot_table(
-                        columns=self.cols_by,
-                        values=self.values,
-                        aggfunc='first'
-                    )
+            elif self.rows_by:
+                # Single column index
+                pivoted_data = data.pivot_table(
+                    index=self.rows_by[0],
+                    columns=self.cols_by,
+                    values=self.values,
+                    aggfunc='first'
+                )
+                pivoted_data = pivoted_data.reset_index()
 
-                # Reset index to make it a regular dataframe
+            else:
+                # No index - just pivot on columns
+                pivoted_data = data.pivot_table(
+                    columns=self.cols_by,
+                    values=self.values,
+                    aggfunc='first'
+                )
                 pivoted_data = pivoted_data.reset_index()
 
             return pivoted_data

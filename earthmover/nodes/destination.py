@@ -1,3 +1,5 @@
+import collections
+import functools
 import os
 import pandas as pd
 import re
@@ -8,6 +10,39 @@ from earthmover import util
 from earthmover.yaml_parser import JinjaEnvironmentYamlLoader
 
 from typing import Tuple
+
+
+# ---------------------------------------------------------------------------
+# Module-level partition function – must be at top level so it is picklable
+# when sent to Dask distributed workers.
+# ---------------------------------------------------------------------------
+
+def _render_destination_partition(partition, template_str, macros, base_dir, null_repr, string_dtypes):
+    """
+    Compile the Jinja template from its source string and render each row in a
+    partition.  Defined at module level so it can be serialised (pickled) by
+    Dask distributed workers.
+    """
+    template = util.build_jinja_template(template_str, macros=macros, base_dir=base_dir)
+
+    def cast_value(value):
+        if pd.isna(value):
+            return null_repr
+        if isinstance(value, string_dtypes):
+            return str(value)
+        return value
+
+    def render_row(row):
+        row_data = row.to_dict() if not isinstance(row, dict) else row
+        row_data = {k: cast_value(v) for k, v in row_data.items()}
+        row_data["__row_data__"] = row_data
+        try:
+            return template.render(row_data) + "\n"
+        except Exception as err:
+            print(f"Error rendering Jinja template: {err}")
+            raise
+
+    return partition.apply(render_row, axis=1)
 
 
 class Destination(Node):
@@ -37,10 +72,10 @@ class Destination(Node):
         """
         if pd.isna(value):
             return cls.NULL_REPR
-        
+
         if isinstance(value, cls.STRING_DTYPES):
             return str(value)
-        
+
         return value
 
 
@@ -79,12 +114,12 @@ class FileDestination(Destination):
 
     def execute(self, **kwargs):
         """
-        
+
         :return:
         """
         super().execute(**kwargs)
 
-        # Prepare the Jinja template for rendering rows.
+        # Load template string (not a compiled template – it will be compiled inside each worker).
         try:
             if self.template:
                 template_string = JinjaEnvironmentYamlLoader.template_open_filepath(self.template, params=self.earthmover.params)
@@ -95,6 +130,7 @@ class FileDestination(Destination):
             if self.linearize:
                 template_string = self.EXP.sub(" ", template_string)
 
+            # Keep the compiled template available for header/footer rendering on the main process.
             self.jinja_template = util.build_jinja_template(template_string, macros=self.earthmover.macros, base_dir=self.config_dir)
 
         except OSError as err:
@@ -109,11 +145,20 @@ class FileDestination(Destination):
             )
             raise
 
-        # this renders each row without having to itertuples() (which is much slower)
-        # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
+        # Build the partition render function with all required parameters bound.
+        # _render_destination_partition is a module-level function so it is picklable.
+        render_fn = functools.partial(
+            _render_destination_partition,
+            template_str=template_string,
+            macros=self.earthmover.macros,
+            base_dir=self.config_dir,
+            null_repr=self.NULL_REPR,
+            string_dtypes=self.STRING_DTYPES,
+        )
+
         self.data = (
             self.upstream_sources[self.source].data
-                .map_partitions(lambda x: x.apply(self.render_row, jinja_template=self.jinja_template, axis=1), meta=pd.Series('str'))
+                .map_partitions(render_fn, meta=pd.Series('str'))
         )
 
         # Repartition before writing, if specified.
@@ -135,11 +180,11 @@ class FileDestination(Destination):
                         warnings.filterwarnings("ignore", message="Insufficient elements for `head`")
                         # (use `npartitions=-1` because the first N partitions could be empty)
                         first_row = self.upstream_sources[self.source].data.head(1, npartitions=-1).reset_index(drop=True).iloc[0]
-                
+
                 except IndexError:  # If no rows are present, build a representation of the row with empty values
                     first_row = {col: "" for col in self.upstream_sources[self.source].data.columns}
                     first_row['__row_data__'] = first_row
-                
+
             if self.header and util.contains_jinja(self.header):
                 jinja_template = util.build_jinja_template(self.header, macros=self.earthmover.macros)
                 rendered_template = self.render_row(first_row, jinja_template=jinja_template)
@@ -147,9 +192,32 @@ class FileDestination(Destination):
             elif self.header: # no jinja
                 fp.write(self.header)
 
-            for partition in self.data.partitions:
-                fp.writelines(partition.compute())
-                partition = None  # Remove partition from memory immediately after write.
+            # Write partitions – sliding window of futures when a Dask client is
+            # available: keep n_workers futures in flight so workers render in
+            # parallel, but collect and write in order so at most n_workers
+            # rendered results are held in memory at any one time.
+            try:
+                import dask.distributed
+                client = dask.distributed.get_client()
+                n_workers = len(client.scheduler_info()['workers'])
+                partitions = list(self.data.partitions)
+                pending = collections.deque(
+                    client.compute(partitions[i])
+                    for i in range(min(n_workers, len(partitions)))
+                )
+                next_submit = n_workers
+                while pending:
+                    series = pending.popleft().result()
+                    fp.writelines(series)
+                    del series
+                    if next_submit < len(partitions):
+                        pending.append(client.compute(partitions[next_submit]))
+                        next_submit += 1
+            except (ValueError, ImportError):
+                # No distributed client – compute partitions sequentially.
+                for partition in self.data.partitions:
+                    fp.writelines(partition.compute())
+                    partition = None  # Remove partition from memory immediately after write.
 
             if self.footer and util.contains_jinja(self.footer):
                 jinja_template = util.build_jinja_template(self.footer, macros=self.earthmover.macros)
