@@ -346,8 +346,7 @@ Making earthmover use parallel processing may not always improve wall-clock comp
 
 Empirically, we find 4 workers optimal for many types of workloads. See [Design / Performance](./design#performance) for further optimization discussion and benchmarking.
 
-???+ tip "Optimization tips"
-
-    * Using `sort_rows` before `join` or `group_by` operations can help them be more performant.
-    * If Dask is running out of memory during `earthmover run` (Dask workers getting "killed", Dask erors about shuffle, etc.), try specifying `sources.{source}.blocksize` in `earthmover.yaml`: the default is `25MB` but if transformations significantly increase data size (creating JSONL often does), a smaller value like `5MB` or even `2MB` may work better
+#### Optimization tips
+* Using `sort_rows` before `join` or `group_by` operations can help them be more performant.
+* If Dask is running out of memory during `earthmover run` (Dask workers getting "killed", Dask erors about shuffle, etc.), try specifying `sources.{source}.blocksize` in `earthmover.yaml`: the default is `25MB` but if transformations significantly increase data size (creating JSONL often does), a smaller value like `5MB` or even `2MB` may work better
 
