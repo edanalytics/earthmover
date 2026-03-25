@@ -72,6 +72,52 @@ config:
 | (optional) | `show_progress` | `boolean` | Whether to show a progress bar for each Dask transformation | `False` |
 | (optional) | `git_auth_timeout` | `integer` | Number of seconds to wait for the user to enter Git credentials if needed during package installation (see [project composition](usage.md#earthmover-deps)) | `60` |
 
+####  Dask Distributed
+If using earthmover with [parallel processing](./usage#parallel-processing), the following additional configuration may be provided (optional if calling with `--workers`/`-w`):
+```yaml
+config:
+  dask_cluster_kwargs:
+    n_workers: - # `--workers` value if passed; no default
+    memory_limit: - # `--mem_per_worker` value if passed; no default
+    threads_per_worker: 1    # (not recommended to change this)
+    processes: True          # (not recommended to change this)
+```
+
+####  Dask
+In additional to the above `config`, one may also optionally pass and [supported Dask configuration](https://docs.dask.org/en/latest/configuration.html#dask) via `config.dask`. The default configurations are given below:
+```yaml
+config:
+  dask:
+    temporary_directory: `tempfile.gettempdir()`
+    dataframe:
+      backend: pandas        # (not recommended to change this)
+      convert-string: False
+      query-planning: False
+      shuffle:
+        method: tasks
+    multiprocessing:
+      context: fork
+    distributed:
+      scheduler:
+        active-memory-manager:
+          measure: managed
+        processes: True
+        worker-saturation: 1.0
+      worker:
+        memory:
+          recent-to-old-time: 5s
+          monitor-interval: 15s
+          rebalance:
+            measure: managed
+          spill: 0.5
+          pause: 0.95
+          terminate: 0.99
+          max-spill: False
+      nanny:
+        pre-spawn-environ:
+          MALLOC_TRIM_THRESHOLD_: 0
+```
+
 
 ### `definitions`
 

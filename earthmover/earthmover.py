@@ -43,7 +43,57 @@ class Earthmover:
         "show_stacktrace": False,
         "tmp_dir": tempfile.gettempdir(),
         "show_progress": False,
-        "git_auth_timeout": 60
+        "git_auth_timeout": 60,
+        
+        # the below settings only affect runs with dask distributed:
+        "dask": {
+            "temporary_directory": tempfile.gettempdir(), # always updated (below) to match `tmp_dir`
+            "dataframe": {
+                "backend": "pandas",
+                "convert-string": False,
+                "query-planning": False,
+                "shuffle": "tasks"
+            },
+            "multiprocessing": {
+                "context": "fork"
+            },
+            "logging": {
+                "distributed": "error",
+                "distributed.nanny": "error",
+                "distributed.scheduler": "error",
+                "distributed.worker": "error",
+                "distributed.shuffle": "error",
+                "tornado": "error",
+                "tornado.application": "error"
+            },
+            "distributed": {
+                "scheduler": {
+                    "active-memory-manager": {
+                        "measure": "managed"
+                    },
+                    "processes": True,
+                    "worker-saturation": 1.0
+                },
+                "worker": {
+                    "memory": {
+                        "recent-to-old-time": "5s",
+                        "monitor-interval": "15s",
+                        "rebalance": {
+                            "measure": "managed"
+                        },
+                        "spill": 0.75,
+                        "pause": 0.95,
+                        "terminate": 0.99,
+                        "max-spill": False
+                    }
+                },
+                "nanny": {
+                    "pre-spawn-environ": {
+                        "MALLOC_TRIM_THRESHOLD_": 0
+                    }
+                }
+            }
+        }
     }
 
     sources: List[Source] = []
@@ -59,6 +109,8 @@ class Earthmover:
         cli_state_configs: Optional[dict] = None,
         results_file: str = "",
         overrides: Optional[dict] = None,
+        workers: str = "",
+        mem_per_worker: str = "",
     ):
         self.do_generate = True
         self.force = force
@@ -67,6 +119,13 @@ class Earthmover:
         self.results_file = os.path.abspath(results_file) if results_file else None
         self.config_file = os.path.abspath(config_file)
         self.overrides = overrides
+
+        # dask distributed settings:
+        self.dask_cluster = None
+        self.dask_client = None
+        self.workers = workers
+        self.mem_per_worker = mem_per_worker
+
         self.compiled_yaml_file = COMPILED_YAML_FILE
         self.error_handler = ErrorHandler(file=self.config_file)
 
@@ -374,8 +433,53 @@ class Earthmover:
         if not self.do_generate:
             exit(99) # Operation canceled
 
+        # Apply any dask config settings from the YAML config.
+        dask_user_config = self.state_configs.get('dask', {})
+        if dask_user_config:
+            dask.config.set(dict(dask_user_config))
+
+        # Set up a Dask distributed LocalCluster if dask_cluster_kwargs are provided.
+        cluster_kwargs = self.state_configs.get('dask_cluster_kwargs', {})
+        if cluster_kwargs or self.workers != "":
+            target_n_workers = util.get_total_cpu_cores() - 1 if self.workers == "auto" else int(self.workers)
+            target_mem_per_worker = round(0.9 * util.get_total_ram() / target_n_workers) if self.mem_per_worker == "" else self.mem_per_worker
+            if not cluster_kwargs: # not specified in YAML, but workers specified via CLI
+                cluster_kwargs = {
+                    "n_workers": target_n_workers,
+                    "memory_limit": target_mem_per_worker,
+                    "threads_per_worker": 1,
+                    "processes": True,
+                }
+            # add worker/memory keys if not present, or overwrite them if specified via CLI:
+            if not "n_workers" not in cluster_kwargs.keys() or self.workers!="":
+                cluster_kwargs["n_workers"] = target_n_workers
+            if not "memory_limit" not in cluster_kwargs.keys() or self.mem_per_worker!="":
+                cluster_kwargs["memory_limit"] = target_mem_per_worker
+            self.logger.info(
+                    f"Attempting to run Dask distributed with {cluster_kwargs['n_workers']} workers and {cluster_kwargs['memory_limit']} memory each"
+                )
+            try:
+                from dask.distributed import LocalCluster, Client
+                self.dask_cluster = LocalCluster(**dict(cluster_kwargs))
+                self.dask_client = Client(self.dask_cluster)
+                self.logger.info(
+                    f"Dask distributed cluster started: {self.dask_client.dashboard_link}"
+                )
+            except ImportError:
+                self.logger.warning(
+                    "dask.distributed is not available; running with default Dask scheduler"
+                )
+
         # Iterate the graph and execute each Node.
-        self.execute(active_graph)
+        try:
+            self.execute(active_graph)
+        finally:
+            if self.dask_client:
+                self.dask_client.close(timeout=20)
+                self.dask_client = None
+            if self.dask_cluster:
+                self.dask_cluster.close(timeout=20)
+                self.dask_cluster = None
 
         ### Save run log only after a successful run! (in case of errors)
         # Note: `runs_file` is only defined in certain circumstances.

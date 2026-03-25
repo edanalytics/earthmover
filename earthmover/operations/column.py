@@ -1,5 +1,6 @@
 import csv
 import dask
+import functools
 import pandas as pd
 import re
 import string
@@ -13,12 +14,63 @@ if TYPE_CHECKING:
     from dask.dataframe.core import DataFrame
 
 
+# ---------------------------------------------------------------------------
+# Module-level partition helpers – must be top-level so they are picklable
+# when sent to Dask distributed workers.
+# ---------------------------------------------------------------------------
+
+def _jinja_add_column_partition(partition, col, template_str, macros):
+    """
+    Compile the Jinja template from its string source and apply it to every row
+    in *partition*, returning a Series of rendered values for column *col*.
+    Defined at module level so it can be serialised by Dask distributed.
+    """
+    from earthmover import util  # local import so workers can resolve it
+    template = util.build_jinja_template(template_str, macros=macros)
+
+    def render_row(row):
+        row_data = row.to_dict()
+        row_data["__row_data__"] = row.to_dict()
+        return template.render(row_data)
+
+    result = partition.apply(render_row, axis=1)
+    result.name = col
+    return result
+
+
+def _jinja_modify_column_partition(partition, col, template_str, macros):
+    """
+    Like _jinja_add_column_partition but temporarily exposes the current column
+    value as ``value`` in the template context (matching the original behaviour
+    of ModifyColumnsOperation).
+    """
+    from earthmover import util
+    template = util.build_jinja_template(template_str, macros=macros)
+
+    partition = partition.copy()
+    partition['value'] = partition[col]
+
+    def render_row(row):
+        row_data = row.to_dict()
+        row_data["__row_data__"] = row.to_dict()
+        return template.render(row_data)
+
+    result = partition.apply(render_row, axis=1)
+    result.name = col
+    return result
+
+
+def _combine_columns_row(row, cols_to_combine, separator):
+    """Row-level helper for CombineColumnsOperation – picklable via functools.partial."""
+    return separator.join(str(row[col]) for col in cols_to_combine)
+
+
 class AddColumnsOperation(Operation):
     """
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'columns',
     )
 
@@ -41,7 +93,8 @@ class AddColumnsOperation(Operation):
 
             else:
                 try:
-                    template = util.build_jinja_template(val, macros=self.earthmover.macros)
+                    # Validate template syntax early (on the main process).
+                    util.build_jinja_template(val, macros=self.earthmover.macros)
 
                 except Exception as err:
                     self.error_handler.ctx.remove('line')
@@ -50,12 +103,16 @@ class AddColumnsOperation(Operation):
                     )
                     raise
 
-                data[col] = data.apply(
-                    util.render_jinja_template, axis=1,
+                # Use map_partitions so the template is compiled once per partition
+                # inside the worker (compiled jinja2.Template objects are not picklable).
+                data[col] = data.map_partitions(
+                    functools.partial(
+                        _jinja_add_column_partition,
+                        col=col,
+                        template_str=val,
+                        macros=self.earthmover.macros,
+                    ),
                     meta=pd.Series(dtype='str', name=col),
-                    template=template,
-                    template_str=val,
-                    error_handler=self.error_handler
                 )
 
         return data
@@ -66,7 +123,7 @@ class ModifyColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'columns',
     )
 
@@ -87,15 +144,16 @@ class ModifyColumnsOperation(Operation):
                 self.apply_jinja(data, data_column, val)
 
         return data
-    
+
     def apply_jinja(self, data, col, val):
         # Apply the value as a static string if not obviously Jinja.
         if not util.contains_jinja(val):
             data[col] = val
             return  # End immediately if no jinja processing is required.
-        
+
         try:
-            template = util.build_jinja_template(val, macros=self.earthmover.macros)
+            # Validate template syntax early (on the main process).
+            util.build_jinja_template(val, macros=self.earthmover.macros)
 
         except Exception as err:
             self.error_handler.ctx.remove('line')
@@ -110,16 +168,18 @@ class ModifyColumnsOperation(Operation):
             self.error_handler.throw(
                 f"error in `modify_columns` operation; a column named `value` already exists, and would be removed by this operation... please rename it before using `modify_columns`"
             )
-        data['value'] = data[col]
 
-        data[col] = data.apply(
-            util.render_jinja_template, axis=1,
+        # Use map_partitions so the template is compiled once per partition inside the
+        # worker (compiled jinja2.Template objects are not picklable).
+        data[col] = data.map_partitions(
+            functools.partial(
+                _jinja_modify_column_partition,
+                col=col,
+                template_str=val,
+                macros=self.earthmover.macros,
+            ),
             meta=pd.Series(dtype='str', name=col),
-            template=template,
-            template_str=val,
-            error_handler=self.error_handler
         )
-        del data["value"]
 
 
 class DuplicateColumnsOperation(Operation):
@@ -127,7 +187,7 @@ class DuplicateColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'columns',
     )
 
@@ -164,7 +224,7 @@ class RenameColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'columns',
     )
 
@@ -199,7 +259,7 @@ class DropColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'columns',
     )
 
@@ -232,7 +292,7 @@ class KeepColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'columns',
     )
 
@@ -259,7 +319,7 @@ class CombineColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'columns', 'new_column', 'separator',
     )
 
@@ -281,7 +341,7 @@ class CombineColumnsOperation(Operation):
         # Raise an error if a column specified to combine is absent from the dataset.
         cols_to_combine = self.match_wildcard_columns(data.columns, self.columns_list, raise_on_unmatched=True)
         data[self.new_column] = data.apply(
-            lambda x: self.separator.join(x[col] for col in cols_to_combine),
+            functools.partial(_combine_columns_row, cols_to_combine=cols_to_combine, separator=self.separator),
             axis=1,
             meta=pd.Series(dtype='str', name=self.new_column)
         )
@@ -295,7 +355,7 @@ class MapValuesOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'column', 'columns', 'mapping', 'map_file',
     )
 
@@ -360,7 +420,7 @@ class MapValuesOperation(Operation):
             with open(file, 'r', encoding='utf-8') as fp:
                 _translations_list = list(csv.reader(fp, delimiter=sep))
                 return dict(_translations_list[1:])
-        
+
         except Exception as err:
             self.error_handler.throw(
                 f"error reading `map_file` {file}: {err}"
@@ -374,7 +434,7 @@ class DateFormatOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'column', 'columns', 'from_format', 'to_format', 'ignore_errors', 'exact_match',
     )
 
@@ -427,7 +487,7 @@ class CaseColumnsOperation(Operation):
     Generic casing operation to be overridden by child classes.
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
     )
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':

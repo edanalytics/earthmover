@@ -1,6 +1,7 @@
 import dask.config as dask_config
 import dask.dataframe as dd
 import ftplib
+import functools
 import io
 import os
 import pandas as pd
@@ -90,9 +91,13 @@ class Source(Node):
             meta = pd.DataFrame(columns=all_columns)
             meta = meta.astype({col: "object" for col in self.optional_fields})  # Ensure optional fields have correct type
 
-            # Apply to each partition
+            # Use functools.partial instead of a lambda so the function is picklable
+            # by Dask distributed workers.
+            def _reindex_partition(df, columns):
+                return df.reindex(columns=columns, fill_value="")
+
             self.data = self.data.map_partitions(
-                lambda df: df.reindex(columns=all_columns, fill_value=""),
+                functools.partial(_reindex_partition, columns=all_columns),
                 meta=meta
             )
 
@@ -403,7 +408,7 @@ class FileSource(Source):
 
         # We don't want to activate the function inside this helper function.
         read_lambda_mapping = {
-            'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, header=0, skiprows=__get_skiprows(config), names=__get_flattened_columns(file, config)),
+            'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, header=0, skiprows=__get_skiprows(config), names=__get_flattened_columns(file, config), blocksize=config.get('blocksize', "25MB")),
             'excel'     : lambda file, config: pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False, header=0, skiprows=__get_skiprows(config), names=__get_flattened_columns(file, config)),
             'feather'   : lambda file, _     : pd.read_feather(file),
             'fixedwidth': self.__read_fwf,
@@ -416,7 +421,7 @@ class FileSource(Source):
             'spss'      : lambda file, _     : pd.read_spss(file),
             'stata'     : lambda file, _     : pd.read_stata(file),
             'xml'       : lambda file, config: pd.read_xml(file, xpath=config.get('xpath', "./*")),
-            'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, header=0, skiprows=__get_skiprows(config), names=__get_flattened_columns(file, config)),
+            'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, header=0, skiprows=__get_skiprows(config), names=__get_flattened_columns(file, config), blocksize=config.get('blocksize', "25MB")),
         }
         return read_lambda_mapping.get(file_type)
 

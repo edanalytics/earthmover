@@ -2,6 +2,7 @@ import jinja2
 import hashlib
 import json
 import os
+import sys
 
 from sys import exc_info
 
@@ -180,3 +181,40 @@ def get_string_hash(string: str, hash_algorithm="md5") -> str:
 
     hashed.update(str(string).encode('utf-8'))
     return hashed.hexdigest()
+
+
+# When running earthmover _distributed_, we want to know how much memory the machine
+# has available, so we can set a sensible default per worker.
+# Python has no cross-platform, built-in library for detecting how much memory is
+# available on the machine. (Using `psutil` requires installing it; `os.sysconf` is
+# Linux-only.) Therefore we use this function to find available memory differently
+# based on what platform we're on.
+
+def get_total_ram():
+    """Returns total RAM in bytes, cross-platform."""
+    if sys.platform.startswith('linux'):
+        # Parse /proc/meminfo on Linux
+        with open('/proc/meminfo', 'r') as f:
+            for line in f:
+                if 'MemTotal' in line:
+                    # Line format: "MemTotal:  16345672 kB"
+                    return int(line.split()[1]) * 1024
+    elif sys.platform.startswith('win'):
+        # Use wmic on Windows
+        import subprocess
+        result = subprocess.run(['wmic', 'computersystem', 'get', 'totalphysicalmemory'],
+                                stdout=subprocess.PIPE, text=True)
+        lines = result.stdout.strip().split('\n')
+        if len(lines) > 1:
+            return int(lines[1].strip())
+    elif sys.platform.startswith('darwin'):
+        # Use sysctl on macOS
+        import subprocess
+        result = subprocess.run(['sysctl', '-n', 'hw.memsize'],
+                                stdout=subprocess.PIPE, text=True)
+        return int(result.stdout.strip())
+    
+    return 0
+
+def get_total_cpu_cores():
+    return os.cpu_count()

@@ -325,3 +325,28 @@ In the example below, an `earthmover` project `projA` depends on a package `proj
 * There is no limit to the number of packages that can be imported and no limit to how deeply they can be nested (i.e. packages can import other packages). However, there are a few things to keep in mind with using multiple packages.
   - If multiple packages at the same level (e.g. `projA/packages/pkgB` and `projA/packages/pkgC`, not `projA/packages/pkgB/packages/pkgC`) include same-named nodes, the package specified later in the `packages` list will overwrite. If the node is also specified in the top-level project, its version of the node will overwrite as usual.
   - A similar limitation exists for macros &ndash; a single definition of each macro will be applied everywhere in the project and packages using the same overwrite logic used for the nodes. When you are creating projects that are likely to be used as packages, consider including a namespace in the names of macros with more common operations, such as `assessment123_filter()` instead of the more generic `filter()`. 
+
+
+### Parallel Processing
+By default, `earthmover run` - like Python - is single-threaded. For compute-heavy workloads, however, it also supports parallel processing across CPU cores via a [Dask Distributed](https://distributed.dask.org/en/stable/) [LocalCluster](https://distributed.dask.org/en/stable/api.html#distributed.LocalCluster).
+
+The easiest way to enable distributed is:
+```bash
+pip install earthmover[distributed]
+earthmover run --workers auto
+```
+
+The `--workers` or `-w` flag specifies the number of workers (and CPU cores) to use. Specifying `auto` will detect the number of cores available and run with one fewer.
+
+The amount of memory available to each worker can be controlled with `--mem_per_worker` or `-m`, passing human-readable values like `200MB` or `1.8GB`. If unspecified, available memory is detected and divided evenly across CPU cores.
+
+Dask distributed configuration may also be specified in the `earthmover.yml` config; see [`config.dask`](./configuration/#dask) and [`config.dask_cluster_kwargs`](./configuration/#dask-cluster-kwargs) for documentation and defaults.
+
+Making earthmover use parallel processing may not always improve wall-clock completion time. For small input datasets (10s of MB), the overhead of Dask Distributed's scheduler and worker communication will likely result in _slower_ runtime than earthmover with no parallelism. For larger input datasets, parallelism can help but it depends on the type of workload... more workers means more data processed in parallel, but also more communication between workers for some operations.
+
+Empirically, we find 4 workers optimal for many types of workloads. See [Design / Performance](./design#performance) for further optimization discussion and benchmarking.
+
+#### Optimization tips
+* Using `sort_rows` before `join` or `group_by` operations can help them be more performant.
+* If Dask is running out of memory during `earthmover run` (Dask workers getting "killed", Dask erors about shuffle, etc.), try specifying `sources.{source}.blocksize` in `earthmover.yaml`: the default is `25MB` but if transformations significantly increase data size (creating JSONL often does), a smaller value like `5MB` or even `2MB` may work better
+
