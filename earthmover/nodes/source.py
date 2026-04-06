@@ -78,6 +78,9 @@ class Source(Node):
 
         self.data = self.opt_repartition(self.data)  # Repartition if specified.
 
+        # Remove rows will all null values.
+        self.data = self.data.dropna(axis=0, how='all')  # TODO: This also should affect empty strings.
+
         # Add missing columns if defined under `optional_fields`.
         if self.optional_fields:
             # Get all existing columns
