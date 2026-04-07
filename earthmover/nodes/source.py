@@ -76,10 +76,14 @@ class Source(Node):
             )
             self.data = dd.from_pandas(self.data, chunksize=self.chunksize)
 
-        self.data = self.opt_repartition(self.data)  # Repartition if specified.
+        # Remove rows with all null values or empty strings.
+        # DataFrame.dropna() only removes nulls.
+        # Using a mask reduces the number of passes made over the data.
+        empty_mask = self.data.isna() | (self.data == "")
+        self.data = self.data[~empty_mask.all(axis=1)]
 
-        # Remove rows will all null values.
-        self.data = self.data.dropna(axis=0, how='all')  # TODO: This also should affect empty strings.
+        # Repartition if specified.
+        self.data = self.opt_repartition(self.data)
 
         # Add missing columns if defined under `optional_fields`.
         if self.optional_fields:
