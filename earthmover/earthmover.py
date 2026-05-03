@@ -96,12 +96,6 @@ class Earthmover:
         # convert state_configs to YamlMapping so we can inject CLI overrides
         self.state_configs = YamlMapping().update(self.state_configs)
         self.state_configs = self.inject_cli_overrides(self.state_configs, "config.")
-        
-        # Prepare the output directory for destinations.
-        self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
-
-        # Set the temporary directory in cases of disk-spillage.
-        dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
 
         # Set a directory for installing packages.
         self.packages_dir = os.path.join(os.getcwd(), 'packages')
@@ -168,9 +162,13 @@ class Earthmover:
 
         ### Optionally merge packages to update user-configs and write the composed YAML to disk.
         self.user_configs = self.merge_packages() or self.user_configs
+        self.user_configs = self.inject_cli_overrides(self.user_configs)
+
         if to_disk:
             self.user_configs.to_disk(self.compiled_yaml_file)
-        self.user_configs = self.inject_cli_overrides(self.user_configs)
+
+        # Expand the output directory before compiling destinations.
+        self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
 
         ### Compile the nodes and add to the graph type-by-type.
         self.sources = self.compile_node_configs(
@@ -253,12 +251,17 @@ class Earthmover:
         Iterate subgraphs in `Earthmover.graph` and execute each Node in order.
         :return:
         """
+        # Create the output directory.
         if not os.path.isdir(self.state_configs['output_dir']):
             self.logger.info(
                 f"creating output directory {self.state_configs['output_dir']}"
             )
             os.makedirs(self.state_configs['output_dir'], exist_ok=True)
 
+        # Set the temporary directory in cases of disk-spillage.
+        dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
+
+        # Execute the graph node-by-node.
         for idx, component in enumerate(nx.weakly_connected_components(graph)):
             self.logger.debug(f"processing component {idx}")
 
