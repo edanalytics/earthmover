@@ -205,6 +205,7 @@ class DebugOperation(Operation):
         self.skip_columns = self.error_handler.assert_get_key(self.config, 'skip_columns', dtype=list, required=False, default=[])
         self.keep_columns = self.error_handler.assert_get_key(self.config, 'keep_columns', dtype=list, required=False, default=None)
         self.transpose = self.error_handler.assert_get_key(self.config, 'transpose', dtype=bool, required=False, default=False)
+        self.to_file = self.error_handler.assert_get_key(self.config, 'to_file', dtype=str, required=False, default=None)
 
         if self.func not in self.DEBUG_FUNCTIONS:
             self.error_handler.throw(f"debug type `{self.func}` not defined")
@@ -219,7 +220,8 @@ class DebugOperation(Operation):
         transformation_name = self.full_name.replace('.operations:debug', '')
         rows_str = ' ' + str(self.rows) if self.func in ['head', 'tail'] else ''
         transpose_str = ', Transpose' if self.transpose else ''
-        self.logger.info(f"debug ({self.func}{rows_str}{transpose_str}) for {transformation_name}:")
+        to_file_str = ', wrote to ' + self.to_file if self.to_file else ''
+        self.logger.info(f"debug ({self.func}{rows_str}{transpose_str}{to_file_str}) for {transformation_name}:")
         
         # `columns` debug does not require column selection or compute
         if self.func == 'columns':
@@ -243,6 +245,9 @@ class DebugOperation(Operation):
 
         if self.transpose:
             debug_data = debug_data.transpose().reset_index(names="column")
+
+        if self.to_file:
+            debug_data.to_csv(self.to_file)
         
         print(debug_data.to_string(index=False))
         return data  # do not actually transform the data
