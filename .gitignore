@@ -30,3 +30,11 @@ example_projects/*/graph.svg
 example_projects/*/output/*
 example_projects/01_simple/sources/big_attendance.tsv
 earthmover/tests/outputs/*.jsonl
+
+# Polars-refactor POC scratch (local venvs, benchmark data/outputs)
+.venv-dask/
+.venv-polars/
+_bench/sources/*.tsv
+_bench/output/
+_bench_melt/sources/*.csv
+_bench_melt/output/

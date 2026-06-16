@@ -1,6 +1,5 @@
 import csv
-import dask
-import pandas as pd
+import polars as pl
 import re
 import string
 
@@ -10,7 +9,7 @@ from earthmover import util
 from typing import Dict, List, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from dask.dataframe.core import DataFrame
+    from polars import LazyFrame as DataFrame
 
 
 class AddColumnsOperation(Operation):
@@ -18,7 +17,7 @@ class AddColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'columns',
     )
 
@@ -33,11 +32,14 @@ class AddColumnsOperation(Operation):
         """
         super().execute(data, **kwargs)
 
+        # Columns are added sequentially (in separate `with_columns` calls) so that a later
+        # column's Jinja template can reference an earlier-added column, matching the
+        # previous row-wise `apply` semantics.
         for col, val in self.columns_dict.items():
 
-            # Apply the value as a static string if not obviously Jinja.
+            # Apply the value as a static literal if not obviously Jinja.
             if not util.contains_jinja(val):
-                data[col] = val
+                data = data.with_columns(pl.lit(val).alias(col))
 
             else:
                 try:
@@ -50,12 +52,8 @@ class AddColumnsOperation(Operation):
                     )
                     raise
 
-                data[col] = data.apply(
-                    util.render_jinja_template, axis=1,
-                    meta=pd.Series(dtype='str', name=col),
-                    template=template,
-                    template_str=val,
-                    error_handler=self.error_handler
+                data = data.with_columns(
+                    util.jinja_render_expr(template, val, error_handler=self.error_handler).alias(col)
                 )
 
         return data
@@ -66,7 +64,7 @@ class ModifyColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'columns',
     )
 
@@ -83,17 +81,16 @@ class ModifyColumnsOperation(Operation):
 
         # Map each config column separately to expand wildcards one-by-one.
         for col, val in self.columns_dict.items():
-            for data_column in self.match_wildcard_columns(data.columns, [col]):
-                self.apply_jinja(data, data_column, val)
+            for data_column in self.match_wildcard_columns(data.collect_schema().names(), [col]):
+                data = self.apply_jinja(data, data_column, val)
 
         return data
-    
+
     def apply_jinja(self, data, col, val):
-        # Apply the value as a static string if not obviously Jinja.
+        # Apply the value as a static literal if not obviously Jinja.
         if not util.contains_jinja(val):
-            data[col] = val
-            return  # End immediately if no jinja processing is required.
-        
+            return data.with_columns(pl.lit(val).alias(col))  # End immediately if no jinja processing is required.
+
         try:
             template = util.build_jinja_template(val, macros=self.earthmover.macros)
 
@@ -105,21 +102,19 @@ class ModifyColumnsOperation(Operation):
             raise
 
         # TODO: Allow user to specify string that represents current column value.
-        if 'value' in data.columns:
+        if 'value' in data.collect_schema().names():
             # prevent existing `value` column from being clobbered, if it exists
             self.error_handler.throw(
                 f"error in `modify_columns` operation; a column named `value` already exists, and would be removed by this operation... please rename it before using `modify_columns`"
             )
-        data['value'] = data[col]
 
-        data[col] = data.apply(
-            util.render_jinja_template, axis=1,
-            meta=pd.Series(dtype='str', name=col),
-            template=template,
-            template_str=val,
-            error_handler=self.error_handler
+        # Expose the current column value as `value` (referenced by templates), render, then drop it.
+        data = data.with_columns(pl.col(col).alias("value"))
+        data = data.with_columns(
+            util.jinja_render_expr(template, val, error_handler=self.error_handler).alias(col)
         )
-        del data["value"]
+        data = data.drop("value")
+        return data
 
 
 class DuplicateColumnsOperation(Operation):
@@ -127,7 +122,7 @@ class DuplicateColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'columns',
     )
 
@@ -142,19 +137,20 @@ class DuplicateColumnsOperation(Operation):
         """
         super().execute(data, **kwargs)
 
+        data_columns = data.collect_schema().names()
         for old_col, new_col in self.columns_dict.items():
 
-            if new_col in data.columns:
+            if new_col in data_columns:
                 self.logger.warning(
                     f"Duplicate column operation overwrites existing column `{new_col}`."
                 )
 
-            if old_col not in data.columns:
+            if old_col not in data_columns:
                 self.error_handler.throw(
                     f"column {old_col} not present in the dataset"
                 )
 
-            data[new_col] = data[old_col]
+            data = data.with_columns(pl.col(old_col).alias(new_col))
 
         return data
 
@@ -164,7 +160,7 @@ class RenameColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'columns',
     )
 
@@ -179,17 +175,18 @@ class RenameColumnsOperation(Operation):
         """
         super().execute(data, **kwargs)
 
+        data_columns = data.collect_schema().names()
         for old_col, new_col in self.columns_dict.items():
-            if new_col in data.columns:
+            if new_col in data_columns:
                 self.error_handler.throw(
                     f"Rename column operation overwrites existing column `{new_col}`."
                 )
-            if old_col not in data.columns:
+            if old_col not in data_columns:
                 self.error_handler.throw(
                     f"column {old_col} not present in the dataset"
                 )
 
-        data = data.rename(columns=self.columns_dict)
+        data = data.rename(dict(self.columns_dict))
 
         return data
 
@@ -199,7 +196,7 @@ class DropColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'columns',
     )
 
@@ -214,15 +211,16 @@ class DropColumnsOperation(Operation):
         """
         super().execute(data, **kwargs)
 
-        cols_to_discard = self.match_wildcard_columns(data.columns, self.columns_to_drop)
-        if not set(cols_to_discard).issubset(data.columns):
+        data_columns = data.collect_schema().names()
+        cols_to_discard = self.match_wildcard_columns(data_columns, self.columns_to_drop)
+        if not set(cols_to_discard).issubset(data_columns):
             self.error_handler.throw(
-                f"one or more columns specified to drop are not present in the dataset: {set(self.columns_to_drop).difference(data.columns)}"
+                f"one or more columns specified to drop are not present in the dataset: {set(self.columns_to_drop).difference(data_columns)}"
             )
             raise
 
         # New functionality: do not raise an error if a column was not found in the dataset.
-        data = data.drop(columns=cols_to_discard)
+        data = data.drop(cols_to_discard)
 
         return data
 
@@ -232,7 +230,7 @@ class KeepColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'columns',
     )
 
@@ -248,8 +246,8 @@ class KeepColumnsOperation(Operation):
         super().execute(data, **kwargs)
 
         # Raise an error if a column specified to keep is absent from the dataset.
-        cols_to_keep = self.match_wildcard_columns(data.columns, self.header, raise_on_unmatched=True)
-        data = data[cols_to_keep]
+        cols_to_keep = self.match_wildcard_columns(data.collect_schema().names(), self.header, raise_on_unmatched=True)
+        data = data.select(cols_to_keep)
 
         return data
 
@@ -259,7 +257,7 @@ class CombineColumnsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'columns', 'new_column', 'separator',
     )
 
@@ -279,11 +277,9 @@ class CombineColumnsOperation(Operation):
         # Columns are returned in order they were matched.
         # If more than one wildcard matches the same column, only the first is kept.
         # Raise an error if a column specified to combine is absent from the dataset.
-        cols_to_combine = self.match_wildcard_columns(data.columns, self.columns_list, raise_on_unmatched=True)
-        data[self.new_column] = data.apply(
-            lambda x: self.separator.join(x[col] for col in cols_to_combine),
-            axis=1,
-            meta=pd.Series(dtype='str', name=self.new_column)
+        cols_to_combine = self.match_wildcard_columns(data.collect_schema().names(), self.columns_list, raise_on_unmatched=True)
+        data = data.with_columns(
+            pl.concat_str([pl.col(col) for col in cols_to_combine], separator=self.separator).alias(self.new_column)
         )
 
         return data
@@ -295,7 +291,7 @@ class MapValuesOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'column', 'columns', 'mapping', 'map_file',
     )
 
@@ -337,8 +333,8 @@ class MapValuesOperation(Operation):
 
         try:
             # Raise an error if a column specified to combine is absent from the dataset.
-            for data_column in self.match_wildcard_columns(data.columns, self.columns_list, raise_on_unmatched=True):
-                data[data_column] = data[data_column].replace(self.mapping)
+            for data_column in self.match_wildcard_columns(data.collect_schema().names(), self.columns_list, raise_on_unmatched=True):
+                data = data.with_columns(pl.col(data_column).replace(self.mapping).alias(data_column))
 
         except Exception as _:
             self.error_handler.throw(
@@ -360,7 +356,7 @@ class MapValuesOperation(Operation):
             with open(file, 'r', encoding='utf-8') as fp:
                 _translations_list = list(csv.reader(fp, delimiter=sep))
                 return dict(_translations_list[1:])
-        
+
         except Exception as err:
             self.error_handler.throw(
                 f"error reading `map_file` {file}: {err}"
@@ -374,7 +370,7 @@ class DateFormatOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'column', 'columns', 'from_format', 'to_format', 'ignore_errors', 'exact_match',
     )
 
@@ -406,11 +402,13 @@ class DateFormatOperation(Operation):
 
 
         # Raise an error if a column specified to combine is absent from the dataset.
-        for data_column in self.match_wildcard_columns(data.columns, self.columns_list, raise_on_unmatched=True):
+        for data_column in self.match_wildcard_columns(data.collect_schema().names(), self.columns_list, raise_on_unmatched=True):
             try:
-                data[data_column] = (
-                    dask.dataframe.to_datetime(data[data_column], format=self.from_format, exact=bool(self.exact_match), errors='coerce' if self.ignore_errors else 'raise')
+                data = data.with_columns(
+                    pl.col(data_column)
+                        .str.strptime(pl.Datetime, format=self.from_format, exact=bool(self.exact_match), strict=not bool(self.ignore_errors))
                         .dt.strftime(self.to_format)
+                        .alias(data_column)
                 )
 
             except Exception as err:
@@ -427,7 +425,7 @@ class CaseColumnsOperation(Operation):
     Generic casing operation to be overridden by child classes.
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
     )
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
@@ -437,7 +435,7 @@ class CaseColumnsOperation(Operation):
         """
         super().execute(data, **kwargs)
 
-        data_columns  = list(data.columns)
+        data_columns  = list(data.collect_schema().names())
         cased_columns = list(map(self.apply_case, data_columns))
 
         if len(set(data_columns)) != len(set(cased_columns)):
@@ -447,7 +445,7 @@ class CaseColumnsOperation(Operation):
                 f"Columns after : {len(set(cased_columns))}"
             )
 
-        data = data.rename(columns=dict(zip(data_columns, cased_columns)))
+        data = data.rename(dict(zip(data_columns, cased_columns)))
         return data
 
     @staticmethod

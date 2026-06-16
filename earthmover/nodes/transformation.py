@@ -42,7 +42,7 @@ class Transformation(Node):
         """
         super().execute()
 
-        self.data = self.upstream_sources[self.source].data.copy()
+        self.data = self.upstream_sources[self.source].data.clone()
 
         for operation in self.operations:
             self.data = operation.execute(self.data, data_mapping=self.upstream_sources)

@@ -1,7 +1,8 @@
 import os
 import pandas as pd
+import polars as pl
 import re
-import warnings
+import tempfile
 
 from earthmover.nodes.node import Node
 from earthmover import util
@@ -35,12 +36,17 @@ class Destination(Node):
         Helper method for casting row values to correct datatypes.
         Null-representation and dtype-to-string conversion differ by destination subclass.
         """
-        if pd.isna(value):
-            return cls.NULL_REPR
-        
+        # Guard `pd.isna` against array-like values (e.g. nested list/dict columns), which
+        # would otherwise raise an ambiguous-truth-value error.
+        try:
+            if bool(pd.isna(value)):
+                return cls.NULL_REPR
+        except (ValueError, TypeError):
+            pass
+
         if isinstance(value, cls.STRING_DTYPES):
             return str(value)
-        
+
         return value
 
 
@@ -61,6 +67,10 @@ class FileDestination(Destination):
     TEMPLATED_COL = "____OUTPUT____"
     DEFAULT_TEMPLATE = """{ {% for col, val in __row_data__.pop('__row_data__').items() %}"{{ col }}": {{ val | tojson }}{% if not loop.last %}, {% endif %}{% endfor %} }"""
 
+    # Number of rows materialized at a time when writing output. Bounds peak memory during
+    # the write, regardless of total output size.
+    WRITE_BATCH_SIZE = 100_000
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.template = self.error_handler.assert_get_key(self.config, 'template', dtype=str, required=False, default=None)
@@ -79,7 +89,7 @@ class FileDestination(Destination):
 
     def execute(self, **kwargs):
         """
-        
+
         :return:
         """
         super().execute(**kwargs)
@@ -109,59 +119,75 @@ class FileDestination(Destination):
             )
             raise
 
-        # this renders each row without having to itertuples() (which is much slower)
-        # (meta=... below is how we prevent dask warnings that it can't infer the output data type)
-        self.data = (
-            self.upstream_sources[self.source].data
-                .map_partitions(lambda x: x.apply(self.render_row, jinja_template=self.jinja_template, axis=1), meta=pd.Series('str'))
-        )
-
-        # Repartition before writing, if specified.
-        self.data = self.opt_repartition(self.data)
+        upstream_data = self.upstream_sources[self.source].data
+        upstream_data = self.opt_repartition(upstream_data)  # no-op under Polars (warns if set)
+        self.data = upstream_data
 
         # Verify the output directory exists.
         os.makedirs(os.path.dirname(self.file), exist_ok=True)
 
-        # Write the optional header, each line, and the optional footer.
-        with open(self.file, 'w+', encoding='utf-8') as fp:
+        # Spill the TRANSFORMED (pre-render) data to a temporary Arrow file using Polars'
+        # streaming engine. This step contains no Python UDF, so it streams with bounded peak
+        # memory regardless of dataset size. We then read the spilled data back in row-batches
+        # and render each batch to output lines in Python, so the per-row Jinja rendering never
+        # has to hold more than one batch in memory at a time.
+        tmp_dir = self.earthmover.state_configs['tmp_dir']
+        tmp_fd, tmp_path = tempfile.mkstemp(suffix=".arrow", prefix="earthmover_", dir=tmp_dir)
+        os.close(tmp_fd)
 
-            # only load the first row if header/footer contain Jinja that might need it:
-            if (
-                (self.header and util.contains_jinja(self.header))
-                or (self.footer and util.contains_jinja(self.footer))
-            ):
-                try:
-                    with warnings.catch_warnings():
-                        warnings.filterwarnings("ignore", message="Insufficient elements for `head`")
-                        # (use `npartitions=-1` because the first N partitions could be empty)
-                        first_row = self.upstream_sources[self.source].data.head(1, npartitions=-1).reset_index(drop=True).iloc[0]
-                
-                except IndexError:  # If no rows are present, build a representation of the row with empty values
-                    first_row = {col: "" for col in self.upstream_sources[self.source].data.columns}
-                    first_row['__row_data__'] = first_row
-                
-            if self.header and util.contains_jinja(self.header):
-                jinja_template = util.build_jinja_template(self.header, macros=self.earthmover.macros)
-                rendered_template = self.render_row(first_row, jinja_template=jinja_template)
-                fp.write(rendered_template)
-            elif self.header: # no jinja
-                fp.write(self.header)
+        try:
+            upstream_data.sink_ipc(tmp_path)
+            scan = pl.scan_ipc(tmp_path)
+            total_rows = scan.select(pl.len()).collect().item()
+            self.num_rows = total_rows
 
-            for partition in self.data.partitions:
-                fp.writelines(partition.compute())
-                partition = None  # Remove partition from memory immediately after write.
+            # Write the optional header, each line, and the optional footer.
+            with open(self.file, 'w+', encoding='utf-8') as fp:
 
-            if self.footer and util.contains_jinja(self.footer):
-                jinja_template = util.build_jinja_template(self.footer, macros=self.earthmover.macros)
-                rendered_template = self.render_row(first_row, jinja_template)
-                fp.write(rendered_template)
-            elif self.footer: # no jinja
-                fp.write(self.footer)
+                # only load the first row if header/footer contain Jinja that might need it:
+                first_row = None
+                if (
+                    (self.header and util.contains_jinja(self.header))
+                    or (self.footer and util.contains_jinja(self.footer))
+                ):
+                    head_df = scan.head(1).collect()
+                    if head_df.height > 0:
+                        first_row = head_df.row(0, named=True)
+                    else:  # If no rows are present, build a representation of the row with empty values
+                        first_row = {col: "" for col in scan.collect_schema().names()}
+
+                if self.header and util.contains_jinja(self.header):
+                    jinja_template = util.build_jinja_template(self.header, macros=self.earthmover.macros)
+                    rendered_template = self.render_row(first_row, jinja_template=jinja_template)
+                    fp.write(rendered_template)
+                elif self.header: # no jinja
+                    fp.write(self.header)
+
+                offset = 0
+                while offset < total_rows:
+                    batch = scan.slice(offset, self.WRITE_BATCH_SIZE).collect()
+                    fp.writelines(
+                        self.render_row(row, jinja_template=self.jinja_template)
+                        for row in batch.iter_rows(named=True)
+                    )
+                    offset += self.WRITE_BATCH_SIZE
+                    batch = None  # Release the batch from memory immediately after write.
+
+                if self.footer and util.contains_jinja(self.footer):
+                    jinja_template = util.build_jinja_template(self.footer, macros=self.earthmover.macros)
+                    rendered_template = self.render_row(first_row, jinja_template)
+                    fp.write(rendered_template)
+                elif self.footer: # no jinja
+                    fp.write(self.footer)
+
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
 
         self.logger.debug(f"output `{self.file}` written")
         self.size = os.path.getsize(self.file)
 
-    def render_row(self, row: pd.Series, jinja_template):
+    def render_row(self, row, jinja_template):
         row_data = row if isinstance(row, dict) else row.to_dict()
         row_data = {
             field: self.cast_output_dtype(value)

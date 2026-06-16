@@ -1,4 +1,5 @@
 import pandas as pd
+import polars as pl
 import re
 
 from earthmover.operations.operation import Operation
@@ -6,12 +7,12 @@ from earthmover.operations.operation import Operation
 from typing import Dict, List, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from dask.dataframe.core import DataFrame
+    from polars import LazyFrame as DataFrame
 
 
 class GroupByWithRankOperation(Operation):
     """
-    
+
     """
     allowed_configs: Tuple[str] = (
         'operation', 'group_by_columns', 'rank_column',
@@ -32,13 +33,16 @@ class GroupByWithRankOperation(Operation):
         """
         super().execute(data, **kwargs)
 
-        if not set(self.group_by_columns).issubset(data.columns):
+        if not set(self.group_by_columns).issubset(data.collect_schema().names()):
             self.error_handler.throw(
                 "one or more specified group-by columns not in the dataset"
             )
             raise
 
-        data[self.rank_column] = data.groupby(self.group_by_columns).cumcount().reset_index(drop=True)
+        # 0-based position within each group, in row order (equivalent to pandas `cumcount()`).
+        data = data.with_columns(
+            pl.int_range(0, pl.len()).over(self.group_by_columns).alias(self.rank_column)
+        )
 
         return data
 
@@ -48,7 +52,7 @@ class GroupByOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'group_by_columns', 'create_columns',
     )
 
@@ -71,21 +75,23 @@ class GroupByOperation(Operation):
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
-        Note: There is a bug in Dask Groupby operations.
-        Index columns are overwritten by 'index' after index reset.
+        Group-by is an inherently whole-frame aggregation. We materialize to pandas (the
+        result of an aggregation is typically small) and reuse the established aggregation
+        lambdas, which keeps behavior identical to the previous backend. The result is
+        returned as a Polars LazyFrame so the rest of the pipeline stays lazy.
 
         :return:
         """
         super().execute(data, **kwargs)
 
-        if not set(self.group_by_columns).issubset(data.columns):
+        if not set(self.group_by_columns).issubset(data.collect_schema().names()):
             self.error_handler.throw(
                 "one or more specified group-by columns not in the dataset"
             )
             raise
 
-        #
-        grouped = data.groupby(self.group_by_columns)
+        pdf = data.collect().to_pandas()
+        grouped = pdf.groupby(self.group_by_columns, sort=False)
 
         result = grouped.size().reset_index()
         result.columns = self.group_by_columns + [self.GROUP_SIZE_COL]
@@ -109,7 +115,7 @@ class GroupByOperation(Operation):
                         f"aggregation function `{_agg_type}`(column) missing required column"
                     )
 
-                if _col not in data.columns:
+                if _col not in pdf.columns:
                     self.error_handler.throw(
                         f"aggregation function `{_agg_type}`({_col}) refers to a column {_col} which does not exist"
                     )
@@ -120,24 +126,14 @@ class GroupByOperation(Operation):
                     f"invalid aggregation function `{_agg_type}` in `group_by` operation"
                 )
 
-            #
-            # ddf.apply() requires the index be defined, at least in structure.
-            meta = pd.Series(
-                dtype='object',
-                name=new_col_name,
-                index=pd.MultiIndex.from_tuples(
-                    tuples=[(None,) * len(self.group_by_columns)],
-                    names=self.group_by_columns
-                )
-            )
-
-            _computed = grouped.apply(agg_lambda, meta=meta).reset_index()
+            _computed = grouped.apply(agg_lambda).reset_index()
+            _computed.columns = self.group_by_columns + [new_col_name]
             result = result.merge(_computed, how="left", on=self.group_by_columns)
 
-        data = result.query(f"{self.GROUP_SIZE_COL} > 0")
-        del data[self.GROUP_SIZE_COL]
+        result = result[result[self.GROUP_SIZE_COL] > 0]
+        del result[self.GROUP_SIZE_COL]
 
-        return data
+        return pl.from_pandas(result).lazy()
 
     @staticmethod
     def _get_agg_lambda(agg_type: str, column: str = "", separator: str = ""):

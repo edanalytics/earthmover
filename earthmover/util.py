@@ -2,6 +2,7 @@ import jinja2
 import hashlib
 import json
 import os
+import polars as pl
 
 from sys import exc_info
 
@@ -70,25 +71,34 @@ def contains_jinja(string: str) -> bool:
         return False
 
 
-def render_jinja_template(row: 'Series', template: jinja2.Template, template_str: str, *, error_handler: 'ErrorHandler') -> str:
+def render_jinja_template(row, template: jinja2.Template, template_str: str, *, error_handler: 'ErrorHandler') -> str:
     """
-
-    :param row:
+    :param row: a mapping of column name -> value. Under the Polars backend this is the
+        dict produced by `pl.struct(...).map_elements(...)`; for back-compatibility a
+        pandas Series is also accepted.
     :param template:
     :param template_str:
     :param error_handler:
     :return:
     """
+    # Normalize to a plain dict. Polars represents missing values as `None`; we coerce
+    # them to NaN so that the long-standing `{% if value!=value %}` idiom (NaN != NaN)
+    # and other pandas-style null checks behave identically to the previous backend.
+    if isinstance(row, dict):
+        row_dict = {k: (float('nan') if v is None else v) for k, v in row.items()}
+    else:
+        row_dict = {k: (float('nan') if v is None else v) for k, v in row.to_dict().items()}
+
     try:
-        row_data = row.to_dict()
-        row_data.update({"__row_data__": row.to_dict()})
+        row_data = dict(row_dict)
+        row_data.update({"__row_data__": dict(row_dict)})
         return template.render(row_data)
 
     except Exception as err:
         error_handler.ctx.remove('line')
 
-        if dict(row):
-            _joined_keys = "`, `".join(dict(row).keys())
+        if row_dict:
+            _joined_keys = "`, `".join(row_dict.keys())
             variables = f"\n(available variables are `{_joined_keys}`)"
         else:
             variables = f"\n(no available variables)"
@@ -97,6 +107,20 @@ def render_jinja_template(row: 'Series', template: jinja2.Template, template_str
             f"Error rendering Jinja template: ({err}):\n===> {template_str}{variables}"
         )
         raise
+
+
+def jinja_render_expr(template: jinja2.Template, template_str: str, *, error_handler: 'ErrorHandler') -> 'pl.Expr':
+    """
+    Build a Polars expression that renders `template` once per row, with every column in
+    scope (equivalent to the previous backend's `df.apply(render, axis=1)`).
+
+    The struct passed to `map_elements` becomes a `{column: value}` dict per row, which is
+    exactly the input shape `render_jinja_template` expects.
+    """
+    def _render(row: dict) -> str:
+        return render_jinja_template(row, template, template_str, error_handler=error_handler)
+
+    return pl.struct(pl.all()).map_elements(_render, return_dtype=pl.Utf8)
 
 
 def jinja2_template_error_lineno():

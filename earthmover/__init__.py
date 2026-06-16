@@ -1,18 +1,16 @@
-# only use upgraded dask/pandas config on later versions of python
-import sys
-if sys.version_info.minor >= 10:
+# Earthmover uses Polars as its dataframe backend.
+#
+# Historically the backend was Dask (+ pandas); it was swapped to Polars to
+# reduce peak memory usage and OOM errors in production by leaning on Polars'
+# Arrow-backed columnar storage and its lazy/streaming execution engine.
+#
+# A small amount of pandas is still used internally for row-wise Jinja
+# rendering and a few operations whose pandas semantics we preserve exactly
+# (e.g. `filter_rows`' query syntax); those run inside bounded, streaming
+# `LazyFrame.map_batches` calls.
 
-    # September 2024 - for now we need to do this in order to turn off the Dask 
-    #    query optimizer - see https://blog.dask.org/2023/08/25/dask-expr-introduction
-    #    For reasons unknown, it doesn't yet work with Earthmover. A future Dask 
-    #    version may force us to use the query optimizer, but hopefully by then,
-    #    the bugs that emerge when we use it with Earthmover will have been fixed.
-    import dask
-    dask.config.set({'dataframe.query-planning': False})
+import polars as pl
 
-    # performance enhancements
-    dask.config.set({"dataframe.convert-string": True})
-
-    import pandas as pd
-    pd.options.mode.copy_on_write = True
-    pd.options.mode.string_storage = "pyarrow"
+# Be permissive about Jinja-produced/empty values: we never want Polars to
+# raise on a column that mixes types during a Python UDF round-trip.
+pl.Config.set_fmt_str_lengths(1000)

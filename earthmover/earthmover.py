@@ -1,4 +1,3 @@
-import dask
 import itertools
 import json
 import logging
@@ -6,6 +5,7 @@ import tempfile
 import networkx as nx
 import pathlib
 import os
+import polars as pl
 import shutil
 import string
 import time
@@ -100,8 +100,8 @@ class Earthmover:
         # Prepare the output directory for destinations.
         self.state_configs['output_dir'] = os.path.expanduser(self.state_configs['output_dir'])
 
-        # Set the temporary directory in cases of disk-spillage.
-        dask.config.set({'temporary_directory': self.state_configs['tmp_dir']})
+        # Set the temporary directory Polars uses when its streaming engine must spill to disk.
+        os.environ.setdefault("POLARS_TEMP_DIR", self.state_configs['tmp_dir'])
 
         # Set a directory for installing packages.
         self.packages_dir = os.path.join(os.getcwd(), 'packages')
@@ -276,7 +276,9 @@ class Earthmover:
                 node.post_execute()
 
                 if self.results_file:
-                    self.metadata["row_counts"].update({node_name: len(node.data)})
+                    if node.num_rows is None:
+                        node.num_rows = node.data.select(pl.len()).collect().item()
+                    self.metadata["row_counts"].update({node_name: node.num_rows})
 
 
     def hash_graph_to_runs_file(self, graph: Graph) -> RunsFile:
@@ -395,14 +397,10 @@ class Earthmover:
         if self.state_configs['show_graph']:
             self.logger.info("saving dataflow graph image to `graph.png` and `graph.svg`")
 
-            # Compute all row number values at once for performance, then update the nodes.
-            computed_node_rows = dask.compute(
-                {node_name: node.num_rows for node_name, node in active_graph.get_node_data().items()}
-            )[0]
-
-            for node_name, num_rows in computed_node_rows.items():
-                node = active_graph.ref(node_name)
-                node.num_rows = num_rows
+            # Materialize row counts for any node that hasn't computed one yet, then update.
+            for node_name, node in active_graph.get_node_data().items():
+                if node.num_rows is None and node.data is not None:
+                    node.num_rows = node.data.select(pl.len()).collect().item()
 
             active_graph.draw()
         

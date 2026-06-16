@@ -1,0 +1,33 @@
+version: 2
+
+config:
+  output_dir: ./output/
+  log_level: INFO
+
+sources:
+  attendance:
+    file: ./sources/big_attendance.tsv
+    header_rows: 1
+
+transformations:
+  attendance:
+    source: $sources.attendance
+    operations:
+      - operation: map_values
+        column: attended
+        mapping:
+          "TRUE": absent
+          "FALSE": present
+      - operation: rename_columns
+        columns:
+          attended: status
+      - operation: add_columns
+        columns:
+          school: 12345
+
+destinations:
+  studentSchoolAttendanceEvents:
+    source: $transformations.attendance
+    template: ./templates/attendance.jsont
+    extension: jsonl
+    linearize: True

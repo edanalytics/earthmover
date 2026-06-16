@@ -1,0 +1,1 @@
+{ "studentId": "{{ student_id }}", "schoolId": "{{ school_id }}", "metric": "{{ metric }}", "value": {{ value }} }

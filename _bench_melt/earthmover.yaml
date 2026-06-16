@@ -1,0 +1,22 @@
+version: 2
+config:
+  output_dir: ./output/
+  log_level: INFO
+sources:
+  wide:
+    file: ./sources/wide.csv
+    header_rows: 1
+transformations:
+  long:
+    source: $sources.wide
+    operations:
+      - operation: melt
+        id_vars: [student_id, school_id]
+        var_name: metric
+        value_name: value
+destinations:
+  scores_long:
+    source: $transformations.long
+    template: ./templates/score.jsont
+    extension: jsonl
+    linearize: True

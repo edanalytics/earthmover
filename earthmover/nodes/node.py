@@ -1,19 +1,17 @@
 import abc
-import dask
 import fnmatch
 import jinja2
 import logging
 import pandas as pd
+import polars as pl
 import warnings
-
-from dask.diagnostics import ProgressBar
 
 from earthmover import util
 
 from typing import Dict, List, Tuple, Optional, Union
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from dask.dataframe.core import DataFrame
+    from polars import LazyFrame
     from earthmover.earthmover import Earthmover
     from earthmover.error_handler import ErrorHandler
     from earthmover.yaml_parser import YamlMapping
@@ -42,7 +40,7 @@ class Node:
 
         self.upstream_sources: Dict[str, Optional['Node']] = {}
 
-        self.data: 'DataFrame' = None
+        self.data: 'LazyFrame' = None
 
         self.size: int = None
         self.num_rows: int = None
@@ -52,12 +50,14 @@ class Node:
         self.require_rows: bool = False
         self.debug: bool = (self.logger.level <= logging.DEBUG)  # Default to Logger's level.
 
-        # Internal Dask configs
+        # `repartition` was a Dask partitioning concept; it has no effect under the Polars
+        # backend (Polars manages memory/parallelism internally). We still accept it for
+        # backward-compatibility and warn that it is a no-op (see `opt_repartition`).
         self.partition_size: Union[str, int] = self.config.get('repartition')
 
-        # Optional variables for displaying progress and diagnostics.
+        # Progress bars were provided by Dask's diagnostics; Polars has no equivalent global
+        # progress bar, so `show_progress` is accepted but currently a no-op.
         self.show_progress: bool = self.config.get('show_progress', self.earthmover.state_configs["show_progress"])
-        self.progress_bar: ProgressBar = ProgressBar(minimum=10, dt=5.0)  # Always instantiate, but only use if `show_progress is True`.
         self.head_was_displayed: bool = False  # Workaround to prevent displaying the head twice when debugging.
 
         # Verify all configs provided by the user are specified for the node.
@@ -90,10 +90,8 @@ class Node:
             file=self.config.__file__, line=self.config.__line__, node=self, operation=None
         )
 
-        # Turn on the progress bar manually.
         if self.show_progress:
-            self.logger.info(f"Displaying progress for {self.type} node: {self.name}")
-            self.progress_bar.__enter__()  # Open context manager manually to avoid with-clause
+            self.logger.info(f"Processing {self.type} node: {self.name}")
 
         pass
 
@@ -109,19 +107,14 @@ class Node:
 
         :return:
         """
-        # Close context manager manually to avoid with-clause.
-        if self.show_progress:
-            self.progress_bar.__exit__(None, None, None)
-
         self.check_expectations(self.expectations)
 
-        # Get lazy row and column counts to display in graph.png.
-        if isinstance(self.data, (pd.Series, dask.dataframe.Series)):
-            self.num_rows, self.num_cols = self.data.size, 1
-        else:
-            self.num_rows, self.num_cols = self.data.shape
+        # Column count is available cheaply from the (lazy) schema; row count is deferred
+        # because it would force a full materialization of the LazyFrame.
+        self.num_cols = len(self.data.collect_schema().names())
+        self.num_rows = None
 
-        # Only actually compute() and count the rows if `require_rows` was defined for this node.
+        # Only actually count the rows if `require_rows` was defined for this node.
         if self.require_rows > 0:
             self.check_require_rows(self.require_rows)
 
@@ -132,7 +125,8 @@ class Node:
         pass
 
     def check_require_rows(self, num_required_rows):
-        self.num_rows = dask.compute(self.num_rows)[0]
+        if self.num_rows is None:
+            self.num_rows = self.data.select(pl.len()).collect().item()
         if self.num_rows < num_required_rows:
             self.error_handler.throw(
                 f"Source `{self.full_name}` failed require_rows >= {num_required_rows}` (only {self.num_rows} rows found)"
@@ -144,43 +138,42 @@ class Node:
 
     def display_head(self, nrows: int = 5):
         """
-        Originally, this outputted twice due to multiple optimization passes: https://github.com/dask/dask/issues/7545
+        Materialize just the first `nrows` rows for display.
         """
         if self.head_was_displayed:
             return None
 
-        # Turn off UserWarnings when the number of rows is less than the head-size.
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", message="Insufficient elements for `head`")
+        # Collect the head and (cheaply, alongside) the total row count.
+        data_head = self.data.head(nrows).collect()
+        if self.num_rows is None:
+            self.num_rows = self.data.select(pl.len()).collect().item()
 
-            # Complete all computes at once to reduce duplicate computation.
-            self.num_rows, data_head = dask.compute([self.num_rows, self.data.head(nrows)])[0]
+        self.logger.info(f"Node {self.name}: {int(self.num_rows)} rows; {self.num_cols} columns")
+        # Render pandas-style (no index) to keep the familiar debug output format.
+        with pd.option_context('display.max_columns', None, 'display.width', None):
+            print(f"\n{data_head.to_pandas().to_string(index=False)}\n")
 
-            self.logger.info(f"Node {self.name}: {int(self.num_rows)} rows; {self.num_cols} columns")
-            with pd.option_context('display.max_columns', None, 'display.width', None):
-                print(f"\n{data_head.to_string(index=False)}\n")
-
-            self.head_was_displayed = True  # Mark that state was shown to avoid double-logging.
+        self.head_was_displayed = True  # Mark that state was shown to avoid double-logging.
 
     def check_expectations(self, expectations: List[str]):
         """
-
-        :return:
+        Evaluate Jinja boolean `expect` expressions row-by-row and fail if any row is False.
         """
         expectation_result_col = "__expectation_result__"
 
         if expectations:
-            result = self.data.copy()
+            # Expectations are opt-in and evaluated eagerly via pandas to preserve the exact
+            # rendering/`query` semantics of the previous backend.
+            result = self.data.collect().to_pandas()
 
             for expectation in expectations:
                 template = jinja2.Template("{{" + expectation + "}}")
 
                 result[expectation_result_col] = result.apply(
                     util.render_jinja_template, axis=1,
-                    meta=pd.Series(dtype='str', name=expectation_result_col),
                     template=template,
                     template_str="{{" + expectation + "}}",
-                    error_handler = self.error_handler
+                    error_handler=self.error_handler
                 )
 
                 num_failed = len(result.query(f"{expectation_result_col}=='False'").index)
@@ -193,9 +186,17 @@ class Node:
                         f"Assertion passed! {self.name}: {expectation}"
                     )
 
-    def opt_repartition(self, data: 'DataFrame'):
+    def opt_repartition(self, data: 'LazyFrame'):
+        """
+        `repartition` was a Dask-specific tuning knob. Under Polars it is a no-op; we warn
+        once per node that sets it so existing project YAML keeps working but users know it
+        no longer has any effect.
+        """
         if self.partition_size:
-            data = data.repartition(partition_size=self.partition_size)
+            self.logger.warning(
+                f"Config `repartition` on node `{self.name}` is deprecated and has no effect "
+                f"under the Polars backend (Polars manages partitioning/memory internally)."
+            )
         return data
 
     def set_upstream_source(self, source_name: str, node: 'Node'):
@@ -218,7 +219,7 @@ class Node:
         matched_cols: List[str] = []
         unmatched_wildcards: List[str] = []
 
-        # Iterate the wildcards and attempt to match against all columns in the dataframe. 
+        # Iterate the wildcards and attempt to match against all columns in the dataframe.
         for wildcard in wildcard_list:
 
             # Track whether the wildcard matched any columns.
@@ -231,7 +232,7 @@ class Node:
 
             if not match_found:
                 unmatched_wildcards.append(wildcard)
-        
+
         # Raise an error if one or more columns specified could not be mapped to the columns list.
         if raise_on_unmatched and unmatched_wildcards:
             self.error_handler.throw(

@@ -1,10 +1,13 @@
+import numpy as np
+import pandas as pd
+import polars as pl
+
 from earthmover.operations.operation import Operation
 
-import warnings
 from typing import Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from dask.dataframe.core import DataFrame
+    from polars import LazyFrame as DataFrame
 
 
 class DistinctRowsOperation(Operation):
@@ -12,7 +15,7 @@ class DistinctRowsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'column', 'columns',
     )
 
@@ -37,16 +40,16 @@ class DistinctRowsOperation(Operation):
         """
         super().execute(data, **kwargs)
 
-        if not set(self.columns_list).issubset(data.columns):
+        data_columns = data.collect_schema().names()
+        if not set(self.columns_list).issubset(data_columns):
             self.error_handler.throw(
                 "one or more columns for checking for distinctness are undefined in the dataset"
             )
             raise
 
-        if not self.columns_list:
-            self.columns_list = data.columns
-
-        return data.drop_duplicates(subset=self.columns_list)
+        # An empty subset means "distinct over all columns".
+        subset = self.columns_list or None
+        return data.unique(subset=subset, keep='first', maintain_order=True)
 
 
 class FilterRowsOperation(Operation):
@@ -54,7 +57,7 @@ class FilterRowsOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'query', 'behavior',
     )
 
@@ -84,8 +87,15 @@ class FilterRowsOperation(Operation):
         else:
             _query = self.query
 
+        # `filter_rows` uses pandas' `query` mini-language (e.g. `col.str.contains(...)`),
+        # which has no direct Polars equivalent. We preserve it exactly by evaluating each
+        # streaming batch with pandas. Filtering is row-independent, so `streamable=True`
+        # lets Polars run this per-batch in the streaming engine (memory stays bounded).
+        def _filter(batch: 'pl.DataFrame') -> 'pl.DataFrame':
+            return pl.from_pandas(batch.to_pandas().query(_query, engine='python'))
+
         try:
-            data = data.query(_query, engine='python')  #`numexpr` is used by default if installed.
+            data = data.map_batches(_filter, streamable=True)
 
         except Exception as _:
             self.error_handler.throw(
@@ -123,7 +133,7 @@ class SortRowsOperation(Operation):
             sort_direc_list = [] # True for ascending
                           # False for descending
 
-            clean_columns_list = [] 
+            clean_columns_list = []
                 # getting rid of "+" and"-" in front of the column name
                 # when the user inputs the columns in the second format
 
@@ -136,22 +146,25 @@ class SortRowsOperation(Operation):
                     clean_columns_list.append(col[1:] if col.startswith("+") else col)
                     sort_direc_list.append(True)
 
-            
+
             # overwrites any of the "+" that could have been provided
             # and sets all the directions to descending
             if self.descending is True:
                 sort_direc_list = [False] * len(sort_direc_list)
 
 
-            if not set(clean_columns_list).issubset(data.columns):
+            if not set(clean_columns_list).issubset(data.collect_schema().names()):
                 self.error_handler.throw(
                     "one or more columns for sorting are undefined in the dataset"
                 )
-                raise 
+                raise
 
-            return data.sort_values(by=clean_columns_list, ascending=sort_direc_list)
-                # where clean_columns_list is a list of strings 
-                # and sort_direc_list is a list of booleans
+            # Polars `descending` is the inverse of the ascending flags. `nulls_last=True`
+            # matches pandas' default of sorting NaN/null values to the end.
+            descending = [not ascending for ascending in sort_direc_list]
+            return data.sort(by=clean_columns_list, descending=descending, nulls_last=True)
+                # where clean_columns_list is a list of strings
+                # and descending is a list of booleans
 
 class LimitRowsOperation(Operation):
         """
@@ -179,10 +192,10 @@ class LimitRowsOperation(Operation):
                     "count for a limit operation must be a positive integer"
                 )
                 raise
-            
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", message="Insufficient elements for `head`")
-                return data.head(self.count + self.offset, npartitions=-1, compute=False).tail(self.count, compute=False)
+
+            # Equivalent to the previous `head(count+offset).tail(count)`: take `count`
+            # rows starting at `offset`.
+            return data.slice(self.offset, self.count)
 
 
 class FlattenOperation(Operation):
@@ -190,7 +203,7 @@ class FlattenOperation(Operation):
 
     """
     allowed_configs: Tuple[str] = (
-        'operation', 'repartition', 
+        'operation', 'repartition',
         'flatten_column', 'left_wrapper', 'right_wrapper', 'separator', 'value_column', 'trim_whitespace'
     )
 
@@ -210,39 +223,68 @@ class FlattenOperation(Operation):
         """
         super().execute(data, **kwargs)
 
-        # Update the meta to reflect the flattened column.
-        target_dtypes = data.dtypes.to_dict()
-        target_dtypes.update({self.value_column: target_dtypes[self.flatten_column]})
-        del target_dtypes[self.flatten_column]
+        # Output schema: original columns minus the flattened column, plus the new value column.
+        cols = data.collect_schema().names()
+        out_cols = [c for c in cols if c != self.flatten_column] + [self.value_column]
+        out_schema = {c: pl.Utf8 for c in out_cols}
 
-        return data.map_partitions(self.flatten_partition, meta=target_dtypes)
+        # Exploding a delimited cell into many rows is row-independent, so we run the exact
+        # pandas implementation per streaming batch (`streamable=True`).
+        def _flatten(batch: 'pl.DataFrame') -> 'pl.DataFrame':
+            return pl.from_pandas(self.flatten_partition(batch.to_pandas()))
+
+        return data.map_batches(_flatten, streamable=True, schema=out_schema)
+
+    @staticmethod
+    def _stringify_cell(value):
+        """
+        Render a cell as the string the splitter expects. Plain strings pass through; JSON
+        list/array values (e.g. from a JSONL source read as a Polars List) are rendered with
+        their Python list repr (comma-separated), matching the previous backend's behavior.
+        """
+        if isinstance(value, str):
+            return value
+        if isinstance(value, np.ndarray):
+            return str(value.tolist())  # `.tolist()` yields plain Python scalars (e.g. int, not np.int64)
+        if isinstance(value, (list, tuple)):
+            return str([v.item() if hasattr(v, "item") else v for v in value])
+        if value is None:
+            return ""
+        try:
+            if pd.isna(value):
+                return ""
+        except (ValueError, TypeError):
+            pass
+        return str(value)
 
     def flatten_partition(self, df):
 
-        flattened_values_df = (df[self.flatten_column]
-            # force to a string before splitting
+        flattened_values = (df[self.flatten_column]
+            # force to a string before splitting (handles JSON list cells too)
+            .map(self._stringify_cell)
             .astype("string")
 
             # trim off `left_wrapper` and `right_wrapper` characters
-            .str.lstrip(self.left_wrapper)  
+            .str.lstrip(self.left_wrapper)
             .str.rstrip(self.right_wrapper)
 
-            # split by `separator` and explode rows
-            .str.split(self.separator, expand=True)
-            .stack()
+            # split by `separator` and explode into one row per value (the index is repeated,
+            # which drives the join below). `explode` avoids the NaN-padding that
+            # `split(expand=True).stack()` produces.
+            .str.split(self.separator)
+            .explode()
 
             # trim off `trim_whitespace` characters from each of the split values
             .str.strip(self.trim_whitespace)
 
-            # remove the hierarchical index and set the `value_column` name
-            .reset_index(level=1)
-            .drop('level_1', axis=1)
-            .rename(columns={0: self.value_column})
+            # name the resulting column
+            .rename(self.value_column)
         )
 
-        # join the exploded df to the original and drop `flatten_column` which is no longer needed
+        # join the exploded values back to the original (on index) and drop the now-unneeded
+        # `flatten_column`.
         return (df
-            .join(flattened_values_df)
             .drop(self.flatten_column, axis=1)
+            .join(flattened_values)
             .reset_index(drop=True)
         )

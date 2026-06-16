@@ -1,9 +1,8 @@
-import dask.config as dask_config
-import dask.dataframe as dd
 import ftplib
 import io
 import os
 import pandas as pd
+import polars as pl
 import re
 import hashlib
 
@@ -13,9 +12,20 @@ from earthmover import util
 from typing import List, Optional, Tuple
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from dask.dataframe.core import DataFrame
+    from polars import LazyFrame
     from earthmover.earthmover import Earthmover
     from earthmover.yaml_parser import YamlMapping
+
+
+def _to_lazy(data) -> 'LazyFrame':
+    """Normalize a read result (pandas/polars, eager/lazy) into a Polars LazyFrame."""
+    if isinstance(data, pl.LazyFrame):
+        return data
+    if isinstance(data, pl.DataFrame):
+        return data.lazy()
+    if isinstance(data, pd.DataFrame):
+        return pl.from_pandas(data).lazy()
+    raise TypeError(f"Cannot convert object of type {type(data)} to a Polars LazyFrame")
 
 
 class Source(Node):
@@ -70,38 +80,33 @@ class Source(Node):
         :param kwargs:
         :return:
         """
-        if isinstance(self.data, pd.DataFrame):
-            self.logger.debug(
-                f"Casting data in {self.type} node `{self.name}` to a Dask dataframe."
-            )
-            self.data = dd.from_pandas(self.data, chunksize=self.chunksize)
+        self.logger.debug(
+            f"Casting data in {self.type} node `{self.name}` to a Polars LazyFrame."
+        )
+        self.data = _to_lazy(self.data)
 
-        # Remove rows with all null values or empty strings.
-        # DataFrame.dropna() only removes nulls.
-        # Using a mask reduces the number of passes made over the data.
-        empty_mask = self.data.isna() | (self.data == "")
-        self.data = self.data[~empty_mask.all(axis=1)]
+        # Remove rows where every value is null or an empty string.
+        # (Build the mask per-column so non-string columns are only null-checked.)
+        schema = self.data.collect_schema()
+        if len(schema) > 0:
+            conditions = []
+            for col, dtype in schema.items():
+                if dtype == pl.Utf8:
+                    conditions.append(pl.col(col).is_null() | (pl.col(col) == ""))
+                else:
+                    conditions.append(pl.col(col).is_null())
+            self.data = self.data.filter(~pl.all_horizontal(conditions))
 
-        # Repartition if specified.
+        # `repartition` is a no-op under Polars (warns if set).
         self.data = self.opt_repartition(self.data)
 
-        # Add missing columns if defined under `optional_fields`.
+        # Add missing columns if defined under `optional_fields`, initialized to empty strings.
         if self.optional_fields:
-            # Get all existing columns
-            existing_columns = self.data.columns.tolist()
-
-            # Combine existing columns with optional fields
-            all_columns = existing_columns + list(set(self.optional_fields).difference(existing_columns))
-
-            # Construct a schema with all columns, initializing optional fields to empty strings
-            meta = pd.DataFrame(columns=all_columns)
-            meta = meta.astype({col: "object" for col in self.optional_fields})  # Ensure optional fields have correct type
-
-            # Apply to each partition
-            self.data = self.data.map_partitions(
-                lambda df: df.reindex(columns=all_columns, fill_value=""),
-                meta=meta
-            )
+            existing_columns = self.data.collect_schema().names()
+            missing_columns = [c for c in self.optional_fields if c not in existing_columns]
+            if missing_columns:
+                self.data = self.data.with_columns([pl.lit("").alias(c) for c in missing_columns])
+                self.data = self.data.select(existing_columns + missing_columns)
 
         super().post_execute(**kwargs)
 
@@ -186,16 +191,17 @@ class FileSource(Source):
         try:
             # Build an empty dataframe if the path is not populated or if an empty directory is passed (for Parquet files).
             if self.optional and not os.path.exists(self.file) or (os.path.isdir(self.file) and not os.listdir(self.file)):
-                self.data = pd.DataFrame(columns=self.columns_list, dtype="string")
+                self.data = pl.DataFrame(schema={col: pl.Utf8 for col in self.columns_list}).lazy()
             else:
-                dask_config.set({'dataframe.convert-string': False})
-                self.data = self.read_lambda(self.file, self.config)
+                self.data = _to_lazy(self.read_lambda(self.file, self.config))
                 if self.is_hashable:
                     self.size = os.path.getsize(self.file)
 
+            data_columns = self.data.collect_schema().names()
+
             # Rename columns if specified. Note that optional columns are ignored in this case.
             if self.columns_list and self.rename_cols:
-                _num_data_cols = len(self.data.columns)
+                _num_data_cols = len(data_columns)
                 _num_list_cols = len(self.columns_list)
                 if _num_data_cols != _num_list_cols:
                     self.error_handler.throw(
@@ -203,24 +209,24 @@ class FileSource(Source):
                     )
                     raise
 
-                self.data.columns = self.columns_list
-                
+                self.data = self.data.rename(dict(zip(data_columns, self.columns_list)))
+
             # Select columns if specified, being aware of optional fields.
             elif self.columns_list:
-                undefined_optional_fields = set(self.optional_fields).difference(self.data.columns)  # Columns to be ignored in the select and added in post_execute()
+                undefined_optional_fields = set(self.optional_fields).difference(data_columns)  # Columns to be ignored in the select and added in post_execute()
                 expected_cols = list(set(self.columns_list).difference(undefined_optional_fields))   # Subset columns, ignoring undefined optionals.
 
                 undefined_cols = []
                 for col in expected_cols:
-                    if col not in self.data.columns:
+                    if col not in data_columns:
                         undefined_cols.append(col)
-                
+
                 if undefined_cols:
                     self.error_handler.throw(
                         f"One or more columns not found in dataset and not marked as optional using `optional_fields`: [{', '.join(undefined_cols)}]"
                     )
 
-                self.data = self.data[expected_cols]
+                self.data = self.data.select(expected_cols)
 
             self.logger.debug(
                 f"source `{self.name}` loaded"
@@ -281,7 +287,7 @@ class FileSource(Source):
             if not names:
                 self.error_handler.throw("No `colspec_file` specified for fixedwidth source. In this case, `columns` must be specified, and `colspecs` may be specified, or else will be inferred")
 
-            return dd.read_fwf(file, colspecs=config.get('colspecs', "infer"), header=config.get('header_rows', "infer"), names=names, converters={c:str for c in names})
+            return pd.read_fwf(file, colspecs=config.get('colspecs', "infer"), header=config.get('header_rows', "infer"), names=names, converters={c:str for c in names})
         try:
             # ensure we find the colspec file relative to the config file that references it (in case of project composition)
             file_format = pd.read_csv(os.path.join(os.path.dirname(self.config.__file__), colspec_file))
@@ -325,10 +331,10 @@ class FileSource(Source):
         converters = {c:str for c in names}
         if use_widths:
             widths = list(file_format[width_col])
-            return dd.read_fwf(file, widths=widths, header=header, names=names, converters=converters, encoding=encoding)
+            return pd.read_fwf(file, widths=widths, header=header, names=names, converters=converters, encoding=encoding)
         else:
             colspecs = list(zip(file_format.start_index, file_format.end_index))
-            return dd.read_fwf(file, colspecs=colspecs, header=header, names=names, converters=converters, encoding=encoding)
+            return pd.read_fwf(file, colspecs=colspecs, header=header, names=names, converters=converters, encoding=encoding)
 
     def _get_read_lambda(self, file_type: str, sep: Optional[str] = None):
         """
@@ -408,22 +414,46 @@ class FileSource(Source):
             return flattened_columns
                 
 
+        def __read_delimited(file, config):
+            """
+            Read a CSV/TSV as all-strings. Uses Polars' streaming `scan_csv` for the common
+            single-header-row, UTF-8 case (this is the path that bounds memory on large
+            sources); falls back to pandas for multi-line headers or non-UTF-8 encodings,
+            preserving the previous backend's exact behavior.
+            """
+            header_rows = config.get('header_rows', 1)
+            encoding = config.get('encoding', "utf8")
+            names = list(__get_flattened_columns(file, config))
+
+            can_stream = (not isinstance(header_rows, list)) and str(encoding).lower().replace("-", "") == "utf8"
+            if can_stream:
+                return pl.scan_csv(
+                    file, separator=sep, has_header=False, skip_rows=int(header_rows),
+                    new_columns=names, infer_schema_length=0,
+                    missing_utf8_is_empty_string=True, truncate_ragged_lines=True,
+                )
+            # pandas fallback (multi-line header or exotic encoding) -> normalized to lazy later
+            return pd.read_csv(
+                file, sep=sep, dtype=str, encoding=encoding, keep_default_na=False,
+                header=0, skiprows=__get_skiprows(config), names=names,
+            )
+
         # We don't want to activate the function inside this helper function.
         read_lambda_mapping = {
-            'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, header=0, skiprows=__get_skiprows(config), names=__get_flattened_columns(file, config)),
+            'csv'       : lambda file, config: __read_delimited(file, config),
             'excel'     : lambda file, config: pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False, header=0, skiprows=__get_skiprows(config), names=__get_flattened_columns(file, config)),
             'feather'   : lambda file, _     : pd.read_feather(file),
             'fixedwidth': self.__read_fwf,
             'html'      : lambda file, config: pd.read_html(file, match=config.get('match', ".+"), keep_default_na=False)[0],
-            'orc'       : lambda file, _     : dd.read_orc(file),
-            'json'      : lambda file, config: dd.read_json(file, typ=config.get('object_type', "frame"), orient=config.get('orientation', "columns")),
-            'jsonl'     : lambda file, config: dd.read_json(file, lines=True),
-            'parquet'   : lambda file, _     : dd.read_parquet(file),
+            'orc'       : lambda file, _     : pd.read_orc(file),
+            'json'      : lambda file, config: pd.read_json(file, typ=config.get('object_type', "frame"), orient=config.get('orientation', "columns")),
+            'jsonl'     : lambda file, config: pl.scan_ndjson(file),
+            'parquet'   : lambda file, _     : pl.scan_parquet(file),
             'sas'       : lambda file, config: pd.read_sas(file, encoding=config.get('encoding', "utf-8")),
             'spss'      : lambda file, _     : pd.read_spss(file),
             'stata'     : lambda file, _     : pd.read_stata(file),
             'xml'       : lambda file, config: pd.read_xml(file, xpath=config.get('xpath', "./*")),
-            'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, header=0, skiprows=__get_skiprows(config), names=__get_flattened_columns(file, config)),
+            'tsv'       : lambda file, config: __read_delimited(file, config),
         }
         return read_lambda_mapping.get(file_type)
 
