@@ -38,3 +38,4 @@ _bench/sources/*.tsv
 _bench/output/
 _bench_melt/sources/*.csv
 _bench_melt/output/
+_bench_melt/output_gb/

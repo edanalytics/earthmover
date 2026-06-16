@@ -1,0 +1,29 @@
+version: 2
+config:
+  output_dir: ./output_gb/
+  log_level: INFO
+sources:
+  wide:
+    file: ./sources/wide_100k_1000.csv
+    header_rows: 1
+transformations:
+  long:
+    source: $sources.wide
+    operations:
+      - operation: melt
+        id_vars: [student_id, school_id]
+        var_name: metric
+        value_name: value
+  counts:
+    source: $transformations.long
+    operations:
+      - operation: group_by
+        group_by_columns: [metric]
+        create_columns:
+          n: count()
+destinations:
+  metric_counts:
+    source: $transformations.counts
+    template: ./count.jsont
+    extension: jsonl
+    linearize: True

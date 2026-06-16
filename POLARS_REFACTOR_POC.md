@@ -81,6 +81,44 @@ Design:
   `map_values` uses `Expr.replace`, which is memory-heavy (~+0.4 GB at 5M rows) — a candidate
   for a lighter idiom. These are follow-ups, not blockers; the headline `melt` path streams.
 
+## Follow-up: streaming `group_by`, native `pivot`, and the melt-chunking investigation
+
+(Separate branch `feature/melt-memory`, off `feature/polars`.)
+
+**The real melt OOM is `melt -> group_by`, not melt alone.** Polars' `unpivot` already
+streams melt with bounded memory (≈0.6–1.0 GB whether 50 or 4000 value columns; verified up to
+200M output rows). The explosion came from `group_by`, which previously did
+`collect().to_pandas()` — materializing the entire post-melt explosion.
+
+Discriminating test (melt 100K×1000 → 100M rows, then `group_by` count):
+
+| group_by implementation | Peak RSS |
+|---|---|
+| old (`collect().to_pandas()`) | **11.9 GB** |
+| **native `pl.group_by().agg()` (streaming)** | **0.46 GB** |
+
+So `group_by` was ported to native Polars `group_by().agg(...)`:
+- count/min/max/sum/mean/std/var → native reductions (hold per-group state, stream).
+- `agg`/`json_array_agg` → per-group list aggregation, collapsed to strings post-group_by
+  (these inherently retain each group's values, but the grouping still streams).
+- Numeric results re-formatted to match the prior pandas output (integral → `34`, not `34.0`).
+- Verified **byte-identical** to the Dask backend on `earthmover -t` and example projects
+  `03_groupby` and `03a_groupby_with_rank` (which exercise min/max/mean/agg/json_array_agg).
+
+**`pivot`** now uses Polars' native Arrow-backed `pivot` (with `sort_columns=True` to match
+pandas' sorted output) instead of a `to_pandas().pivot_table()` round-trip. It still
+materializes (pivot must see all rows), but in the more efficient engine. Tests pass identically.
+
+**Melt column-chunking: investigated and intentionally NOT shipped.** Chunking the value
+columns and `pl.concat`-ing the sub-melts *increased* peak memory (0.8 GB → 2.8 GB → 4 GB as
+chunks shrank) because it breaks streaming and re-scans the source. Polars' single `unpivot` is
+already the bounded-memory path; chunking can't beat it. (Data on request.)
+
+**Known remaining overhead (follow-up):** on *very wide* sources the row-level "drop all-empty
+rows" filter builds an `all_horizontal` predicate over every column, which adds ~1.8 GB on a
+1002-column table (full earthmover `melt -> group_by` lands at ~2.3 GB vs the group_by's own
+0.45 GB). Worth a lighter formulation, but separate from this change.
+
 ## Reproduce
 
 ```

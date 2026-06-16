@@ -1,4 +1,4 @@
-import pandas as pd
+import json
 import polars as pl
 import re
 
@@ -73,28 +73,36 @@ class GroupByOperation(Operation):
         self.group_by_columns    = self.error_handler.assert_get_key(self.config, 'group_by_columns', dtype=list)
         self.create_columns_dict = self.error_handler.assert_get_key(self.config, 'create_columns', dtype=dict)
 
+    # Aggregations computed as native Polars numeric reductions (streaming-friendly).
+    # Their results are formatted back to strings to match the previous pandas output.
+    NUMERIC_AGG_TYPES = (
+        "sum", "min", "minimum", "max", "maximum",
+        "mean", "avg", "std", "stdev", "stddev", "var", "variance",
+    )
+
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
-        Group-by is an inherently whole-frame aggregation. We materialize to pandas (the
-        result of an aggregation is typically small) and reuse the established aggregation
-        lambdas, which keeps behavior identical to the previous backend. The result is
-        returned as a Polars LazyFrame so the rest of the pipeline stays lazy.
+        Group-by is implemented with native Polars `group_by().agg(...)` so it streams: the
+        reducing aggregations (count/min/max/sum/mean/std/var) hold only per-group state
+        rather than materializing every row, which is what makes large `melt -> group_by`
+        pipelines fit in memory. (`agg`/`json_array_agg` must collect each group's values by
+        nature, but the grouping itself still streams.)
 
         :return:
         """
         super().execute(data, **kwargs)
 
-        if not set(self.group_by_columns).issubset(data.collect_schema().names()):
+        data_columns = data.collect_schema().names()
+        if not set(self.group_by_columns).issubset(data_columns):
             self.error_handler.throw(
                 "one or more specified group-by columns not in the dataset"
             )
             raise
 
-        pdf = data.collect().to_pandas()
-        grouped = pdf.groupby(self.group_by_columns, sort=False)
-
-        result = grouped.size().reset_index()
-        result.columns = self.group_by_columns + [self.GROUP_SIZE_COL]
+        agg_exprs = []
+        numeric_cols = []           # result columns to re-format as ints/floats like pandas
+        list_join_cols = {}         # name -> separator (for `agg`/`aggregate`)
+        json_cols = {}              # name -> separator/"str" flag (for `json_array_agg`)
 
         for new_col_name, func in self.create_columns_dict.items():
 
@@ -115,56 +123,96 @@ class GroupByOperation(Operation):
                         f"aggregation function `{_agg_type}`(column) missing required column"
                     )
 
-                if _col not in pdf.columns:
+                if _col not in data_columns:
                     self.error_handler.throw(
                         f"aggregation function `{_agg_type}`({_col}) refers to a column {_col} which does not exist"
                     )
 
-            agg_lambda = self._get_agg_lambda(_agg_type, _col, _sep)
-            if not agg_lambda:
+            expr = self._build_agg_expr(_agg_type, _col, _sep, new_col_name)
+            if expr is None:
                 self.error_handler.throw(
                     f"invalid aggregation function `{_agg_type}` in `group_by` operation"
                 )
+                raise
 
-            _computed = grouped.apply(agg_lambda).reset_index()
-            _computed.columns = self.group_by_columns + [new_col_name]
-            result = result.merge(_computed, how="left", on=self.group_by_columns)
+            agg_exprs.append(expr)
+            if _agg_type in self.NUMERIC_AGG_TYPES:
+                numeric_cols.append(new_col_name)
+            elif _agg_type in ("agg", "aggregate"):
+                list_join_cols[new_col_name] = _sep
+            elif _agg_type == "json_array_agg":
+                json_cols[new_col_name] = _sep
 
-        result = result[result[self.GROUP_SIZE_COL] > 0]
-        del result[self.GROUP_SIZE_COL]
+        result = data.group_by(self.group_by_columns).agg(agg_exprs)
 
-        return pl.from_pandas(result).lazy()
+        # Post-process the (now small) grouped result. `agg`/`json_array_agg` were aggregated
+        # into per-group lists above; collapse them to strings here, preserving input order.
+        for name, sep in list_join_cols.items():
+            result = result.with_columns(pl.col(name).list.join(sep).alias(name))
+
+        for name, sep in json_cols.items():
+            result = result.with_columns(
+                pl.col(name).map_elements(self._make_json_formatter(sep), return_dtype=pl.Utf8).alias(name)
+            )
+
+        # Format numeric results to match pandas: integral values render without a trailing
+        # ".0" (e.g. min 34, not 34.0), non-integral as their usual float repr.
+        for name in numeric_cols:
+            result = result.with_columns(
+                pl.col(name).map_elements(self._format_numeric, return_dtype=pl.Utf8).alias(name)
+            )
+
+        return result
+
+    def _build_agg_expr(self, agg_type: str, column: str, separator: str, alias: str):
+        """Map an aggregation function name to a native Polars aggregation expression."""
+        if agg_type in ("count", "size"):
+            return pl.len().alias(alias)
+
+        if agg_type in ("agg", "aggregate", "json_array_agg"):
+            # Collect each group's values (in input order); collapsed to a string post-agg.
+            return pl.col(column).alias(alias)
+
+        if agg_type in ("str_min", "str_minimum"):
+            return pl.col(column).min().alias(alias)
+        if agg_type in ("str_max", "str_maximum"):
+            return pl.col(column).max().alias(alias)
+
+        numeric = pl.col(column).cast(pl.Float64, strict=False)
+        if agg_type == "sum":
+            return numeric.sum().alias(alias)
+        if agg_type in ("min", "minimum"):
+            return numeric.min().alias(alias)
+        if agg_type in ("max", "maximum"):
+            return numeric.max().alias(alias)
+        if agg_type in ("mean", "avg"):
+            # Matches the prior `to_numeric(col).sum() / len(group)`.
+            return (numeric.sum() / pl.len()).alias(alias)
+        if agg_type in ("std", "stdev", "stddev"):
+            return numeric.std().alias(alias)
+        if agg_type in ("var", "variance"):
+            return numeric.var().alias(alias)
+
+        return None
 
     @staticmethod
-    def _get_agg_lambda(agg_type: str, column: str = "", separator: str = ""):
-        """
+    def _format_numeric(value):
+        """Render a numeric aggregate like pandas did: integral -> int string, else float."""
+        if value is None:
+            return None
+        fvalue = float(value)
+        if fvalue.is_integer():
+            return str(int(fvalue))
+        return str(fvalue)
 
-        :param agg_type:
-        :param column:
-        :param separator: usually a string to separate list elements, except in the case of json_array_agg where it specifies a data type
-        :return:
-        """
-        agg_lambda_mapping = {
-            'agg'      : lambda x: separator.join(x[column]),
-            'aggregate': lambda x: separator.join(x[column]),
-            'json_array_agg': lambda x: x[column].to_json(orient="records") if separator == "str" else f"[{','.join(x[column])}]",
-            'avg'      : lambda x: pd.to_numeric(x[column]).sum() / max(1, len(x)),
-            'count'    : lambda x: len(x),
-            'max'      : lambda x: pd.to_numeric(x[column]).max(),
-            'maximum'  : lambda x: pd.to_numeric(x[column]).max(),
-            'str_max'      : lambda x: x[column].max(),
-            'str_maximum'  : lambda x: x[column].max(),
-            'mean'     : lambda x: pd.to_numeric(x[column]).sum() / max(1, len(x)),
-            'min'      : lambda x: pd.to_numeric(x[column]).min(),
-            'minimum'  : lambda x: pd.to_numeric(x[column]).min(),
-            'str_min'      : lambda x: x[column].min(),
-            'str_minimum'  : lambda x: x[column].min(),
-            'size'     : lambda x: len(x),
-            'std'      : lambda x: pd.to_numeric(x[column]).std(),
-            'stdev'    : lambda x: pd.to_numeric(x[column]).std(),
-            'stddev'   : lambda x: pd.to_numeric(x[column]).std(),
-            'sum'      : lambda x: pd.to_numeric(x[column]).sum(),
-            'var'      : lambda x: pd.to_numeric(x[column]).var(),
-            'variance' : lambda x: pd.to_numeric(x[column]).var(),
-        }
-        return agg_lambda_mapping.get(agg_type)
+    @staticmethod
+    def _make_json_formatter(separator: str):
+        """Build a per-group list -> JSON-array-string formatter matching the prior backend."""
+        def _format(values):
+            vals = [str(v) for v in values]
+            if separator == "str":
+                # compact JSON (no spaces), quoted strings: ["1","2"]
+                return json.dumps(vals, separators=(",", ":"))
+            # unquoted, comma-joined: [1,2]
+            return "[" + ",".join(vals) + "]"
+        return _format

@@ -308,7 +308,9 @@ class MeltOperation(Operation):
             )
 
         try:
-            # Polars' `unpivot` is the equivalent of pandas/Dask `melt`.
+            # Polars' `unpivot` is the equivalent of pandas/Dask `melt`. It streams (the
+            # destination's streaming sink keeps peak memory bounded even when the melt
+            # explodes row count), so no manual column-chunking is needed.
             return data.unpivot(
                 index=self.id_vars,
                 on=self.value_vars,
@@ -355,19 +357,16 @@ class PivotOperation(Operation):
             )
 
         try:
-            # Pivot is an inherently whole-frame reshape; materialize to pandas (typically
-            # small after upstream aggregation) and reuse pandas' `pivot_table` semantics.
-            pdf = data.collect().to_pandas()
+            # Pivot is an inherently whole-frame reshape (it must see every row to know the
+            # output columns), so it materializes — but we use Polars' native, Arrow-backed
+            # `pivot` rather than a pandas `pivot_table` round-trip.
+            df = data.collect()
 
             # Check for uniqueness: index + columns should uniquely identify values
-            # This is required for a pivot without aggregation
-            if self.rows_by:
-                key_cols = self.rows_by + [self.cols_by]
-            else:
-                key_cols = [self.cols_by]
-
-            total_rows = len(pdf)
-            unique_rows = len(pdf[key_cols].drop_duplicates())
+            # This is required for a pivot without aggregation.
+            key_cols = (self.rows_by + [self.cols_by]) if self.rows_by else [self.cols_by]
+            total_rows = df.height
+            unique_rows = df.select(key_cols).unique().height
 
             if total_rows != unique_rows:
                 self.error_handler.throw(
@@ -376,17 +375,21 @@ class PivotOperation(Operation):
                     f"Consider using group_by to aggregate the data instead."
                 )
 
-            pivoted = pdf.pivot_table(
-                index=self.rows_by if self.rows_by else None,
-                columns=self.cols_by,
+            # When no `rows_by` is given, every non-(cols_by/values) column acts as the index
+            # (matches the previous behavior of leaving the remaining columns intact).
+            index = self.rows_by if self.rows_by else [
+                c for c in df.columns if c not in (self.cols_by, self.values)
+            ]
+
+            pivoted = df.pivot(
+                on=self.cols_by,
+                index=index,
                 values=self.values,
-                aggfunc='first'  # should be redundant but we have to pass an arg
+                aggregate_function="first",  # combinations are unique (checked above)
+                sort_columns=True,  # match pandas `pivot_table`'s sorted output columns
             )
 
-            pivoted = pivoted.reset_index()
-            pivoted.columns.name = None  # drop the pivoted columns' index name
-
-            return pl.from_pandas(pivoted).lazy()
+            return pivoted.lazy()
 
         except Exception as e:
             self.error_handler.throw(
