@@ -1,5 +1,6 @@
 from earthmover.nodes.node import Node
 from earthmover.operations.operation import Operation
+from earthmover import util
 
 from typing import List, Tuple
 
@@ -45,8 +46,11 @@ class Transformation(Node):
         self.data = self.upstream_sources[self.source].data.copy()
 
         for operation in self.operations:
+            _op = operation.config.get('operation')
+            self.logger.debug(f"[mem]   before `{_op}` op in `{self.name}` | {util.memory_usage_str()}")
             self.data = operation.execute(self.data, data_mapping=self.upstream_sources)
             self.data = operation.post_execute(self.data)
+            self.logger.debug(f"[mem]   after `{_op}` op in `{self.name}` (lazy; spike occurs at compute) | {util.memory_usage_str()}")
 
         self.data = self.opt_repartition(self.data)  # Repartition if specified.
 

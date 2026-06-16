@@ -35,6 +35,49 @@ def human_time(seconds: int) -> str:
 def human_size(bytes_: int, units=('B','KB','MB','GB','TB', 'PB', 'EB')):
     return str(bytes_) + units[0] if bytes_ < 1024 else human_size(bytes_>>10, units[1:])
 
+
+def get_memory_usage() -> Optional[dict]:
+    """
+    Snapshot current-process and system memory using psutil.
+    Returns None if psutil is not installed, so callers can degrade gracefully.
+
+    :return: dict of byte counts + system memory percent, or None
+    """
+    try:
+        import psutil
+    except ImportError:
+        return None
+
+    process_rss = psutil.Process(os.getpid()).memory_info().rss
+    vm = psutil.virtual_memory()
+    return {
+        "process_rss": process_rss,
+        "system_used": vm.used,
+        "system_available": vm.available,
+        "system_total": vm.total,
+        "system_percent": vm.percent,
+    }
+
+
+def memory_usage_str() -> str:
+    """
+    Build a human-readable one-line memory snapshot for logging, e.g.:
+        "process=1.2GB | system=6.4GB/16GB (40%) used, 9.6GB available"
+
+    Falls back to a hint if psutil is unavailable, so logging never breaks.
+
+    :return: formatted memory string
+    """
+    usage = get_memory_usage()
+    if usage is None:
+        return "(psutil not installed; `pip install psutil` for memory metrics)"
+    return (
+        f"process={human_size(usage['process_rss'])}"
+        f" | system={human_size(usage['system_used'])}/{human_size(usage['system_total'])}"
+        f" ({usage['system_percent']:.0f}%) used,"
+        f" {human_size(usage['system_available'])} available"
+    )
+
 def get_sep(file: str) -> Optional[str]:
     """
     Determine field separator from file extension

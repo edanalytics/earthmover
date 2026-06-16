@@ -272,8 +272,14 @@ class Earthmover:
                     continue
 
                 # Set self.data in each node.
+                _node_start = time.time()
+                self.logger.info(f"[mem] starting node `{node_name}` | {util.memory_usage_str()}")
                 node.execute()
                 node.post_execute()
+                self.logger.info(
+                    f"[mem] finished node `{node_name}` "
+                    f"in {time.time() - _node_start:.1f}s | {util.memory_usage_str()}"
+                )
 
                 if self.results_file:
                     self.metadata["row_counts"].update({node_name: len(node.data)})

@@ -147,9 +147,16 @@ class FileDestination(Destination):
             elif self.header: # no jinja
                 fp.write(self.header)
 
-            for partition in self.data.partitions:
-                fp.writelines(partition.compute())
+            _num_partitions = self.data.npartitions
+            self.logger.info(
+                f"[mem] writing `{self.file}` ({_num_partitions} partitions) | {util.memory_usage_str()}"
+            )
+            for idx, partition in enumerate(self.data.partitions):
+                fp.writelines(partition.compute())  # compute() materializes the partition: memory peaks here
                 partition = None  # Remove partition from memory immediately after write.
+                self.logger.debug(
+                    f"[mem]   wrote partition {idx + 1}/{_num_partitions} of `{self.file}` | {util.memory_usage_str()}"
+                )
 
             if self.footer and util.contains_jinja(self.footer):
                 jinja_template = util.build_jinja_template(self.footer, macros=self.earthmover.macros)

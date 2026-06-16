@@ -254,6 +254,9 @@ class MeltOperation(Operation):
         'id_vars', 'value_vars', 'var_name', 'value_name'
     )
 
+    # Target number of batches when splitting wide value_vars
+    _MELT_NUM_BATCHES = 10
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -291,17 +294,40 @@ class MeltOperation(Operation):
                 f"columns in `value_vars` are not defined in the dataset: {missing_cols}"
             )
 
+        # Resolve value_vars explicitly so we can prune columns and batch
+        id_vars = self.id_vars or []
+        value_vars = self.value_vars
+        if value_vars is None:
+            id_vars_set = set(id_vars)
+            value_vars = [c for c in data.columns if c not in id_vars_set]
+
+        # Drop any columns not needed for melt — reduces per-partition memory
+        data = data[id_vars + value_vars]
+
         try:
-            return data.melt(
-                id_vars=self.id_vars,
-                value_vars=self.value_vars,
-                var_name=self.var_name,
-                value_name=self.value_name
-            )
+            return self._batched_melt(data, id_vars, value_vars)
         except Exception as e:
             self.error_handler.throw(
                 f"error during `melt` operation: {str(e)}"
             )
+
+    def _batched_melt(self, data: 'DataFrame', id_vars: List[str], value_vars: List[str]) -> 'DataFrame':
+        """Split value_vars into ~10 batches to cap peak memory for wide DataFrames."""
+        batch_size = max(1, -(-len(value_vars) // self._MELT_NUM_BATCHES))  # ceiling division
+        batches = [
+            value_vars[i:i + batch_size]
+            for i in range(0, len(value_vars), batch_size)
+        ]
+        parts = [
+            data[id_vars + batch].melt(
+                id_vars=id_vars or None,
+                value_vars=batch,
+                var_name=self.var_name,
+                value_name=self.value_name,
+            )
+            for batch in batches
+        ]
+        return dd.concat(parts)
 
 class PivotOperation(Operation):
     allowed_configs: Tuple[str] = (
