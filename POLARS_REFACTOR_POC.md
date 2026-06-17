@@ -114,10 +114,14 @@ columns and `pl.concat`-ing the sub-melts *increased* peak memory (0.8 GB → 2.
 chunks shrank) because it breaks streaming and re-scans the source. Polars' single `unpivot` is
 already the bounded-memory path; chunking can't beat it. (Data on request.)
 
-**Known remaining overhead (follow-up):** on *very wide* sources the row-level "drop all-empty
-rows" filter builds an `all_horizontal` predicate over every column, which adds ~1.8 GB on a
-1002-column table (full earthmover `melt -> group_by` lands at ~2.3 GB vs the group_by's own
-0.45 GB). Worth a lighter formulation, but separate from this change.
+**Wide-source empty-row filter, optimized.** The row-level "drop all-empty rows" filter used to
+build an `all_horizontal` predicate over *every* column — markedly memory-hungry on wide
+sources. It now tests "any non-empty" for string columns with a single horizontal `concat_str`
+(`ignore_nulls=True`), one intermediate column instead of N booleans (non-string/nested columns
+fall back to `is_not_null`). On a 1002-column table this cut the full earthmover
+`melt -> group_by` peak from ~2.36 GB to ~1.55 GB (~34%), verified byte-identical on
+`earthmover -t` (incl. the nested-JSONL `cities` source) and with explicit empty/whitespace/null
+edge-case checks. (Tried `pl.fold` — much worse, 5.3 GB; rejected.)
 
 ## Reproduce
 

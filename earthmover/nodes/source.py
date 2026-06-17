@@ -85,17 +85,32 @@ class Source(Node):
         )
         self.data = _to_lazy(self.data)
 
-        # Remove rows where every value is null or an empty string.
-        # (Build the mask per-column so non-string columns are only null-checked.)
+        # Remove rows where every value is null or an empty string, i.e. keep rows that have
+        # at least one non-empty value.
+        #
+        # For string columns we test "any non-empty" with a SINGLE horizontal string concat
+        # (one intermediate column) rather than one boolean per column. On very wide sources
+        # the per-column approach (`all_horizontal` over N booleans) is markedly more
+        # memory-hungry; concat_str keeps peak memory down. `ignore_nulls=True` makes nulls
+        # and empty strings both contribute nothing, so the concat is empty iff every string
+        # cell is null/empty. Non-string columns (e.g. nested JSON Struct/List) can't be
+        # concatenated, so they count as non-empty whenever they are non-null.
         schema = self.data.collect_schema()
         if len(schema) > 0:
-            conditions = []
-            for col, dtype in schema.items():
-                if dtype == pl.Utf8:
-                    conditions.append(pl.col(col).is_null() | (pl.col(col) == ""))
-                else:
-                    conditions.append(pl.col(col).is_null())
-            self.data = self.data.filter(~pl.all_horizontal(conditions))
+            utf8_cols = [col for col, dtype in schema.items() if dtype == pl.Utf8]
+            other_cols = [col for col, dtype in schema.items() if dtype != pl.Utf8]
+
+            keep_row = None
+            if utf8_cols:
+                keep_row = (
+                    pl.concat_str([pl.col(c) for c in utf8_cols], separator="", ignore_nulls=True) != ""
+                )
+            for col in other_cols:
+                cond = pl.col(col).is_not_null()
+                keep_row = cond if keep_row is None else (keep_row | cond)
+
+            if keep_row is not None:
+                self.data = self.data.filter(keep_row)
 
         # `repartition` is a no-op under Polars (warns if set).
         self.data = self.opt_repartition(self.data)
