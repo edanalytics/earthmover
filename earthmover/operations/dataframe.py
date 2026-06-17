@@ -251,7 +251,8 @@ class DebugOperation(Operation):
 class MeltOperation(Operation):
     allowed_configs: Tuple[str] = (
         'operation', 'repartition',
-        'id_vars', 'value_vars', 'var_name', 'value_name'
+        'id_vars', 'value_vars', 'var_name', 'value_name',
+        'drop_empty_values', 'keep_empty_value_vars',
     )
 
     def __init__(self, *args, **kwargs):
@@ -276,6 +277,14 @@ class MeltOperation(Operation):
         # name for the new column that will hold the values
         self.value_name = self.error_handler.assert_get_key(self.config, 'value_name', dtype=str, required=False, default='melt_value')
 
+        self.drop_empty_values = self.error_handler.assert_get_key(self.config, 'drop_empty_values', dtype=bool, required=False, default=False)
+
+        self.keep_empty_value_vars = self.config.get('keep_empty_value_vars', [])
+        if isinstance(self.keep_empty_value_vars, str):
+            self.keep_empty_value_vars = [self.keep_empty_value_vars]
+        elif not isinstance(self.keep_empty_value_vars, list):
+            self.error_handler.throw(f"`keep_empty_value_vars` must be a string or list, got {type(self.keep_empty_value_vars)}")
+
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         super().execute(data, **kwargs)
 
@@ -291,7 +300,31 @@ class MeltOperation(Operation):
                 f"columns in `value_vars` are not defined in the dataset: {missing_cols}"
             )
 
+        if self.keep_empty_value_vars and not set(self.keep_empty_value_vars).issubset(data.columns):
+            missing_cols = set(self.keep_empty_value_vars) - set(data.columns)
+            self.error_handler.throw(
+                f"columns in `keep_empty_value_vars` are not defined in the dataset: {missing_cols}"
+            )
+
         try:
+            if self.drop_empty_values:
+                meta = data._meta.melt(
+                    id_vars=self.id_vars,
+                    value_vars=self.value_vars,
+                    var_name=self.var_name,
+                    value_name=self.value_name
+                )
+
+                return data.map_partitions(
+                    self._melt_partition,
+                    id_vars=self.id_vars,
+                    value_vars=self.value_vars,
+                    var_name=self.var_name,
+                    value_name=self.value_name,
+                    keep_empty_value_vars=self.keep_empty_value_vars,
+                    meta=meta,
+                )
+
             return data.melt(
                 id_vars=self.id_vars,
                 value_vars=self.value_vars,
@@ -302,6 +335,21 @@ class MeltOperation(Operation):
             self.error_handler.throw(
                 f"error during `melt` operation: {str(e)}"
             )
+
+    @staticmethod
+    def _melt_partition(df, id_vars, value_vars, var_name, value_name, keep_empty_value_vars):
+        melted = df.melt(
+            id_vars=id_vars,
+            value_vars=value_vars,
+            var_name=var_name,
+            value_name=value_name,
+        )
+
+        keep_rows = melted[value_name].notna() & (melted[value_name] != "")
+        if keep_empty_value_vars:
+            keep_rows = keep_rows | melted[var_name].isin(keep_empty_value_vars)
+
+        return melted.loc[keep_rows]
 
 class PivotOperation(Operation):
     allowed_configs: Tuple[str] = (

@@ -47,6 +47,10 @@ sources:
   wildcards:
     file: ${BASE_DIR}/sources/wildcards.csv
     header_rows: 1
+
+  melt_sparse:
+    file: ${BASE_DIR}/sources/melt_sparse.csv
+    header_rows: 1
   
   cities:
     file: ${BASE_DIR}/sources/cities.jsonl
@@ -445,6 +449,18 @@ transformations:
         var_name: characteristic
         value_name: value
 
+  # Test melt operation - drop empty melted values while preserving selected empty vars
+  melt_drop_empty_values:
+    source: $sources.melt_sparse
+    operations:
+      - operation: melt
+        id_vars: id
+        value_vars: [score_a, score_b, final_date]
+        var_name: metric
+        value_name: value
+        drop_empty_values: true
+        keep_empty_value_vars: [final_date]
+
   # Test pivot operation - basic case with multi-column rows_by
   pivot_basic:
     source: $transformations.melt_basic
@@ -538,6 +554,12 @@ destinations:
 
   melt_no_value_vars_output:
     source: $transformations.melt_no_value_vars
+    template: ${BASE_DIR}/templates/verbatim.jsont
+    extension: jsonl
+    linearize: True
+
+  melt_drop_empty_values_output:
+    source: $transformations.melt_drop_empty_values
     template: ${BASE_DIR}/templates/verbatim.jsont
     extension: jsonl
     linearize: True

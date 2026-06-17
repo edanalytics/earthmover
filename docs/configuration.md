@@ -691,6 +691,10 @@ The above example shows a transformation of the courses source, which consists o
             var_name: subject
             # Optional name of the column containing the values of the value_vars columns. Default to "melt_value"
             value_name: score
+            # Optional: drop rows where the melted value is empty. Default: false
+            drop_empty_values: true
+            # Optional: preserve empty rows for selected value_vars when drop_empty_values is true
+            keep_empty_value_vars: [math_score]
     ```
 
 ??? example "pivot"
