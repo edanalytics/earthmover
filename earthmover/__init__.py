@@ -16,3 +16,7 @@ if sys.version_info.minor >= 10:
     import pandas as pd
     pd.options.mode.copy_on_write = True
     pd.options.mode.string_storage = "pyarrow"
+
+# Public, importable file reader (reuses Earthmover's FileSource).
+# Usage: `from earthmover import read_file, read_source`
+from earthmover.reader import read_file, read_source
