@@ -1,5 +1,9 @@
 This page tracks releases of `earthmover`, with a summary of what was changed, fixed, added in each new version.
 
+## Unreleased changes
+
+* feature: Export file reading functionality `read_compiled_source` and `read_file`
+
 
 ## 2026 releases
 
