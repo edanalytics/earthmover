@@ -464,6 +464,14 @@ transformations:
         var_name: measurement_type
         value_name: measurement_value
 
+  # Test limit_rows with an offset (skips the first `offset` rows, then takes `count`)
+  limit_offset:
+    source: $sources.mammal_species
+    operations:
+      - operation: limit_rows
+        count: 2
+        offset: 1
+
 
 destinations:
 
@@ -550,6 +558,12 @@ destinations:
 
   melt_pivot_roundtrip_output:
     source: $transformations.melt_pivot_roundtrip
+    template: ${BASE_DIR}/templates/verbatim.jsont
+    extension: jsonl
+    linearize: True
+
+  limit_offset_output:
+    source: $transformations.limit_offset
     template: ${BASE_DIR}/templates/verbatim.jsont
     extension: jsonl
     linearize: True
