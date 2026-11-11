@@ -167,6 +167,12 @@ class LimitRowsOperation(Operation):
             self.count = self.error_handler.assert_get_key(self.config, 'count', dtype=int, required=True)
             self.offset = self.error_handler.assert_get_key(self.config, 'offset', dtype=int, required=False, default=0)
 
+            if self.offset < 0:
+                self.error_handler.throw(
+                    "offset for a limit operation must be a non-negative integer"
+                )
+                raise
+
         def execute(self, data: 'DataFrame', **kwargs):
             """
 
