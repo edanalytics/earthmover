@@ -29,4 +29,5 @@ example_projects/*/graph.png
 example_projects/*/graph.svg
 example_projects/*/output/*
 example_projects/01_simple/sources/big_attendance.tsv
+example_projects/01_simple/sources/big_attendance.zip
 earthmover/tests/outputs/*.jsonl

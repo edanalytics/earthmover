@@ -77,18 +77,17 @@ If using earthmover with [parallel processing](./usage#parallel-processing), the
 ```yaml
 config:
   dask_cluster_kwargs:
-    n_workers: - # `--workers` value if passed; no default
-    memory_limit: - # `--mem_per_worker` value if passed; no default
+    n_workers: auto          # `--workers` value if passed; `auto` = available cores - 1 (minimum 1)
+    memory_limit: 2.4GB      # `--mem_per_worker` value if passed; default divides 90% of total RAM evenly across workers
     threads_per_worker: 1    # (not recommended to change this)
     processes: True          # (not recommended to change this)
 ```
 
 ####  Dask
-In additional to the above `config`, one may also optionally pass and [supported Dask configuration](https://docs.dask.org/en/latest/configuration.html#dask) via `config.dask`. The default configurations are given below:
+In addition to the above `config`, one may also optionally pass any [supported Dask configuration](https://docs.dask.org/en/latest/configuration.html#dask) via `config.dask`. These settings apply only when running with Dask distributed. Values you pass are merged into the defaults below (unspecified defaults are kept). Dask spills to [`config.tmp_dir`](#config) unless you set `temporary_directory` here.
 ```yaml
 config:
   dask:
-    temporary_directory: `tempfile.gettempdir()`
     dataframe:
       backend: pandas        # (not recommended to change this)
       convert-string: False
@@ -109,7 +108,7 @@ config:
           monitor-interval: 15s
           rebalance:
             measure: managed
-          spill: 0.5
+          spill: 0.75
           pause: 0.95
           terminate: 0.99
           max-spill: False
