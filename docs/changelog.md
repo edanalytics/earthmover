@@ -3,6 +3,12 @@ This page tracks releases of `earthmover`, with a summary of what was changed, f
 
 ## 2026 releases
 
+### [v0.4.10](https://github.com/edanalytics/earthmover/releases/tag/v0.4.10)
+(Released 2026-04-16)
+
+* feature: [filter out entirely empty rows in sources](https://github.com/edanalytics/earthmover/pull/189)
+
+
 ### [v0.4.9](https://github.com/edanalytics/earthmover/releases/tag/v0.4.9)
 (Released 2026-02-09)
 
