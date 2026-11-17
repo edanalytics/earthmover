@@ -1,6 +1,7 @@
 import abc
 import dask
 import fnmatch
+import functools
 import jinja2
 import logging
 import pandas as pd
@@ -9,6 +10,28 @@ import warnings
 from dask.diagnostics import ProgressBar
 
 from earthmover import util
+
+
+# ---------------------------------------------------------------------------
+# Module-level helper for check_expectations – must be top-level so it is
+# picklable by Dask distributed workers.
+# ---------------------------------------------------------------------------
+
+def _apply_expectation_partition(partition, expectation_str, result_col, error_context):
+    """
+    Compile and evaluate a Jinja expectation expression on each row in a
+    partition, returning a Series of 'True'/'False' strings.
+    Defined at module level so it can be serialised by Dask distributed.
+    """
+    template_str = "{{" + expectation_str + "}}"
+    template = jinja2.Template(template_str)
+
+    result = partition.apply(
+        util.render_jinja_template, axis=1,
+        template=template, template_str=template_str, error_context=error_context
+    )
+    result.name = result_col
+    return result
 
 from typing import Dict, List, Tuple, Optional, Union
 from typing import TYPE_CHECKING
@@ -113,6 +136,19 @@ class Node:
         if self.show_progress:
             self.progress_bar.__exit__(None, None, None)
 
+        # When running with a distributed cluster, persist this node's data in
+        # the cluster BEFORE any computes (expectations, require_rows, display_head).
+        # This keeps the computed partitions in cluster memory so that downstream
+        # nodes reference already-materialized futures rather than re-submitting
+        # the upstream task graph.  Without this, intermediate computes release
+        # tasks from the scheduler; when the next node re-submits them, Dask's
+        # graph optimizer may fuse tasks differently, producing a different
+        # serialized form for the same task key and triggering the
+        # "Detected different run_spec" warning (dask/dask#9888).
+        # Destinations are skipped: their output is already written, and nothing downstream reads it.
+        if self.earthmover.dask_client and self.type != 'destination':
+            self.data = self.earthmover.dask_client.persist(self.data)
+
         self.check_expectations(self.expectations)
 
         # Get lazy row and column counts to display in graph.png.
@@ -173,14 +209,17 @@ class Node:
             result = self.data.copy()
 
             for expectation in expectations:
-                template = jinja2.Template("{{" + expectation + "}}")
-
-                result[expectation_result_col] = result.apply(
-                    util.render_jinja_template, axis=1,
+                # Use a module-level partition function so the Jinja template
+                # is compiled inside each worker (compiled templates are not
+                # picklable by Dask distributed).
+                result[expectation_result_col] = result.map_partitions(
+                    functools.partial(
+                        _apply_expectation_partition,
+                        expectation_str=expectation,
+                        result_col=expectation_result_col,
+                        error_context=str(self.error_handler.ctx),
+                    ),
                     meta=pd.Series(dtype='str', name=expectation_result_col),
-                    template=template,
-                    template_str="{{" + expectation + "}}",
-                    error_handler = self.error_handler
                 )
 
                 num_failed = len(result.query(f"{expectation_result_col}=='False'").index)

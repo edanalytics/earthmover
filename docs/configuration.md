@@ -72,6 +72,51 @@ config:
 | (optional) | `show_progress` | `boolean` | Whether to show a progress bar for each Dask transformation | `False` |
 | (optional) | `git_auth_timeout` | `integer` | Number of seconds to wait for the user to enter Git credentials if needed during package installation (see [project composition](usage.md#earthmover-deps)) | `60` |
 
+####  Dask Distributed
+If using earthmover with [parallel processing](./usage#parallel-processing), the following additional configuration may be provided (optional if calling with `--workers`/`-w`):
+```yaml
+config:
+  dask_cluster_kwargs:
+    n_workers: auto          # `--workers` value if passed; `auto` = available cores - 1 (minimum 1)
+    memory_limit: 2.4GB      # `--mem_per_worker` value if passed; default divides 90% of total RAM evenly across workers
+    threads_per_worker: 1    # (not recommended to change this)
+    processes: True          # (not recommended to change this)
+```
+
+####  Dask
+In addition to the above `config`, one may also optionally pass any [supported Dask configuration](https://docs.dask.org/en/latest/configuration.html#dask) via `config.dask`. These settings apply only when running with Dask distributed. Values you pass are merged into the defaults below (unspecified defaults are kept). Dask spills to [`config.tmp_dir`](#config) unless you set `temporary_directory` here.
+```yaml
+config:
+  dask:
+    dataframe:
+      backend: pandas        # (not recommended to change this)
+      convert-string: False
+      query-planning: False
+      shuffle:
+        method: tasks
+    multiprocessing:
+      context: fork
+    distributed:
+      scheduler:
+        active-memory-manager:
+          measure: managed
+        processes: True
+        worker-saturation: 1.0
+      worker:
+        memory:
+          recent-to-old-time: 5s
+          monitor-interval: 15s
+          rebalance:
+            measure: managed
+          spill: 0.75
+          pause: 0.95
+          terminate: 0.99
+          max-spill: False
+      nanny:
+        pre-spawn-environ:
+          MALLOC_TRIM_THRESHOLD_: 0
+```
+
 
 ### `definitions`
 
@@ -182,8 +227,8 @@ Each source must have a name (which is how it is referenced by transformations a
 
 | source type | format | file type | notes |
 |---|---|---|---|
-| file {: rowspan=13} | row-based {: rowspan=3} | `.csv` | Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8). See also [multi-line & sparse headers](#multi-line-sparse-headers). |
-| `.tsv` | Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8). See also [multi-line & sparse headers](#multi-line-sparse-headers). |
+| file {: rowspan=13} | row-based {: rowspan=3} | `.csv` | Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8). Optionally specify a `blocksize` (like `25MB`) to control the size of each partition when reading the file (the default is Dask's: at most `64MB`, smaller on machines with less memory per CPU core). See also [multi-line & sparse headers](#multi-line-sparse-headers). |
+| `.tsv` | Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8). Optionally specify a `blocksize` (like `25MB`) to control the size of each partition when reading the file (the default is Dask's: at most `64MB`, smaller on machines with less memory per CPU core). See also [multi-line & sparse headers](#multi-line-sparse-headers). |
 | `.txt` | A fixed-width text file; see the [documentation below](#fixed-width-config) for configuration details. |
 | column-based | `.parquet`, `.feather`, `.orc` | These require the [`pyarrow` library](https://arrow.apache.org/docs/python/index.html), which can be installed with `pip install pyarrow` or similar |
 | structured {: rowspan=4} | `.json` | Optionally specify a `object_type` (`frame` or `series`) and `orientation` (see [these docs](https://pandas.pydata.org/docs/reference/api/pandas.read_json.html)) to interpret different JSON structures. |
@@ -695,7 +740,7 @@ The above example shows a transformation of the courses source, which consists o
 
 ??? example "pivot"
 
-    Opposite of `melt` - pivots a source from long to wide format, where the unique values of old columns become the column names of new ones
+    Opposite of `melt` - pivots a source from long to wide format, where the unique values of old columns become the column names of new ones. New columns are sorted alphabetically.
 
     ```yaml
         - operation: pivot

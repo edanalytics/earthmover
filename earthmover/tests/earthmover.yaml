@@ -51,6 +51,16 @@ sources:
   cities:
     file: ${BASE_DIR}/sources/cities.jsonl
 
+  # Same file twice: split into 3 partitions (to test cross-partition behavior), and as 1 partition.
+  scores:
+    file: ${BASE_DIR}/sources/scores.csv
+    header_rows: 1
+    blocksize: 500B
+
+  scores_one_partition:
+    file: ${BASE_DIR}/sources/scores.csv
+    header_rows: 1
+
 
 
 transformations:
@@ -464,6 +474,47 @@ transformations:
         var_name: measurement_type
         value_name: measurement_value
 
+  # Test group_by across partitions with 2 keys and native + count + custom aggregations:
+  # every group kept, output columns in `create_columns` order, avg counts blank scores
+  # (e.g. school D grade 9 has only blanks: avg 0.0, sum 0.0, max blank).
+  # (`agg(grade)` is order-insensitive here, since each group has a single grade.)
+  scores_by_school_grade:
+    source: $sources.scores
+    operations:
+      - operation: filter_rows
+        query: subject == 'math'
+        behavior: include
+      - operation: group_by
+        group_by_columns: [school, grade]
+        create_columns:
+          avg_score: avg(score)
+          num_students: count()
+          max_score: max(score)
+          grades: agg(grade,;)
+          total_score: sum(score)
+          first_student: str_min(student)
+
+  # Test pivot columns are sorted, even when a value (`art`) first appears in the last partition
+  scores_wide:
+    source: $sources.scores
+    operations:
+      - operation: drop_columns
+        columns: [school, grade]
+      - operation: pivot
+        rows_by: [student]
+        cols_by: subject
+        values: score
+
+  # Test std/var (single partition, so floating-point results don't depend on row order)
+  score_spread_by_school:
+    source: $sources.scores_one_partition
+    operations:
+      - operation: group_by
+        group_by_columns: [school]
+        create_columns:
+          sd: std(score)
+          var: var(score)
+
 
 destinations:
 
@@ -550,6 +601,25 @@ destinations:
 
   melt_pivot_roundtrip_output:
     source: $transformations.melt_pivot_roundtrip
+    template: ${BASE_DIR}/templates/verbatim.jsont
+    extension: jsonl
+    linearize: True
+
+  # Test outputs for group_by, pivot, and std/var with partitioned data
+  scores_by_school_grade:
+    source: $transformations.scores_by_school_grade
+    template: ${BASE_DIR}/templates/verbatim.jsont
+    extension: jsonl
+    linearize: True
+
+  scores_wide:
+    source: $transformations.scores_wide
+    template: ${BASE_DIR}/templates/verbatim.jsont
+    extension: jsonl
+    linearize: True
+
+  score_spread_by_school:
+    source: $transformations.score_spread_by_school
     template: ${BASE_DIR}/templates/verbatim.jsont
     extension: jsonl
     linearize: True

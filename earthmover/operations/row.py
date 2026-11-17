@@ -1,5 +1,6 @@
 from earthmover.operations.operation import Operation
 
+import functools
 import warnings
 from typing import Tuple
 from typing import TYPE_CHECKING
@@ -215,34 +216,51 @@ class FlattenOperation(Operation):
         target_dtypes.update({self.value_column: target_dtypes[self.flatten_column]})
         del target_dtypes[self.flatten_column]
 
-        return data.map_partitions(self.flatten_partition, meta=target_dtypes)
-
-    def flatten_partition(self, df):
-
-        flattened_values_df = (df[self.flatten_column]
-            # force to a string before splitting
-            .astype("string")
-
-            # trim off `left_wrapper` and `right_wrapper` characters
-            .str.lstrip(self.left_wrapper)  
-            .str.rstrip(self.right_wrapper)
-
-            # split by `separator` and explode rows
-            .str.split(self.separator, expand=True)
-            .stack()
-
-            # trim off `trim_whitespace` characters from each of the split values
-            .str.strip(self.trim_whitespace)
-
-            # remove the hierarchical index and set the `value_column` name
-            .reset_index(level=1)
-            .drop('level_1', axis=1)
-            .rename(columns={0: self.value_column})
+        return data.map_partitions(
+            functools.partial(
+                _flatten_partition,
+                flatten_column=self.flatten_column,
+                left_wrapper=self.left_wrapper,
+                right_wrapper=self.right_wrapper,
+                separator=self.separator,
+                value_column=self.value_column,
+                trim_whitespace=self.trim_whitespace,
+            ),
+            meta=target_dtypes,
         )
 
-        # join the exploded df to the original and drop `flatten_column` which is no longer needed
-        return (df
-            .join(flattened_values_df)
-            .drop(self.flatten_column, axis=1)
-            .reset_index(drop=True)
-        )
+
+# ---------------------------------------------------------------------------
+# Module-level partition helper – must be top-level so it is picklable when
+# sent to Dask distributed workers.
+# ---------------------------------------------------------------------------
+
+def _flatten_partition(df, flatten_column, left_wrapper, right_wrapper, separator, value_column, trim_whitespace):
+    """Flatten a delimited column into one row per value. Module-level so picklable."""
+    flattened_values_df = (df[flatten_column]
+        # force to a string before splitting
+        .astype("string")
+
+        # trim off `left_wrapper` and `right_wrapper` characters
+        .str.lstrip(left_wrapper)
+        .str.rstrip(right_wrapper)
+
+        # split by `separator` and explode rows
+        .str.split(separator, expand=True)
+        .stack()
+
+        # trim off `trim_whitespace` characters from each of the split values
+        .str.strip(trim_whitespace)
+
+        # remove the hierarchical index and set the `value_column` name
+        .reset_index(level=1)
+        .drop('level_1', axis=1)
+        .rename(columns={0: value_column})
+    )
+
+    # join the exploded df to the original and drop `flatten_column` which is no longer needed
+    return (df
+        .join(flattened_values_df)
+        .drop(flatten_column, axis=1)
+        .reset_index(drop=True)
+    )
