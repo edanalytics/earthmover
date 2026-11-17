@@ -196,9 +196,8 @@ class FileDestination(Destination):
             # available: keep n_workers futures in flight so workers render in
             # parallel, but collect and write in order so at most n_workers
             # rendered results are held in memory at any one time.
-            try:
-                import dask.distributed
-                client = dask.distributed.get_client()
+            client = self.earthmover.dask_client
+            if client:
                 n_workers = len(client.scheduler_info()['workers'])
                 partitions = list(self.data.partitions)
                 pending = collections.deque(
@@ -213,7 +212,8 @@ class FileDestination(Destination):
                     if next_submit < len(partitions):
                         pending.append(client.compute(partitions[next_submit]))
                         next_submit += 1
-            except (ValueError, ImportError):
+
+            else:
                 # No distributed client – compute partitions sequentially.
                 for partition in self.data.partitions:
                     fp.writelines(partition.compute())

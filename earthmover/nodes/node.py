@@ -147,7 +147,8 @@ class Node:
         # graph optimizer may fuse tasks differently, producing a different
         # serialized form for the same task key and triggering the
         # "Detected different run_spec" warning (dask/dask#9888).
-        if self.earthmover.dask_client:
+        # Destinations are skipped: their output is already written, and nothing downstream reads it.
+        if self.earthmover.dask_client and self.type != 'destination':
             self.data = self.earthmover.dask_client.persist(self.data)
 
         self.check_expectations(self.expectations)
