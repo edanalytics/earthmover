@@ -348,5 +348,5 @@ Empirically, we find 4 workers optimal for many types of workloads. See [Design 
 
 #### Optimization tips
 * Using `sort_rows` before `join` or `group_by` operations can help them be more performant.
-* If Dask is running out of memory during `earthmover run` (Dask workers getting "killed", Dask erors about shuffle, etc.), try specifying `sources.{source}.blocksize` in `earthmover.yaml`: the default is `25MB` but if transformations significantly increase data size (creating JSONL often does), a smaller value like `5MB` or even `2MB` may work better
+* If Dask is running out of memory during `earthmover run` (Dask workers getting "killed", Dask erors about shuffle, etc.), try specifying `sources.{source}.blocksize` in `earthmover.yaml`: the default is Dask's (at most `64MB`) but if transformations significantly increase data size (creating JSONL often does), a smaller value like `5MB` or even `2MB` may work better
 

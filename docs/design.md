@@ -91,7 +91,7 @@ Union is quite straightforward; the partitions of two (or more) dataframes are s
 
 
 #### column operations
-[Column operations](./configuration#column-operations) such as `add_columns`, `modify_columns`, `keep_columns`, `drop_columns`, `map_values`, etc. can be applied to each partition separately, and so are highly parallelizable. They can increase the size of partitions; in this case, one can keep partitions smaller specifying a `source`'s `blocksize` smaller than the default `25MB`.
+[Column operations](./configuration#column-operations) such as `add_columns`, `modify_columns`, `keep_columns`, `drop_columns`, `map_values`, etc. can be applied to each partition separately, and so are highly parallelizable. They can increase the size of partitions; in this case, one can keep partitions smaller specifying a smaller `blocksize` on a `source` (the default is Dask's: at most `64MB`).
 
 ![dask dataframe concat](./assets/dask-dataframe-column-ops.png)
 

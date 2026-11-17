@@ -129,8 +129,7 @@ class JoinOperation(Operation):
             try:
                 left_data = dd.merge(
                     left_data, right_data, how=self.join_type,
-                    left_on=self.left_keys, right_on=self.right_keys,
-                    shuffle_method="tasks",
+                    left_on=self.left_keys, right_on=self.right_keys
                 )
 
             except Exception as _:

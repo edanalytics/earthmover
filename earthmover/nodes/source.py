@@ -121,7 +121,7 @@ class FileSource(Source):
         'debug', 'expect', 'show_progress', 'repartition', 'chunksize', 'optional', 'optional_fields',
         'file', 'type', 'columns', 'header_rows', 'fill_sparse_headers',
         'colspec_file', 'colspecs', 'colspec_headers', 'rename_cols',
-        'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath',
+        'encoding', 'sheet', 'object_type', 'match', 'orientation', 'xpath', 'blocksize',
     )
 
     def __init__(self, *args, **kwargs):
@@ -415,7 +415,7 @@ class FileSource(Source):
 
         # We don't want to activate the function inside this helper function.
         read_lambda_mapping = {
-            'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, header=0, skiprows=__get_skiprows(config), names=__get_flattened_columns(file, config), blocksize=config.get('blocksize', "25MB")),
+            'csv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, header=0, skiprows=__get_skiprows(config), names=__get_flattened_columns(file, config), blocksize=config.get('blocksize', "default")),
             'excel'     : lambda file, config: pd.read_excel(file, sheet_name=config.get("sheet", 0), keep_default_na=False, header=0, skiprows=__get_skiprows(config), names=__get_flattened_columns(file, config)),
             'feather'   : lambda file, _     : pd.read_feather(file),
             'fixedwidth': self.__read_fwf,
@@ -428,7 +428,7 @@ class FileSource(Source):
             'spss'      : lambda file, _     : pd.read_spss(file),
             'stata'     : lambda file, _     : pd.read_stata(file),
             'xml'       : lambda file, config: pd.read_xml(file, xpath=config.get('xpath', "./*")),
-            'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, header=0, skiprows=__get_skiprows(config), names=__get_flattened_columns(file, config), blocksize=config.get('blocksize', "25MB")),
+            'tsv'       : lambda file, config: dd.read_csv(file, sep=sep, dtype=str, encoding=config.get('encoding', "utf8"), keep_default_na=False, header=0, skiprows=__get_skiprows(config), names=__get_flattened_columns(file, config), blocksize=config.get('blocksize', "default")),
         }
         return read_lambda_mapping.get(file_type)
 

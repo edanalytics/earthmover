@@ -47,7 +47,7 @@ def _jinja_modify_column_partition(partition, col, template_str, macros, error_c
 
 def _combine_columns_row(row, cols_to_combine, separator):
     """Row-level helper for CombineColumnsOperation – picklable via functools.partial."""
-    return separator.join(str(row[col]) for col in cols_to_combine)
+    return separator.join(row[col] for col in cols_to_combine)
 
 
 class AddColumnsOperation(Operation):

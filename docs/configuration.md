@@ -227,8 +227,8 @@ Each source must have a name (which is how it is referenced by transformations a
 
 | source type | format | file type | notes |
 |---|---|---|---|
-| file {: rowspan=13} | row-based {: rowspan=3} | `.csv` | Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8). See also [multi-line & sparse headers](#multi-line-sparse-headers). |
-| `.tsv` | Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8). See also [multi-line & sparse headers](#multi-line-sparse-headers). |
+| file {: rowspan=13} | row-based {: rowspan=3} | `.csv` | Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8). Optionally specify a `blocksize` (like `25MB`) to control the size of each partition when reading the file (the default is Dask's: at most `64MB`, smaller on machines with less memory per CPU core). See also [multi-line & sparse headers](#multi-line-sparse-headers). |
+| `.tsv` | Specify the number of `header_rows`, and (if `header_rows` > 0, optionally) overwrite the `column` names. Optionally specify an `encoding` to use when reading the file (the default is UTF8). Optionally specify a `blocksize` (like `25MB`) to control the size of each partition when reading the file (the default is Dask's: at most `64MB`, smaller on machines with less memory per CPU core). See also [multi-line & sparse headers](#multi-line-sparse-headers). |
 | `.txt` | A fixed-width text file; see the [documentation below](#fixed-width-config) for configuration details. |
 | column-based | `.parquet`, `.feather`, `.orc` | These require the [`pyarrow` library](https://arrow.apache.org/docs/python/index.html), which can be installed with `pip install pyarrow` or similar |
 | structured {: rowspan=4} | `.json` | Optionally specify a `object_type` (`frame` or `series`) and `orientation` (see [these docs](https://pandas.pydata.org/docs/reference/api/pandas.read_json.html)) to interpret different JSON structures. |
@@ -740,7 +740,7 @@ The above example shows a transformation of the courses source, which consists o
 
 ??? example "pivot"
 
-    Opposite of `melt` - pivots a source from long to wide format, where the unique values of old columns become the column names of new ones
+    Opposite of `melt` - pivots a source from long to wide format, where the unique values of old columns become the column names of new ones. New columns are sorted alphabetically.
 
     ```yaml
         - operation: pivot
