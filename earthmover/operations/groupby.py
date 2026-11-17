@@ -24,8 +24,15 @@ def _agg_json_array_agg(x, column, separator):
         return x[column].to_json(orient="records")
     return f"[{','.join(x[column])}]"
 
-def _agg_count(x):
-    return len(x)
+def _agg_std(x, column):
+    return pd.to_numeric(x[column]).std()
+
+def _agg_var(x, column):
+    return pd.to_numeric(x[column]).var()
+
+def _apply_custom_aggs(group, agg_fns):
+    """Compute every custom aggregation for one group, so all of them share a single grouped.apply() (one shuffle)."""
+    return pd.Series({new_col: agg_fn(group) for new_col, agg_fn in agg_fns.items()}, dtype='object')
 
 
 # ---------------------------------------------------------------------------
@@ -34,6 +41,8 @@ def _agg_count(x):
 
 # These map earthmover agg-type names to their Dask/pandas equivalents.
 # All of these can be handled by a single grouped.agg() call.
+# (std/var are custom aggs instead: Dask's grouped std/var loses precision on large values,
+#  e.g. var of [1e9+1, 1e9+2, 1e9+3, 1e9+4] is 0.0 in Dask but 1.25 in pandas.)
 _NATIVE_AGG_MAP = {
     'sum'      : 'sum',
     'avg'      : 'mean',
@@ -46,11 +55,6 @@ _NATIVE_AGG_MAP = {
     'str_maximum'  : 'max',
     'str_min'      : 'min',
     'str_minimum'  : 'min',
-    'std'      : 'std',
-    'stdev'    : 'std',
-    'stddev'   : 'std',
-    'var'      : 'var',
-    'variance' : 'var',
 }
 
 # These aggregation types require the source column to be numeric first.
@@ -58,8 +62,6 @@ _NUMERIC_CONV_TYPES = {
     'sum', 'avg', 'mean',
     'max', 'maximum',
     'min', 'minimum',
-    'std', 'stdev', 'stddev',
-    'var', 'variance',
 }
 
 
@@ -125,10 +127,10 @@ class GroupByOperation(Operation):
 
     def execute(self, data: 'DataFrame', **kwargs) -> 'DataFrame':
         """
-        Aggregate using a single grouped.agg() for all native aggregation types
-        (sum, mean, count, min, max, std, var) so that Dask performs only ONE
-        shuffle instead of one per output column.  Custom aggregations that
-        cannot be expressed natively still use grouped.apply() as a fallback.
+        Aggregate in two passes, regardless of how many columns are created:
+          1. one grouped.agg() for native types (sum, avg, count, min, max)
+          2. one grouped.apply() for custom types (agg, json_array_agg, std, var)
+        (Previously each output column was its own grouped.apply(), i.e. one shuffle per column.)
         """
         super().execute(data, **kwargs)
 
@@ -166,118 +168,92 @@ class GroupByOperation(Operation):
             parsed[new_col_name] = (_agg_type, _col, _sep)
 
         # ── 2. Classify into native / count / custom ──────────────────────────
-        # native   – handled by a single grouped.agg() call (optimal)
-        # count    – handled by grouped.size() (no source column needed)
-        # custom   – fallback to grouped.apply() (one shuffle per column)
-        native = {}      # new_col -> (src_col, dask_fn_str)
-        count_cols = []  # new_col names for count()/size() without a column
-        custom = {}      # new_col -> (_agg_type, _col, _sep)
+        native = {}      # new_col -> (_agg_type, _col)
+        count_cols = []  # new_col names for count()/size(): copies of the group size
+        custom = {}      # new_col -> picklable agg function
 
         for new_col, (_agg_type, _col, _sep) in parsed.items():
-            if _agg_type in ('count', 'size') and not _col:
+            if _agg_type in _NATIVE_AGG_MAP:
+                native[new_col] = (_agg_type, _col)
+            elif _agg_type in ('count', 'size'):
                 count_cols.append(new_col)
-            elif _agg_type in _NATIVE_AGG_MAP:
-                native[new_col] = (_col, _NATIVE_AGG_MAP[_agg_type])
             else:
-                custom[new_col] = (_agg_type, _col, _sep)
-
-        grouped = data.groupby(self.group_by_columns)
-
-        result = None
-
-        # ── 4. Single .agg() call for all native aggregations ─────────────────
-        #
-        #  Strategy: give each (new_col, src_col, fn) its own uniquely-named
-        #  temporary column in data before calling .agg().  This guarantees:
-        #    • Flat column names in the result (no MultiIndex headaches).
-        #    • Numeric conversion is applied ONLY to the temp copy, never to
-        #      the original source column (which may be used by custom aggs
-        #      that require string values, e.g. agg/aggregate).
-        if native:
-            temp_col_map = {}    # new_col -> temp_col_name
-            agg_dict_flat = {}   # temp_col_name -> dask_fn_str
-
-            for new_col, (src_col, dask_fn) in native.items():
-                temp_col = f'__agg_{new_col}__'
-                # Apply numeric conversion on the temp copy when needed,
-                # leaving the original column untouched.
-                if dask_fn in ('sum', 'mean', 'std', 'var') or (
-                    dask_fn in ('max', 'min') and
-                    parsed[new_col][0] in _NUMERIC_CONV_TYPES
-                ):
-                    data[temp_col] = dd.to_numeric(data[src_col], errors='coerce')
-                else:
-                    data[temp_col] = data[src_col]
-                agg_dict_flat[temp_col] = dask_fn
-                temp_col_map[new_col] = temp_col
-
-            # ── ONE shuffle ──
-            native_result = data.groupby(self.group_by_columns).agg(agg_dict_flat).reset_index()
-
-            # Rename temp columns to user-specified new column names.
-            rename_dict = {tmp: new for new, tmp in temp_col_map.items()}
-            native_result = native_result.rename(columns=rename_dict)
-            result = native_result
-
-        # ── 5. Add count() / size() columns ───────────────────────────────────
-        if count_cols:
-            size_result = grouped.size().reset_index()
-            size_result.columns = self.group_by_columns + ['__count__']
-            # Rename the size column to the first count new_col; duplicate for any others.
-            size_result = size_result.rename(columns={'__count__': count_cols[0]})
-            for extra_col in count_cols[1:]:
-                size_result[extra_col] = size_result[count_cols[0]]
-
-            if result is None:
-                result = size_result
-            else:
-                result = result.merge(size_result, on=self.group_by_columns, how='left')
-
-        # ── 6. Custom aggs: fallback to grouped.apply() ───────────────────────
-        if custom:
-            # If we have no base result yet, seed it from grouped.size()
-            if result is None:
-                result = grouped.size().reset_index()
-                result.columns = self.group_by_columns + [self.GROUP_SIZE_COL]
-
-            for new_col, (_agg_type, _col, _sep) in custom.items():
                 agg_fn = self._get_agg_fn(_agg_type, _col, _sep)
                 if not agg_fn:
                     self.error_handler.throw(
                         f"invalid aggregation function `{_agg_type}` in `group_by` operation"
                     )
+                custom[new_col] = agg_fn
 
-                meta = pd.Series(
-                    dtype='object',
-                    name=new_col,
-                    index=pd.MultiIndex.from_tuples(
-                        tuples=[(None,) * len(self.group_by_columns)],
-                        names=self.group_by_columns
-                    )
+        # ── 3. One grouped.agg() for group size + all native aggregations ────
+        # Each native aggregation gets its own temp column. This keeps result names flat, and
+        # numeric conversion never touches the source column (custom aggs need its strings).
+        agg_data = data.assign(**{self.GROUP_SIZE_COL: 1})
+        agg_spec = {self.GROUP_SIZE_COL: 'size'}  # temp col -> Dask agg function
+        temp_cols = {}                            # new_col -> temp col
+        avg_cols = []                             # new cols computed as sum / group size
+
+        for new_col, (_agg_type, _col) in native.items():
+            temp_col = f'__agg_{new_col}__'
+            dask_fn = _NATIVE_AGG_MAP[_agg_type]
+
+            # avg divides by ALL rows in the group (blanks included), e.g. avg('2', '', '4') = 2.0
+            if dask_fn == 'mean':
+                dask_fn = 'sum'
+                avg_cols.append(new_col)
+
+            # Default errors='raise': blanks become NaN, other non-numeric values raise an error.
+            if _agg_type in _NUMERIC_CONV_TYPES:
+                agg_data = agg_data.assign(**{temp_col: dd.to_numeric(agg_data[_col])})
+            else:
+                agg_data = agg_data.assign(**{temp_col: agg_data[_col]})
+
+            agg_spec[temp_col] = dask_fn
+            temp_cols[new_col] = temp_col
+
+        result = agg_data.groupby(self.group_by_columns).agg(agg_spec).reset_index()
+
+        for new_col in avg_cols:
+            result[temp_cols[new_col]] = result[temp_cols[new_col]] / result[self.GROUP_SIZE_COL]
+
+        for new_col in count_cols:
+            result[new_col] = result[self.GROUP_SIZE_COL]
+
+        result = result.rename(columns={temp_col: new_col for new_col, temp_col in temp_cols.items()})
+
+        # ── 4. One grouped.apply() for all custom aggregations ────────────────
+        if custom:
+            meta = pd.DataFrame(
+                {new_col: pd.Series(dtype='object') for new_col in custom},
+                index=pd.MultiIndex.from_tuples(
+                    tuples=[(None,) * len(self.group_by_columns)],
+                    names=self.group_by_columns
                 )
-                _computed = grouped.apply(agg_fn, meta=meta).reset_index()
-                result = result.merge(_computed, how='left', on=self.group_by_columns)
+            ).iloc[:0]
+            custom_result = (data
+                .groupby(self.group_by_columns)
+                .apply(functools.partial(_apply_custom_aggs, agg_fns=custom), meta=meta)
+                .reset_index()
+            )
+            result = result.merge(custom_result, how='left', on=self.group_by_columns)
 
-            # Drop the seed size column if it was only added as a base
-            if self.GROUP_SIZE_COL in result.columns:
-                result = result.query(f"{self.GROUP_SIZE_COL} > 0")
-                del result[self.GROUP_SIZE_COL]
-
-        return result
+        # Output columns in `create_columns` order (also drops the group-size column).
+        return result[self.group_by_columns + list(self.create_columns_dict.keys())]
 
     @staticmethod
     def _get_agg_fn(agg_type: str, column: str = "", separator: str = ""):
         """
         Return a picklable callable for the given *custom* aggregation type.
-        Native types (sum, mean, count, min, max, std, var) are handled
-        separately via grouped.agg() and should not reach this method.
+        Native types (sum, avg, count, min, max) are handled by grouped.agg() instead.
         """
         agg_fn_mapping = {
             'agg'           : functools.partial(_agg_join, column=column, separator=separator),
             'aggregate'     : functools.partial(_agg_join, column=column, separator=separator),
             'json_array_agg': functools.partial(_agg_json_array_agg, column=column, separator=separator),
-            # count is handled upstream; include here as a safe fallback
-            'count'         : _agg_count,
-            'size'          : _agg_count,
+            'std'           : functools.partial(_agg_std, column=column),
+            'stdev'         : functools.partial(_agg_std, column=column),
+            'stddev'        : functools.partial(_agg_std, column=column),
+            'var'           : functools.partial(_agg_var, column=column),
+            'variance'      : functools.partial(_agg_var, column=column),
         }
         return agg_fn_mapping.get(agg_type)
