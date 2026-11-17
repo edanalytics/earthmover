@@ -17,21 +17,19 @@ from earthmover import util
 # picklable by Dask distributed workers.
 # ---------------------------------------------------------------------------
 
-def _apply_expectation_partition(partition, expectation_str, result_col):
+def _apply_expectation_partition(partition, expectation_str, result_col, error_context):
     """
     Compile and evaluate a Jinja expectation expression on each row in a
     partition, returning a Series of 'True'/'False' strings.
     Defined at module level so it can be serialised by Dask distributed.
     """
-    import jinja2 as _jinja2
-    template = _jinja2.Template("{{" + expectation_str + "}}")
+    template_str = "{{" + expectation_str + "}}"
+    template = jinja2.Template(template_str)
 
-    def render_row(row):
-        row_data = row.to_dict()
-        row_data["__row_data__"] = row.to_dict()
-        return template.render(row_data)
-
-    result = partition.apply(render_row, axis=1)
+    result = partition.apply(
+        util.render_jinja_template, axis=1,
+        template=template, template_str=template_str, error_context=error_context
+    )
     result.name = result_col
     return result
 
@@ -219,6 +217,7 @@ class Node:
                         _apply_expectation_partition,
                         expectation_str=expectation,
                         result_col=expectation_result_col,
+                        error_context=str(self.error_handler.ctx),
                     ),
                     meta=pd.Series(dtype='str', name=expectation_result_col),
                 )

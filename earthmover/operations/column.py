@@ -19,45 +19,30 @@ if TYPE_CHECKING:
 # when sent to Dask distributed workers.
 # ---------------------------------------------------------------------------
 
-def _jinja_add_column_partition(partition, col, template_str, macros):
+def _jinja_add_column_partition(partition, col, template_str, macros, error_context):
     """
     Compile the Jinja template from its string source and apply it to every row
     in *partition*, returning a Series of rendered values for column *col*.
     Defined at module level so it can be serialised by Dask distributed.
     """
-    from earthmover import util  # local import so workers can resolve it
     template = util.build_jinja_template(template_str, macros=macros)
 
-    def render_row(row):
-        row_data = row.to_dict()
-        row_data["__row_data__"] = row.to_dict()
-        return template.render(row_data)
-
-    result = partition.apply(render_row, axis=1)
+    result = partition.apply(
+        util.render_jinja_template, axis=1,
+        template=template, template_str=template_str, error_context=error_context
+    )
     result.name = col
     return result
 
 
-def _jinja_modify_column_partition(partition, col, template_str, macros):
+def _jinja_modify_column_partition(partition, col, template_str, macros, error_context):
     """
     Like _jinja_add_column_partition but temporarily exposes the current column
     value as ``value`` in the template context (matching the original behaviour
     of ModifyColumnsOperation).
     """
-    from earthmover import util
-    template = util.build_jinja_template(template_str, macros=macros)
-
-    partition = partition.copy()
-    partition['value'] = partition[col]
-
-    def render_row(row):
-        row_data = row.to_dict()
-        row_data["__row_data__"] = row.to_dict()
-        return template.render(row_data)
-
-    result = partition.apply(render_row, axis=1)
-    result.name = col
-    return result
+    partition = partition.assign(value=partition[col])
+    return _jinja_add_column_partition(partition, col, template_str, macros, error_context)
 
 
 def _combine_columns_row(row, cols_to_combine, separator):
@@ -111,6 +96,7 @@ class AddColumnsOperation(Operation):
                         col=col,
                         template_str=val,
                         macros=self.earthmover.macros,
+                        error_context=str(self.error_handler.ctx),
                     ),
                     meta=pd.Series(dtype='str', name=col),
                 )
@@ -177,6 +163,7 @@ class ModifyColumnsOperation(Operation):
                 col=col,
                 template_str=val,
                 macros=self.earthmover.macros,
+                error_context=str(self.error_handler.ctx),
             ),
             meta=pd.Series(dtype='str', name=col),
         )

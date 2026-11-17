@@ -17,7 +17,7 @@ from typing import Tuple
 # when sent to Dask distributed workers.
 # ---------------------------------------------------------------------------
 
-def _render_destination_partition(partition, template_str, macros, base_dir, null_repr, string_dtypes):
+def _render_destination_partition(partition, template_str, macros, base_dir, null_repr, string_dtypes, error_context):
     """
     Compile the Jinja template from its source string and render each row in a
     partition.  Defined at module level so it can be serialised (pickled) by
@@ -36,11 +36,7 @@ def _render_destination_partition(partition, template_str, macros, base_dir, nul
         row_data = row.to_dict() if not isinstance(row, dict) else row
         row_data = {k: cast_value(v) for k, v in row_data.items()}
         row_data["__row_data__"] = row_data
-        try:
-            return template.render(row_data) + "\n"
-        except Exception as err:
-            print(f"Error rendering Jinja template: {err}")
-            raise
+        return util.render_jinja_template(row_data, template, template_str, error_context) + "\n"
 
     return partition.apply(render_row, axis=1)
 
@@ -154,6 +150,7 @@ class FileDestination(Destination):
             base_dir=self.config_dir,
             null_repr=self.NULL_REPR,
             string_dtypes=self.STRING_DTYPES,
+            error_context=str(self.error_handler.ctx),
         )
 
         self.data = (

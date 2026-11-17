@@ -6,10 +6,9 @@ import sys
 
 from sys import exc_info
 
-from typing import Optional
+from typing import Optional, Union
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from earthmover.error_handler import ErrorHandler
     from pandas import Series
 
 
@@ -71,33 +70,42 @@ def contains_jinja(string: str) -> bool:
         return False
 
 
-def render_jinja_template(row: 'Series', template: jinja2.Template, template_str: str, *, error_handler: 'ErrorHandler') -> str:
+def render_jinja_template(row: Union['Series', dict], template: jinja2.Template, template_str: str, error_context: str = "") -> str:
     """
+    Render one row with a compiled Jinja template.
 
-    :param row:
-    :param template:
-    :param template_str:
-    :param error_handler:
+    This runs inside Dask workers, which can't reach the main process's ErrorHandler.
+    So on failure it raises an error naming where the template is defined, the template, and the row's variables, e.g.
+        (near line 15 of `earthmover.yaml` in `$transformations.t` operation `add_columns`) Error rendering Jinja template: ('str object' has no attribute 'foo'):
+        ===> {{ name.foo.bar }}
+        (available variables are `grp`, `score`, `name`)
+
+    :param row: a Series (converted to a dict plus `__row_data__`), or an already-built dict of template variables
+    :param template: the compiled template
+    :param template_str: the template source, shown in the error message
+    :param error_context: `str(error_handler.ctx)`, captured on the main process
     :return:
     """
-    try:
+    if isinstance(row, dict):
+        row_data = row
+    else:
         row_data = row.to_dict()
-        row_data.update({"__row_data__": row.to_dict()})
+        row_data["__row_data__"] = row.to_dict()
+
+    try:
         return template.render(row_data)
 
     except Exception as err:
-        error_handler.ctx.remove('line')
-
-        if dict(row):
-            _joined_keys = "`, `".join(dict(row).keys())
+        variable_names = [key for key in row_data if key != "__row_data__"]
+        if variable_names:
+            _joined_keys = "`, `".join(variable_names)
             variables = f"\n(available variables are `{_joined_keys}`)"
         else:
             variables = f"\n(no available variables)"
 
-        error_handler.throw(
-            f"Error rendering Jinja template: ({err}):\n===> {template_str}{variables}"
-        )
-        raise
+        raise Exception(
+            f"{error_context}Error rendering Jinja template: ({err}):\n===> {template_str}{variables}"
+        ) from err
 
 
 def jinja2_template_error_lineno():
