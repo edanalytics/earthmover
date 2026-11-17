@@ -1,0 +1,7 @@
+{ "school": "A" ,"grade": "10" ,"avg_score": "67.71428571428571" ,"num_students": "7" ,"max_score": "97.0" ,"grades": "10;10;10;10;10;10;10" ,"total_score": "474.0" ,"first_student": "s03"  }
+{ "school": "B" ,"grade": "9" ,"avg_score": "54.0" ,"num_students": "7" ,"max_score": "96.0" ,"grades": "9;9;9;9;9;9;9" ,"total_score": "378.0" ,"first_student": "s04"  }
+{ "school": "C" ,"grade": "10" ,"avg_score": "43.333333333333336" ,"num_students": "6" ,"max_score": "77.0" ,"grades": "10;10;10;10;10;10" ,"total_score": "260.0" ,"first_student": "s05"  }
+{ "school": "B" ,"grade": "10" ,"avg_score": "65.14285714285714" ,"num_students": "7" ,"max_score": "99.0" ,"grades": "10;10;10;10;10;10;10" ,"total_score": "456.0" ,"first_student": "s01"  }
+{ "school": "C" ,"grade": "9" ,"avg_score": "62.857142857142854" ,"num_students": "7" ,"max_score": "98.0" ,"grades": "9;9;9;9;9;9;9" ,"total_score": "440.0" ,"first_student": "s02"  }
+{ "school": "A" ,"grade": "9" ,"avg_score": "62.0" ,"num_students": "6" ,"max_score": "92.0" ,"grades": "9;9;9;9;9;9" ,"total_score": "372.0" ,"first_student": "s06"  }
+{ "school": "D" ,"grade": "9" ,"avg_score": "0.0" ,"num_students": "2" ,"max_score": "" ,"grades": "9;9" ,"total_score": "0.0" ,"first_student": "s41"  }
